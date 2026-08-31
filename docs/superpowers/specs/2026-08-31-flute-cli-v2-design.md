@@ -41,18 +41,22 @@ Devices and subscriptions are dropped rather than stubbed or pointed at v1 endpo
 
 ### v1 → v2 command changes
 
+**Renamed or removed.** Each v1 command in this table is replaced. The v1 name is not accepted — invoking it is an unrecognised-subcommand error.
+
 | v1 | v2 | Reason |
 |---|---|---|
-| `transactions sale` / `auth` | `transactions create --capture-method auto\|manual` | One endpoint; `sale`/`auth` retained as aliases |
-| `transactions void` / `refund` | `transactions reversal` | One endpoint, payment method auto-detected; both retained as aliases |
+| `transactions sale` / `auth` | `transactions create --capture-method auto\|manual` | One endpoint; sale and authorization differ only by a field |
+| `transactions void` / `refund` | `transactions reversal` | One endpoint; payment method and settled state auto-detected |
 | `transactions settle` | `settlements close` | Operation relocated to the settlements group |
-| `ach debit/credit/void/refund` | `transactions create --ach-*`, `credit`, `reversal` | ACH folded into the unified transaction endpoints |
+| `ach debit/credit/void/refund` | `transactions create --ach-*`, `transactions credit`, `transactions reversal` | ACH folded into the unified transaction endpoints |
 | `customers add-card/add-ach/methods/remove-method` | `payment-methods add-card/add-ach/list/delete` | Payment methods are a top-level resource in v2 |
-| `keys` | `api-keys` (alias `keys`) | Endpoint is `/v2/api-keys` |
+| `keys` | `api-keys` | Endpoint is `/v2/api-keys` |
 | `devices *`, `subscriptions *` | — | No v2 endpoints |
 | — | `payment-links`, `payment-sessions`, `settings`, and 8 new transaction/POS operations | New in v2 |
 
-The naming principle: **the canonical command mirrors the API; a v1 verb survives as an alias where it maps onto exactly one canonical invocation.** Aliases preset a flag; they are not a second code path.
+**Unchanged.** `auth` (`login`, `logout`, `status`, `switch`, `token`), `version`, `update`, and `completion` keep their v1 names and behaviour. None of them changed in v2; `auth token` and `ping` call v2 endpoints but their command shape is identical.
+
+The naming principle: **every command that calls the API is named after the v2 operation it invokes, with no v1 aliases.** A 2.0 release in a new repository is the point at which legacy verbs are dropped, and the choice is reversible in the safe direction — an alias can be added in a later minor version without breaking anyone, whereas removing one later would. See [Open question 7](#q7-command-naming-for-api-calling-commands).
 
 ## 3. Architecture
 
@@ -124,14 +128,14 @@ Both assert on the recorded request: exact method, path, and JSON body. Credenti
 | `ping` | — |
 | `customers` | `create`, `get`, `list`, `update`, `delete` |
 | `payment-methods` | `list`, `get`, `add-card`, `add-ach`, `update`, `delete`, `set-default` |
-| `transactions` | `create` (aliases `sale`, `auth`), `get`, `list`, `capture`, `reversal` (aliases `void`, `refund`), `credit`, `tip-adjust`, `ach-hold`, `ach-release`, `calculate-amount`, `share-receipt`, `inspect` |
+| `transactions` | `create`, `get`, `list`, `capture`, `reversal`, `credit`, `tip-adjust`, `ach-hold`, `ach-release`, `calculate-amount`, `share-receipt`, `inspect` |
 | `pos` | `create`, `get` (`--wait`), `list`, `cancel`, `print-receipt` |
 | `terminals` | `list`, `status` |
 | `settlements` | `list`, `close`, `get` |
 | `payment-links` | `create`, `get`, `list`, `update`, `delete`, `share` |
 | `payment-sessions` | `create`, `get`, `cancel` |
 | `settings` | `payment-config`, `contact-info`, `autofill`, `update-autofill` |
-| `api-keys` (alias `keys`) | `create`, `list`, `revoke` |
+| `api-keys` | `create`, `list`, `revoke` |
 | utility | `version`, `update`, `completion` |
 
 Global flags are unchanged from v1: `--profile`, `--output table|json|quiet`, `--debug`.
@@ -317,6 +321,21 @@ Live sandbox tests are the only layer proving the API accepts the CLI's requests
 The CLI could default it when exactly one processor is configured, which removes the most common source of friction, at the cost of behaviour that varies with account configuration — a script working on a single-processor account would fail on a multi-processor one.
 
 **Needs:** a preference. Recommended default is to require the flag explicitly, with the error message naming `settings payment-config` as the way to find the value.
+
+### Q7: Command naming for API-calling commands
+
+Client-side commands — `auth`, `login`, `token`, `version`, `update` — keep their v1 names. The question is the commands that call the API, where v2 merged several v1 operations into one endpoint.
+
+In v1, charging a card is `flute transactions sale --amount 10 --card 4111…`. In v2 the API has a single create-transaction endpoint where sale versus authorization is a field (`captureMethod: Auto|Manual`) rather than a separate call.
+
+- **A.** `flute transactions create --capture-method auto …` — command names mirror the v2 API. `sale`, `auth`, `void`, `refund`, and `keys` no longer exist.
+- **B.** `flute transactions sale …` keeps working, calling the new v2 endpoint underneath, with `create` available as well.
+
+A matches the API reference exactly and is internally consistent with dropping the `ach` group on the same grounds — `ach debit` and `transactions sale` are both v1 verbs whose endpoints merged into `POST /v2/transactions`. B preserves existing scripts and muscle memory.
+
+A is also the reversible direction: an alias can be added in a later minor version without breaking anyone, whereas removing one later would break whoever adopted it.
+
+**Assumed A pending confirmation.** The design and the tables in section 2 and section 4 reflect A. Switching to B changes command names only and touches no architecture.
 
 ## 10. Build order
 
