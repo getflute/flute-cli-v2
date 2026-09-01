@@ -174,7 +174,7 @@ Three commands have no corresponding endpoint:
 
 ### Modes and streams
 
-Three modes — `table` (default), `json`, `quiet` — resolved `--output` → `FLUTE2_OUTPUT` → config file → default. The environment variable is new: v1 resolves flag → config → default, and reads `FLUTE_OUTPUT` only in the pre-parse path that decides whether a clap usage error prints as JSON, where it recognises `json` and nothing else. Putting it in the chain makes one variable mean the same thing before and after argument parsing. **Data goes to stdout; everything else goes to stderr**: tracing, the production banner, update notices. This holds under `--debug`, so `flute2 --debug --output json` still emits parseable JSON on stdout.
+Three modes — `table` (default), `json`, `quiet` — resolved `--output` → config file → default, as in v1. No environment variable participates. A clap usage error is raised before the config file is read, so that one path decides between a JSON envelope and text by scanning argv for `--output json`, again as in v1. **Data goes to stdout; everything else goes to stderr**: tracing, the production banner, update notices. This holds under `--debug`, so `flute2 --debug --output json` still emits parseable JSON on stdout.
 
 ### Success envelope
 
