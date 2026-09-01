@@ -378,7 +378,7 @@ mod tests {
 }
 ```
 
-Bearer tokens and client secrets are new here — v1 masks card and account numbers only.
+Bearer tokens and client secrets are covered here as defence in depth, not to close a v1 gap: v1 never logs headers and never traces the token exchange, so neither reaches its sink. v2 traces through one client, so the guard covers them from the start rather than after the first request that carries one.
 
 - [ ] **Step 2: Run and watch them fail**
 
@@ -1552,7 +1552,7 @@ pub fn assert_bundle_hash(bytes: &[u8], recorded: &str) {
     use sha2::{Digest, Sha256};
     assert_eq!(format!("{:x}", Sha256::digest(bytes)), recorded,
         "vendored bundle does not match openapi-v2.sha256. Re-vendoring is a \
-         deliberate act: read the diff, update docs/doc-defects.md for anything \
+         deliberate act: read the diff, update the local docs/doc-defects.md for anything \
          that moved, then re-record the hash.");
 }
 ```
@@ -2183,7 +2183,7 @@ pub struct Cli {
     /// No `default_value`: a defaulted flag is never absent, and "absent" is
     /// the only state in which the config file's `default_profile` can be
     /// consulted. Defaulting here is exactly what makes `auth switch` a no-op
-    /// in v1 (V7 in docs/v1-defects.md is the credential case; V1 is this one).
+    /// in v1: `auth switch` writes `default_profile` and nothing reads it.
     #[arg(long, env = "FLUTE2_PROFILE", global = true, help_heading = GLOBAL_HEADING)]
     pub profile: Option<String>,
 

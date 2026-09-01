@@ -863,7 +863,7 @@ Expected: the live tests report as ignored; no network traffic, and no `FLUTE2_L
 - [ ] **Step 6: File every divergence, then commit**
 
 ```bash
-git add tests/ .gitignore .flute2-live.env.example docs/doc-defects.md
+git add tests/ .gitignore .flute2-live.env.example
 git commit -m "ARISE-4928 test(cli): committed live sandbox scenarios for the slice"
 ```
 

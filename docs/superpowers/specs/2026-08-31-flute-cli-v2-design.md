@@ -356,7 +356,7 @@ The v1 parser is carried over and already tolerates both casings and flattens a 
 
 Field-level validation messages are keyed by public camelCase field paths (`baseAmount`, `transactionDetails.cardData.paymentMethodDetails.cardNumber`), which the existing flattening renders directly.
 
-One documented envelope against four observed shapes is a divergence from the reference, not a quirk of this client. The parser accommodates all four because it must, and the divergence belongs in `docs/doc-defects.md` rather than living only as a comment in the parser.
+One documented envelope against four observed shapes is a divergence from the reference, not a quirk of this client. The parser accommodates all four because it must, and the divergence belongs in the local `docs/doc-defects.md` rather than living only as a comment in the parser.
 
 ## 6. Testing strategy
 
@@ -495,10 +495,10 @@ Two binaries on one machine must not share mutable state, so v2 namespaces every
 | `LICENSE`                     | MIT. v1 claims MIT in its readme but ships no LICENSE file, so the licence is not detected and the claim is unenforceable |
 | `docs/superpowers/specs/`     | This document                                                                                                             |
 | `docs/superpowers/plans/`     | Ordered build plan; its checkboxes are the project status                                                                 |
-| `docs/doc-defects.md`         | Divergences between the published API documentation and observed behaviour, with a reproduction and a status for each     |
-| `docs/v1-defects.md`          | Bugs found in the v1 CLI while porting, each naming what v2 does instead. A v1 bug is not a behaviour to preserve         |
 | `docs/reference/`             | Vendored OpenAPI bundle, hash-gated                                                                                       |
 | `CLAUDE.md`, `NOTES.local.md` | Contributor working notes. Not committed                                                                                  |
+| `docs/doc-defects.md`         | Divergences between the published API and observed behaviour. **Not committed** — it describes live-API behaviour          |
+| `docs/v1-defects.md`          | Bugs found in v1 while porting, each naming what v2 does instead. **Not committed**                                        |
 | `tests/live/`                 | Live sandbox verification. **Committed**; account values come from `FLUTE2_LIVE_*`                                        |
 | `tests/support/contracts.rs`  | The contract matrix — one row per operation and request variant, enforced by test                                         |
 | `tests/support/parity.rs`     | v1 capability-parity matrix — every v1 capability preserved, replaced, or removed with a reason                            |
@@ -511,7 +511,7 @@ There is deliberately no separate status document. Status lives in the plan's ch
 
 The published API reference is the primary source for this implementation. Where it diverges from observed behaviour, the divergence is a defect to be filed, not a quirk to be silently accommodated.
 
-The full list, with a reproduction command for each, lives in [`docs/doc-defects.md`](../../doc-defects.md).
+The full list, with a reproduction command for each, lives in `docs/doc-defects.md`, which is **not committed**. It records observed behaviour of the live API — including filters that do not filter and the shape of the duplicate-transaction guard — and this repository is public. Defect IDs (`D4`, `D11`, …) are referenced freely here and in the code; the reproductions stay local.
 
 ## 9. Build order
 

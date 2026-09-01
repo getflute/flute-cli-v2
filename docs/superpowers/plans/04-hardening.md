@@ -104,7 +104,7 @@ jobs:
           fi
 ```
 
-It fails loudly and on a schedule rather than blocking every pull request on a third-party fetch. Re-vendoring is a deliberate act: read the diff, update `docs/doc-defects.md` for anything that changed, re-record the hash, and note in the commit what moved.
+It fails loudly and on a schedule rather than blocking every pull request on a third-party fetch. Re-vendoring is a deliberate act: read the diff, update the local (uncommitted) `docs/doc-defects.md` for anything that changed, re-record the hash, and note in the commit what moved.
 
 - [ ] **Step 3: Configure cargo-dist**
 
@@ -177,7 +177,7 @@ Expected: PASS. Record totals and anything surprising in `NOTES.local.md`.
 - [ ] **Step 6: File every divergence, then commit**
 
 ```bash
-git add tests/ docs/doc-defects.md
+git add tests/
 git commit -m "ARISE-4928 test(cli): complete risk-selected live coverage"
 ```
 
