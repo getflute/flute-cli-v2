@@ -174,7 +174,7 @@ Three commands have no corresponding endpoint:
 
 ### Modes and streams
 
-Three modes — `table` (default), `json`, `quiet` — resolved flag → environment variable → config file → default. **Data goes to stdout; everything else goes to stderr**: tracing, the production banner, update notices. This holds under `--debug`, so `flute2 --debug --output json` still emits parseable JSON on stdout.
+Three modes — `table` (default), `json`, `quiet` — resolved `--output` → `FLUTE2_OUTPUT` → config file → default. The environment variable is new: v1 resolves flag → config → default, and reads `FLUTE_OUTPUT` only in the pre-parse path that decides whether a clap usage error prints as JSON, where it recognises `json` and nothing else. Putting it in the chain makes one variable mean the same thing before and after argument parsing. **Data goes to stdout; everything else goes to stderr**: tracing, the production banner, update notices. This holds under `--debug`, so `flute2 --debug --output json` still emits parseable JSON on stdout.
 
 ### Success envelope
 
@@ -206,11 +206,12 @@ Written to **stdout** under `--output json` so a machine consumer never sees an 
 | 2    | Auth — 401 / 403                                                             |
 | 3    | Validation / bad input — 400 / 422, client-side validation, CLI usage errors |
 | 4    | Not found — 404                                                              |
+| 130  | Interrupted — Ctrl-C during `pos get --wait`                                 |
 
 
-Identical to v1. v2 introduces 402, 409, and 429, which fall through the existing general-error arm rather than claiming new codes.
+Identical to v1, including 130, which v1 emits but omits from its own exit-code table — it is documented only in the prose of v1's `agents.md`. The other `pos get --wait` outcome, an expired `--wait-timeout`, prints the last-known success envelope to stdout, a warning to stderr, and exits 1 through the general arm. v2 introduces 402, 409, and 429, which fall through the existing general-error arm rather than claiming new codes.
 
-A decline exits 0, and the caller reads `transactionStatus` from the response to learn whether payment succeeded. This holds because a declined card is answered with HTTP 200 and a declined status rather than 402 — observed on the sandbox against v1 endpoints, and re-verified against v2 during the live sandbox pass before release. If v2 turns out to answer some declines with 402, the same decline would exit 1 through one path and 0 through the other, and a dedicated decline code becomes worth adding; that addition is backwards compatible, since v1 used only 0–4.
+A decline exits 0, and the caller reads `transactionStatus` from the response to learn whether payment succeeded. This holds because a declined card is answered with HTTP 200 and a declined status rather than 402 — observed on the sandbox against v1 endpoints, and re-verified against v2 during the live sandbox pass before release. If v2 turns out to answer some declines with 402, the same decline would exit 1 through one path and 0 through the other, and a dedicated decline code becomes worth adding; that addition is backwards compatible, because nothing can depend on an exit code the CLI has never emitted.
 
 ### Error parsing
 
