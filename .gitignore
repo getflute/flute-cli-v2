@@ -1,0 +1,10 @@
+/target
+CLAUDE.md
+NOTES.local.md
+.flute2-live.env
+
+# Defect logs stay local: this repository is public, and both describe
+# unpatched behaviour — one of a shipped product, one of the live API.
+# Committed documents reference their IDs; the reproductions live here.
+docs/doc-defects.md
+docs/v1-defects.md
