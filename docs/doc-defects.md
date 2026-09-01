@@ -19,7 +19,7 @@ export TOKEN=$(flute auth token)
 
 `$SPEC` is the OpenAPI bundle the documentation site renders from.
 
-Pipe responses through `jq -S` so keys sort and two payloads compare line by line. Never project fields blindly — `jq '{transactionId, status}'` renders an error envelope as a wall of nulls. Prefer `jq -S 'if has("transactionId") then {transactionId, transactionStatus} else . end'`.
+Pipe responses through `jq -S` so keys sort and two payloads compare line by line.
 
 ## Documentation defects
 
@@ -54,7 +54,7 @@ A documented filter that accepts anything and changes nothing fails silently, wh
 
 ### D13 — `CardDataDto.paymentMethodId` description is ACH text
 
-The card schema's `paymentMethodId` description is character-for-character identical to the ACH one and describes the wrong payment method: "a previously saved **ACH account** to charge", and "use `paymentMethodId` instead of **`accountNumber`**". For a card it should reference a saved card and `cardNumber`.
+The card schema's `paymentMethodId` description is character-for-character identical to the ACH one and describes the wrong payment method: "a previously saved **ACH account** to charge", and "use `paymentMethodId` instead of `**accountNumber**`". For a card it should reference a saved card and `cardNumber`.
 
 ```sh
 curl -s $SPEC | jq -r '.components.schemas.CardDataDto.properties.paymentMethodId.description'

@@ -234,7 +234,13 @@ Layer 2 is the layer v1 lacks entirely, and it is enabled by the injectable clie
 
 Layer 3 vendors the OpenAPI bundle into `docs/reference/`. A **hash gate** fails CI when the vendored spec changes, forcing a human to read the diff rather than drift silently — necessary because the API is in beta. Known divergences live in `docs/doc-defects.md` with a filed ticket each; an unlisted divergence fails the build.
 
-Layer 5 runs `#[ignore]`d by default against sandbox credentials, invoked by hand before a release rather than in CI. See [Open question 5](#q5-sandbox-credentials-in-ci).
+Layer 5 lives in `tests/live/`, which is **gitignored**. It never runs in CI and is not published. Sandbox verification is a local pass, run by hand before a release.
+
+The reason it is uncommitted rather than merely skipped: a live test has to name real account identifiers — payment processor ids, merchant id, customer ids — and this repository is public. Keeping the tests out of version control keeps sandbox account data out of it too.
+
+The tests stay `#[ignore]`d even locally, so a plain `cargo test` remains hermetic and offline; `cargo test -- --ignored` opts in. Each run needs a unique transaction amount, because the API rejects a repeated amount within a short window.
+
+The trade-off, accepted deliberately: the live tests are not reviewable, not shared with teammates, and not recoverable if the working copy is lost. The executable record of what the API accepts lives on one machine. Group-level request-shape tests (layer 2) are committed and carry no account data, so what is verifiable in CI stays verifiable.
 
 Tests are written before implementation. Every group's definition of done is mechanical: builder unit tests, a command→HTTP test, spec conformance or a filed defect, renderer golden files, a help snapshot, and a live sandbox call. `cargo test`, `cargo clippy --all-targets -- -D warnings`, and `cargo fmt --check` pass at every commit, with the command and its pass/fail totals recorded in the summary.
 
@@ -263,6 +269,7 @@ The Homebrew formula installs the same binary name as v1 and declares `conflicts
 | `docs/doc-defects.md` | Divergences between the published API documentation and observed behaviour, one filed ticket each |
 | `docs/reference/` | Vendored OpenAPI bundle, hash-gated |
 | `CLAUDE.md`, `NOTES.local.md` | Contributor working notes. Not committed |
+| `tests/live/` | Live sandbox verification. Not committed — carries real account identifiers |
 
 There is deliberately no separate status document. Status lives in the plan's checkboxes, which are updated as part of doing the work, with merged pull requests and git history as the ground truth beneath.
 
@@ -305,12 +312,6 @@ The complication is that a decline reported as HTTP 402 exits 1, while the same 
 The v2 binary is named `flute`, matching v1. Two Homebrew formulae installing the same binary name collide, expressed with `conflicts_with`, so a user runs one or the other. Naming it `flute2` would permit side-by-side installation during a transition, at the cost of a permanent name.
 
 **Needs:** confirmation that users are expected to migrate rather than run both, and whether v1's Homebrew formula is eventually replaced.
-
-### Q5: Sandbox credentials in CI
-
-Live sandbox tests are the only layer proving the API accepts the CLI's requests, which matters more than usual against a beta API whose specification has ten known defects. They currently run locally by hand before a release; CI stops at layer 4.
-
-**Needs:** a decision on whether sandbox credentials can live in repository secrets. If so, correctness is verified on every pull request rather than at release time.
 
 ### Q6: Payment processor id on every transaction
 
