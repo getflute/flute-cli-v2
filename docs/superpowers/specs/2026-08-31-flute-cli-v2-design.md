@@ -202,11 +202,20 @@ Identical to v1. v2 introduces 402, 409, and 429, which fall through the existin
 
 ### Error parsing
 
-The v2 specification defines **no schema and no description** for any 4xx or 5xx response across all 46 paths, so error handling cannot be built from the primary source. The v1 parser is carried over: it handles both casings of the platform's error envelope, combines title with details, appends the exception type, and flattens field-level validation errors into a readable string.
+The specification documents one error envelope, shared across every operation via `components.responses`. The API returns **four distinct shapes**, so the parser handles all four:
 
-v2 keys validation messages by public camelCase field paths (`baseAmount`, `transactionDetails.cardData.paymentMethodDetails.cardNumber`) rather than v1's PascalCase field names, which the existing flattening handles unchanged and renders more usefully.
+| Source | Shape |
+|---|---|
+| Downstream validation and most errors | The documented envelope, PascalCase: `StatusCode`, `Source`, `ExceptionType`, `CorrelationId`, `Errors`, `Title`, `Cause`, `Resolution` |
+| Edge model-validation | RFC 9110 ProblemDetails: `type`, `title`, `status`, `errors`, `traceId` — no correlation id |
+| Token endpoint | OpenIddict: `error`, `error_description`, `error_uri` |
+| Some 401s | Empty body; `www-authenticate` header only |
 
-**The error envelope is treated as unverified until the live sandbox pass.**
+The v1 parser is carried over and already tolerates both casings and flattens a field-error map, so it handles the first two with minor additions: read `Cause` and `Resolution` (the envelope has no `Details`-equivalent that v1 looked for), and fall back to `traceId` when `correlationId` is absent.
+
+Field-level validation messages are keyed by public camelCase field paths (`baseAmount`, `transactionDetails.cardData.paymentMethodDetails.cardNumber`), which the existing flattening renders directly.
+
+The divergences from the documented envelope are recorded in [`docs/doc-defects.md`](../../doc-defects.md) as D3a and D3b.
 
 ## 6. Testing strategy
 
@@ -259,22 +268,17 @@ There is deliberately no separate status document. Status lives in the plan's ch
 
 ## 8. Documentation defects
 
-The published API reference is the primary source for this implementation. Where it diverges from observed behaviour, the divergence is a documentation defect to be filed, not a quirk to be silently accommodated. Each entry below needs a ticket.
+The published API reference is the primary source for this implementation. Where it diverges from observed behaviour, the divergence is a defect to be filed, not a quirk to be silently accommodated.
 
-| # | Defect | Impact |
-|---|---|---|
-| 1 | `pageIndex` / `pageSize` are absent from the query parameters of **every** collection endpoint | Pagination cannot be implemented from the documentation |
-| 2 | `billingAddress` and `contactInfo` are shown as optional; both are required for a new ACH payment method, along with specific sub-fields | Runtime 400s |
-| 3 | **No schema and no description on any 4xx or 5xx response**, across all 46 paths | Error handling cannot be implemented from the documentation |
-| 4 | `transactionDetails.cardData.captureMethod` appears in every card request example but is missing from the `CardDataDto` schema | The distinction between a sale and an authorization is undiscoverable |
-| 5 | `customerId` is missing from the `CreateTransactionRequestDto` schema | The capability is invisible |
-| 6 | `transactionStatus` and `sortOrder` are missing from the `GET /v2/transactions` query parameters | Server-side filtering appears unsupported |
-| 7 | The `servers` block implies `/oauth2/token` is served from the API host; the prose specifies separate OAuth hosts | Authentication fails on a first integration attempt |
-| 8 | `merchantId` is documented as a `GET /v2/transactions` query parameter and does not appear in the service's request model | Documented parameter may not exist — needs confirmation |
-| 9 | `402` is declared on `POST /v2/payment-methods/{id}/set-default`, an operation that moves no money | Either an error or an undocumented behaviour |
-| 10 | No endpoint returns `201`; the API design conventions specify `201 Created` for `POST /customers`, `/transactions`, and `/payment-methods` | The conventions document and the published specification contradict each other |
+The full list, with a reproduction command for each, lives in [`docs/doc-defects.md`](../../doc-defects.md). Thirteen are confirmed against the sandbox API, split by where they are fixed:
 
-Defect 3 is the highest priority: it is the only one where the CLI is built blind rather than around a known gap.
+**Documentation defects** — the API behaves sensibly, the reference is wrong or silent. D2 (conditional ACH requirements), D4 (`captureMethod` missing from a schema that forbids unknown fields), D5 (`customerId` missing), D7 (`servers` block points at a host that does not serve the token endpoint), D8 (`merchantId` documented but ignored), D11 (create-transaction success documented as a paged collection), D12 (undocumented duplicate-transaction rejection), D13 and D14 (wrong and missing field descriptions).
+
+**Behaviour defects** — the reference describes the intended contract, the implementation diverges. D3a (two incompatible `400` shapes), D3b (PascalCase errors against camelCase everywhere else), D3c (internal type names in error text), D10 (nothing returns `201`).
+
+D7 is the highest priority: authentication is the first call of every integration, and a client generated from the specification cannot obtain a token at all.
+
+Three earlier findings were withdrawn as errors of analysis rather than defects — all three from reading the specification without resolving `$ref`, which it uses for 43 of 127 parameters and all 358 error responses. That is the concrete case for the spec-conformance layer in section 6: a machine that resolves references correctly does not make this mistake.
 
 ## 9. Open questions
 
@@ -287,12 +291,6 @@ The v1 CLI has ten commands across two groups — `devices` (Tap-to-Pay device r
 The alternatives are to keep them calling v1 endpoints, making the binary a mixed v1/v2 client, or to register them as commands that exit with "not available in API v2". Dropping is recommended because the ticket specifies v2 support and a mixed client hides which API version is in use.
 
 **Needs:** confirmation that no consumer depends on these ten commands, and whether v2 endpoints are planned.
-
-### Q2: Ownership of the API documentation defects
-
-Ten documentation defects are listed in section 8, including one — no error schema anywhere — that blocks writing error handling from the published documentation at all.
-
-**Needs:** the team or project that owns `developer.flute.com/api-reference/v2`, and approval to file. No tickets have been created.
 
 ### Q3: Decline signalling
 
