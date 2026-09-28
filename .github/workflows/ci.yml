@@ -41,7 +41,7 @@ jobs:
         run: cargo fmt --all --check
 
       - name: cargo clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       # **The suite must be hermetic, and this is what proves the job is not
       # quietly supplying credentials.** `cargo test` never reaches the
@@ -56,7 +56,12 @@ jobs:
           fi
 
       - name: cargo test
-        run: cargo test
+        run: cargo test --locked
+
+      # The live suite needs a sandbox account, so it is compiled here and
+      # never run: a scenario that does not build fails this job.
+      - name: Build the live suite without running it
+        run: cargo test --locked --features live --test live --no-run
 
       # The vendored bundle's hash is asserted by the suite, which can only
       # see a local edit. Drift in the *published* bundle is spec-drift.yml's
