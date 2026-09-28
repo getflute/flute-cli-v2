@@ -68,7 +68,7 @@ fn documented_command_paths() -> std::collections::BTreeSet<Vec<String>> {
     const GLOBAL_VALUES: [&str; 6] = ["json", "table", "quiet", "sandbox", "production", "prod"];
 
     let mut out = std::collections::BTreeSet::new();
-    for file in ["agents.md", "readme.md"] {
+    for file in ["agents.md", "readme.md", "docs/migrating-from-v1.md"] {
         let text = std::fs::read_to_string(file).unwrap_or_else(|_| panic!("{file}"));
         for line in text.lines() {
             let mut from = 0;
