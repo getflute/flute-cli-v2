@@ -673,8 +673,23 @@ fn an_unparseable_output_value_leaves_stdout_empty() {
     )
     .unwrap();
 
+    for value in ["nosuchmode", "JSON"] {
+        support::bin_without_credentials_in(home.path())
+            .args(["--output", value, "ping"])
+            .assert()
+            .code(3)
+            .stdout(predicate::str::is_empty())
+            .stderr(predicate::str::contains("invalid value"));
+        support::bin_without_credentials_in(home.path())
+            .args([format!("--output={value}").as_str(), "ping"])
+            .assert()
+            .code(3)
+            .stdout(predicate::str::is_empty())
+            .stderr(predicate::str::contains("invalid value"));
+    }
     support::bin_without_credentials_in(home.path())
-        .args(["--output", "nosuchmode", "ping"])
+        .env("FLUTE2_OUTPUT", "JSON")
+        .args(["ping"])
         .assert()
         .code(3)
         .stdout(predicate::str::is_empty())
