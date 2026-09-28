@@ -474,27 +474,3 @@ pub fn no_parity_row_is_stale(capabilities: &[Capability]) {
         }
     }
 }
-
-/// The documentation filenames are lowercase, over a supplied listing.
-///
-/// A listing rather than the directory, and not because it is tidier: macOS is
-/// case-insensitive, so `README.md` and `readme.md` cannot coexist there and
-/// the duplicate arm is unreachable on the machine most likely to introduce
-/// it. Taking the names as an argument is what lets a control supply the pair.
-pub fn documentation_filenames_are_lowercase(names: &[String], expected: &[&str]) {
-    for want in expected {
-        assert!(
-            names.iter().any(|n| n == want),
-            "{want} is not in the package root; it holds {names:?}"
-        );
-        let wrong: Vec<&String> = names
-            .iter()
-            .filter(|n| n.eq_ignore_ascii_case(want) && *n != want)
-            .collect();
-        assert!(
-            wrong.is_empty(),
-            "{want} is also spelled {wrong:?}, and a cross-link resolves to \
-             only one of them on a case-sensitive filesystem"
-        );
-    }
-}

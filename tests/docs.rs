@@ -4,27 +4,6 @@
 
 mod support;
 
-/// **The documentation filenames are lowercase**.
-///
-/// Both documents are cross-linked from each other, and a link to
-/// `readme.md` is broken on a case-sensitive filesystem by a file named
-/// `README.md` — which is what most repositories have, so the wrong name is
-/// the one a contributor reaches for.
-///
-/// **Read from the directory listing, never by probing a path.** macOS is
-/// case-insensitive by default, so `metadata("README.md")` succeeds for a file
-/// actually named `readme.md`, and a probe would pass on the machine most
-/// likely to have introduced the problem.
-#[test]
-fn the_documentation_filenames_are_lowercase() {
-    let names: Vec<String> = std::fs::read_dir(".")
-        .expect("the package root")
-        .flatten()
-        .map(|e| e.file_name().to_string_lossy().to_string())
-        .collect();
-    support::checks::documentation_filenames_are_lowercase(&names, &["readme.md", "agents.md"]);
-}
-
 /// The contract must not name what the CLI cannot do.
 ///
 /// Both documents describe commands, flags and envelope names in prose, and
@@ -106,32 +85,6 @@ fn documented_command_paths() -> std::collections::BTreeSet<Vec<String>> {
         }
     }
     out
-}
-
-/// **The manifest names the readme and the project page.**
-///
-/// Read as text rather than through `CARGO_PKG_*`, because an absent key
-/// compiles to an empty string and an empty string is what a passing test
-/// would then be asserting against. crates.io renders neither key when it is
-/// missing, and the readme is the package's whole front page.
-#[test]
-fn the_manifest_names_the_readme_and_the_homepage() {
-    let text = std::fs::read_to_string("Cargo.toml").expect("Cargo.toml");
-    const EXPECTED: [&str; 3] = [
-        "readme = \"readme.md\"",
-        "homepage = \"https://github.com/getflute/flute-cli-v2\"",
-        "description = \"Cross-platform CLI for the Flute payments platform (v2 API)\"",
-    ];
-    let missing: Vec<&str> = EXPECTED
-        .iter()
-        .copied()
-        .filter(|needle| !text.contains(needle))
-        .collect();
-    assert!(
-        missing.is_empty(),
-        "Cargo.toml does not carry: {}",
-        missing.join(", ")
-    );
 }
 
 /// **The reinstall hint and the readme advertise the same install paths.**

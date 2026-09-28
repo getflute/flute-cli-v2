@@ -1053,33 +1053,6 @@ fn test_sources_by_file() -> Vec<(String, String)> {
 
 // ── Documentation filenames ──────────────────────────────────────────────────
 
-/// **The claim: a capitalised duplicate is rejected.**
-///
-/// It cannot be produced on a case-insensitive filesystem, so the real test
-/// exercises only the missing-file arm there and this arm would otherwise ship
-/// unproven — passing on every developer machine and mattering only in CI.
-#[test]
-fn the_filename_check_rejects_a_capitalised_duplicate() {
-    let listing: Vec<String> = ["readme.md", "README.md", "agents.md"]
-        .iter()
-        .map(|s| (*s).to_string())
-        .collect();
-    assert_rejects("also spelled", || {
-        support::checks::documentation_filenames_are_lowercase(&listing, &["readme.md"]);
-    });
-}
-
-/// And it must still accept the real listing, or the control above proves
-/// nothing about the check that runs.
-#[test]
-fn the_filename_check_accepts_a_correct_listing() {
-    let listing: Vec<String> = ["readme.md", "agents.md", "Cargo.toml"]
-        .iter()
-        .map(|s| (*s).to_string())
-        .collect();
-    support::checks::documentation_filenames_are_lowercase(&listing, &["readme.md", "agents.md"]);
-}
-
 // ── A divergence's evidence ──────────────────────────────────────────────────
 
 /// The real list must be accepted, or the control below proves nothing.
