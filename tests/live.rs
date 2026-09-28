@@ -12,7 +12,7 @@
 //! ```sh
 //! source .flute2-live.env
 //! cargo test --features live --test live -- --ignored --test-threads=1 \
-//!     --skip attended --skip irreversible --skip needs_terminal
+//!     --skip attended --skip irreversible --skip needs_terminal --skip needs_partner
 //! ```
 //!
 //! **Set the credentials in the environment, not the keychain, for any run
@@ -35,7 +35,7 @@
 //! parallel they interfere with each other and report the interference as an
 //! API defect.
 //!
-//! **Three suffixes carry the tiers**, so the exclusions are made at the
+//! **Four suffixes carry the tiers**, so the exclusions are made at the
 //! command line rather than by a runtime gate that could quietly pass:
 //!
 //! - `_attended` — needs a person. Somebody accepts a prompt on the terminal,
@@ -45,6 +45,9 @@
 //!   `terminals list` is what says whether one is, and until it answers a row
 //!   these panic on the unset `FLUTE2_LIVE_TERMINAL_ID` rather than reporting
 //!   an API defect.
+//! - `_needs_partner` — needs partner credentials. The `api-keys` endpoints
+//!   refuse a merchant token, so on the merchant credentials the rest of the
+//!   suite uses these fail for a reason that is not the CLI's.
 //! - `_irreversible` — cannot be undone, and changes what later scenarios
 //!   see. Closing a settlement batch. Run it last or not at all.
 //!

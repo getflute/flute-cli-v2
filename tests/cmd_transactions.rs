@@ -188,7 +188,7 @@ async fn declined_transaction_exits_zero() {
         .and(path("/v2/transactions"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "transactionId": "txn_2", "transactionStatus": "Declined",
-            "responseDetails": {"reason": "DeclineBinNotFound"}
+            "declineDetails": {"message": "DeclineBinNotFound"}
         })))
         .mount(&server)
         .await;
@@ -217,6 +217,7 @@ async fn declined_transaction_exits_zero() {
         .clone();
     let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
     assert_eq!(v["data"]["transactionStatus"], "Declined");
+    assert_eq!(v["data"]["declineDetails"]["message"], "DeclineBinNotFound");
 }
 
 /// Client-side validation spends no round trip.

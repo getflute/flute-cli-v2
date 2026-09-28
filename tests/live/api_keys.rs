@@ -4,13 +4,16 @@
 //! take away the credentials the rest of the suite is authenticating with, so
 //! every scenario revokes only a key it created in the same test, and none of
 //! them touches the key in `FLUTE2_CLIENT_ID`.
+//!
+//! Every scenario carries `_needs_partner`: the `api-keys` endpoints need a
+//! partner token, and merchant credentials cannot pass them.
 
 use crate::*;
 
 /// The whole lifecycle against a key this test brought into existence.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_api_key_create_list_revoke() {
+fn live_api_key_create_list_revoke_needs_partner() {
     let created = json(&[
         "api-keys",
         "create",
@@ -58,7 +61,7 @@ fn live_api_key_create_list_revoke() {
 /// feature-flag message that every other 404 here carries.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_api_key_revoke_twice_is_still_success() {
+fn live_api_key_revoke_twice_is_still_success_needs_partner() {
     let created = json(&[
         "api-keys",
         "create",
@@ -79,7 +82,7 @@ fn live_api_key_revoke_twice_is_still_success() {
 /// The unfiltered read, which is the only variant that sends no query at all.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_api_key_list_without_a_merchant_filter() {
+fn live_api_key_list_without_a_merchant_filter_needs_partner() {
     let listed = json(&["api-keys", "list"]);
     assert_eq!(listed["object"], "api_token_list");
     assert!(listed["data"].is_array(), "{listed}");
@@ -98,6 +101,6 @@ fn live_api_key_list_without_a_merchant_filter() {
 /// account has it off, and asserts the ordinary case in the meantime.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_api_key_list_on_an_enabled_account_is_not_a_404() {
+fn live_api_key_list_on_an_enabled_account_is_not_a_404_needs_partner() {
     live_bin().args(["api-keys", "list"]).assert().success();
 }

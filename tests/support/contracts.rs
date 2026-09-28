@@ -2295,7 +2295,7 @@ pub static CONTRACTS: &[Contract] = &[
                     "clientId": "aa98aa89-07ae-4a23-b441-48725f0386e6",
                     "clientSecret": "1f80d6e1-9901-48b6-a862-6cfad1612e99"}))),
             },
-            live: Live::Test("live_api_key_create_list_revoke"),
+            live: Live::Test("live_api_key_create_list_revoke_needs_partner"),
         }],
     },
     Contract {
@@ -2316,7 +2316,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "merchantId": "8db2ff47-b143-4adb-ab58-a11111111111",
                             "apiKeyName": "Production API Key"}]}))),
                 },
-                live: Live::Test("live_api_key_list_without_a_merchant_filter"),
+                live: Live::Test("live_api_key_list_without_a_merchant_filter_needs_partner"),
             },
             Variant {
                 name: "for one merchant",
@@ -2334,7 +2334,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "merchantId": "8db2ff47-b143-4adb-ab58-a11111111111",
                             "apiKeyName": "Production API Key"}]}))),
                 },
-                live: Live::Test("live_api_key_create_list_revoke"),
+                live: Live::Test("live_api_key_create_list_revoke_needs_partner"),
             },
         ],
     },
@@ -2360,7 +2360,7 @@ pub static CONTRACTS: &[Contract] = &[
                     body: None,
                 },
             },
-            live: Live::Test("live_api_key_revoke_twice_is_still_success"),
+            live: Live::Test("live_api_key_revoke_twice_is_still_success_needs_partner"),
         }],
     },
     Contract {
