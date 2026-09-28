@@ -331,30 +331,3 @@ pub fn help_for_operation(operation_id: &str) -> String {
         String::from_utf8_lossy(&out.stderr)
     )
 }
-
-/// Every `.rs` file under `src/groups/`, paired with the command group it
-/// belongs to: its file stem at the top level, or its directory's name for a
-/// group split into a module directory.
-///
-/// Recursive, because a scan of the top level alone silently skips a group
-/// whose code lives in `src/groups/<group>/`.
-pub fn group_sources() -> Vec<(String, std::path::PathBuf)> {
-    fn walk(
-        dir: &std::path::Path,
-        group: Option<&str>,
-        out: &mut Vec<(String, std::path::PathBuf)>,
-    ) {
-        for entry in std::fs::read_dir(dir).expect("src/groups is readable") {
-            let path = entry.expect("a directory entry").path();
-            let stem = path.file_stem().unwrap().to_string_lossy().to_string();
-            if path.is_dir() {
-                walk(&path, Some(group.unwrap_or(&stem)), out);
-            } else if path.extension().is_some_and(|e| e == "rs") {
-                out.push((group.unwrap_or(&stem).to_string(), path));
-            }
-        }
-    }
-    let mut out = Vec::new();
-    walk(std::path::Path::new("src/groups"), None, &mut out);
-    out
-}

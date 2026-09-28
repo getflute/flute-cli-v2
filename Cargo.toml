@@ -24,6 +24,16 @@ path = "src/main.rs"
 name = "flute_cli2"
 path = "src/lib.rs"
 
+# The live sandbox suite sends real traffic, so it is compiled only under the
+# `live` feature and a plain `cargo test` cannot build it.
+[features]
+live = []
+
+[[test]]
+name = "live"
+path = "tests/live.rs"
+required-features = ["live"]
+
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"

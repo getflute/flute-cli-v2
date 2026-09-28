@@ -5,12 +5,13 @@
 //! live on one machine. Account-specific values come from `FLUTE2_LIVE_*`;
 //! only the file supplying them is ignored.
 //!
-//! Every test here is `#[ignore]`d, so a plain `cargo test` stays hermetic and
-//! offline. Opt in with:
+//! This crate builds only under the `live` feature, so a plain `cargo test`
+//! stays hermetic and offline, and every test here is `#[ignore]`d as well.
+//! Opt in with:
 //!
 //! ```sh
 //! source .flute2-live.env
-//! cargo test --test live -- --ignored --test-threads=1 \
+//! cargo test --features live --test live -- --ignored --test-threads=1 \
 //!     --skip attended --skip irreversible --skip needs_terminal
 //! ```
 //!
@@ -57,7 +58,7 @@
 //! removes it again. Run the full set only with somebody at the terminal:
 //!
 //! ```sh
-//! cargo test --test live -- --ignored --test-threads=1
+//! cargo test --features live --test live -- --ignored --test-threads=1
 //! ```
 //!
 //! The helpers live in this crate root rather than in `tests/live/mod.rs`,

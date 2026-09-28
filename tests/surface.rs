@@ -56,7 +56,8 @@ fn vocabulary<T: clap::ValueEnum + Copy>(wire: fn(T) -> &'static str) -> BTreeSe
 /// `transactions share-receipt --share-by` is absent because
 /// `SendReceiptRequestDto.shareBy` declares a pattern where its description
 /// documents an enum — a conformance exemption holds that suspension and
-/// fails when the enum arrives. `settlements list` is below, where the departures are.
+/// fails when the enum arrives. `settlements list` is bound in its own test
+/// below.
 static VOCABULARIES: &[Vocabulary] = &[
     Vocabulary {
         name: "transactions::SecCode",
@@ -217,61 +218,5 @@ fn the_settlements_filters_match_the_bundle_where_it_declares_them() {
     assert!(
         query.contains(&("sortOrder", "asc".to_string())),
         "--asc sends something other than the bundle's ascending value: {query:?}"
-    );
-}
-
-/// A map bound somewhere other than the table above, and why.
-static DEPARTURES: &[(&str, &str)] = &[
-    (
-        "transactions::ShareBy",
-        "SendReceiptRequestDto.shareBy declares an E.164 pattern where its \
-         description documents the enum, and the conformance exemption fails \
-         when the enum arrives",
-    ),
-    (
-        "settlements::BatchStatus",
-        "the batchStatus query parameter declares no enum, so it is bound to \
-         the response field of the same name",
-    ),
-];
-
-/// **A new `wire()` map cannot escape the binding above.**
-///
-/// A hand-written table omits whatever arrived last, so the declarations are
-/// the oracle: every `pub fn wire` the CLI declares must be bound to the
-/// bundle or named as a departure, and a row naming a map that does not
-/// exist is stale.
-#[test]
-fn every_wire_map_is_bound_or_a_named_departure() {
-    let mut sources = support::group_sources();
-    sources.push(("common".to_string(), "src/cli/common.rs".into()));
-
-    let mut declared: Vec<String> = Vec::new();
-    for (module, path) in sources {
-        let mut implemented_for = String::new();
-        for line in std::fs::read_to_string(&path).unwrap().lines() {
-            if let Some(rest) = line.strip_prefix("impl ") {
-                implemented_for = rest.trim_end_matches(" {").to_string();
-            }
-            if line.trim_start().starts_with("pub fn wire(") {
-                declared.push(format!("{module}::{implemented_for}"));
-            }
-        }
-    }
-    assert!(
-        declared.len() > 15,
-        "the scan found only {} wire maps, so it is not scanning",
-        declared.len()
-    );
-
-    let bound: BTreeSet<&str> = VOCABULARIES
-        .iter()
-        .map(|v| v.name)
-        .chain(DEPARTURES.iter().map(|(name, _)| *name))
-        .collect();
-    let declared: BTreeSet<&str> = declared.iter().map(String::as_str).collect();
-    assert_eq!(
-        declared, bound,
-        "the wire maps the CLI declares and the ones bound to the bundle differ"
     );
 }

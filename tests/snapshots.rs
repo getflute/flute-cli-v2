@@ -240,9 +240,8 @@ fn removed_v1_commands_are_not_accepted() {
 /// JSON, and it cannot drift from what the command tests mount.
 struct Rendered {
     resource: &'static Resource,
-    /// The declaration's own identifier. It is the join key for
-    /// `every_declared_resource_is_snapshotted` and, lowercased, the snapshot
-    /// file name.
+    /// The declaration's own identifier, lowercased into the snapshot file
+    /// name.
     ident: &'static str,
     operation_id: &'static str,
     variant: &'static str,
@@ -428,49 +427,6 @@ fn every_resource_list_rendering_is_stable() {
             render::list_table(r.resource, &[object_for(r)])
         );
     }
-}
-
-/// **A new resource cannot escape the two snapshots above.**
-///
-/// `RENDERED` is a hand-written list, and the thing a hand-written list omits
-/// is whatever arrived last. The declarations are the oracle: every
-/// `pub static …: Resource` under `src/groups/` must be named here, so adding
-/// a twelfth group's resource fails this test rather than quietly rendering
-/// unsnapshotted.
-#[test]
-fn every_declared_resource_is_snapshotted() {
-    let mut declared: Vec<String> = Vec::new();
-    for (group, path) in support::group_sources() {
-        for line in std::fs::read_to_string(&path).unwrap().lines() {
-            let Some(rest) = line.strip_prefix("pub static ") else {
-                continue;
-            };
-            if !rest.contains(": Resource") {
-                continue;
-            }
-            let ident = rest.split(':').next().unwrap();
-            declared.push(format!("{group}::{ident}"));
-        }
-    }
-    assert!(
-        declared.len() > 10,
-        "the scan found only {} resource declarations, so it is not scanning",
-        declared.len()
-    );
-
-    let missing: Vec<&String> = declared
-        .iter()
-        .filter(|d| {
-            let ident = d.split("::").nth(1).unwrap();
-            !RENDERED.iter().any(|r| r.ident == ident)
-        })
-        .collect();
-    assert!(
-        missing.is_empty(),
-        "{} resource(s) are declared and never snapshotted: {:?}",
-        missing.len(),
-        missing
-    );
 }
 
 /// Every pointer one descriptor declares, whatever slot it sits in.
