@@ -73,8 +73,6 @@ Options:
 
       --requester-ip <REQUESTER_IP>
           End-customer IP address. Default `127.0.0.1`. Required for ACH
-          
-          [default: 127.0.0.1]
 
       --same-day
           Request same-day settlement

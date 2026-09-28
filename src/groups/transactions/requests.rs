@@ -160,11 +160,18 @@ pub fn build_share_receipt_body(args: &ShareReceiptArgs) -> Result<Value> {
 }
 
 /// Build the calculate-amount body. No field is required by schema, but an
-/// amount to calculate on is the point of the call.
+/// amount to calculate on is the point of the call. The tip and discount
+/// rules are `create`'s.
 pub fn build_calculate_amount_body(args: &CalculateAmountArgs) -> Result<Value> {
     if args.base_amount <= Decimal::ZERO {
         anyhow::bail!("--amount must be greater than zero");
     }
+    validate_extra_amounts(
+        args.tip_amount,
+        args.tip_rate,
+        args.discount_amount,
+        args.discount_rate,
+    )?;
     let mut body = Map::new();
     body.insert("baseAmount".into(), to_amount_number(args.base_amount)?);
     if let Some(code) = args.currency_code.as_ref().filter(|s| !s.is_empty()) {

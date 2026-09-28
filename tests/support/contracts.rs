@@ -1123,9 +1123,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "currencyCode": "USD",
                         "pricingType": "Card",
                         "tipAmount": amount("15.00"),
-                        "tipRate": amount("0.1500"),
                         "discountAmount": amount("5.00"),
-                        "discountRate": amount("0.0500"),
                         "surchargeRate": amount("0.0300")})),
                     ..req("POST", "/v2/transactions/calculate-amount")
                 },

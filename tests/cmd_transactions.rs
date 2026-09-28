@@ -1470,12 +1470,8 @@ async fn transaction_calculate_amount_exchange_matches_the_contract() {
             "card",
             "--tip-amount",
             "15.00",
-            "--tip-rate",
-            "0.1500",
             "--discount-amount",
             "5.00",
-            "--discount-rate",
-            "0.0500",
             "--surcharge-rate",
             "0.0300",
         ])

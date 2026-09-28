@@ -372,9 +372,41 @@ fn both_ach_routes_require_a_sec_code_and_a_requester_ip() {
         assert!(validate_create_transaction(&no_sec).is_err());
 
         let mut no_ip = clone_args(&base);
-        no_ip.instrument.requester_ip_address = None;
+        no_ip.instrument.requester_ip_address = Some(String::new());
         assert!(validate_create_transaction(&no_ip).is_err());
     }
+}
+
+/// A card sends none of the ACH-only fields, so naming one is refused rather
+/// than dropped.
+#[test]
+fn a_card_refuses_the_ach_only_flags() {
+    for (flag, set) in [
+        (
+            "--sec-code",
+            (|a: &mut InstrumentArgs| a.sec_code = Some(SecCode::Web)) as fn(&mut InstrumentArgs),
+        ),
+        ("--requester-ip", |a| {
+            a.requester_ip_address = Some("203.0.113.10".into())
+        }),
+        ("--same-day", |a| a.is_same_day_processing = true),
+        ("--ach-tax-id", |a| a.ach_tax_id = Some("123456789".into())),
+    ] {
+        for mut args in [valid_args(), saved_card_args()] {
+            set(&mut args.instrument);
+            let err = chosen_instrument(&args.instrument).unwrap_err().to_string();
+            assert!(err.contains(flag), "{flag}: {err}");
+        }
+    }
+}
+
+/// A tax id belongs to new account details, which a saved ACH id has none of.
+#[test]
+fn a_saved_ach_refuses_a_tax_id() {
+    let mut args = saved_ach_args();
+    args.instrument.ach_tax_id = Some("123456789".into());
+    let err = chosen_instrument(&args.instrument).unwrap_err().to_string();
+    assert!(err.contains("--ach-tax-id"), "{err}");
 }
 
 /// A card charge needs neither, so the ACH rules are genuinely scoped.
@@ -611,7 +643,7 @@ fn a_new_ach_transaction_requires_a_contact_email() {
 fn a_new_ach_charge_names_every_missing_requirement_at_once() {
     let mut args = new_ach_args();
     args.instrument.sec_code = None;
-    args.instrument.requester_ip_address = None;
+    args.instrument.requester_ip_address = Some(String::new());
     args.billing = BillingArgs::default();
     args.contact = ContactArgs::default();
     let err = validate_create_transaction(&args).unwrap_err().to_string();

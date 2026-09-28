@@ -370,11 +370,7 @@ pub struct InstrumentArgs {
     #[arg(long, value_enum)]
     pub sec_code: Option<SecCode>,
     /// End-customer IP address. Default `127.0.0.1`. Required for ACH.
-    #[arg(
-        long = "requester-ip",
-        value_name = "REQUESTER_IP",
-        default_value = "127.0.0.1"
-    )]
+    #[arg(long = "requester-ip", value_name = "REQUESTER_IP")]
     pub requester_ip_address: Option<String>,
     /// Request same-day settlement.
     #[arg(long = "same-day")]

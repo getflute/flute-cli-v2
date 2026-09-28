@@ -12,6 +12,11 @@ use anyhow::Result;
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
 
+/// The `requesterIpAddress` an ACH instrument sends when `--requester-ip` is
+/// not given. It is applied here rather than as a clap default so a card can
+/// tell an explicit `--requester-ip` from none.
+const DEFAULT_REQUESTER_IP: &str = "127.0.0.1";
+
 /// Which of the four instrument shapes the flags describe.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Chosen {
@@ -71,6 +76,9 @@ pub fn chosen_instrument(args: &InstrumentArgs) -> Result<Chosen> {
             ),
         }
     }
+    if let [only] = chosen[..] {
+        refuse_fields_the_instrument_drops(args, only)?;
+    }
     match chosen.len() {
         1 => Ok(chosen[0]),
         0 => anyhow::bail!(
@@ -82,6 +90,77 @@ pub fn chosen_instrument(args: &InstrumentArgs) -> Result<Chosen> {
             chosen.len()
         ),
     }
+}
+
+/// Refuse a flag the chosen instrument has no field for, which would
+/// otherwise be dropped from the request: `secCode`, `requesterIpAddress` and
+/// `isSameDayProcessing` live on `achData`, and `taxId` on a new account's
+/// details.
+fn refuse_fields_the_instrument_drops(args: &InstrumentArgs, chosen: Chosen) -> Result<()> {
+    let mut dropped = Vec::new();
+    if !chosen.is_ach() {
+        if args.sec_code.is_some() {
+            dropped.push("--sec-code");
+        }
+        if args.requester_ip_address.is_some() {
+            dropped.push("--requester-ip");
+        }
+        if args.is_same_day_processing {
+            dropped.push("--same-day");
+        }
+    }
+    if chosen != Chosen::NewAch && args.ach_tax_id.is_some() {
+        dropped.push("--ach-tax-id");
+    }
+    if dropped.is_empty() {
+        return Ok(());
+    }
+    let only = if chosen.is_ach() {
+        "a new bank account (the --ach-* account flags)"
+    } else {
+        "an ACH instrument"
+    };
+    anyhow::bail!("{} applies to {only} only", dropped.join(", "))
+}
+
+/// The amount-or-rate exclusions and the declared minimums shared by
+/// `transactions create` and `transactions calculate-amount`. A non-zero
+/// value cannot go to both halves of a pair.
+pub(super) fn validate_extra_amounts(
+    tip_amount: Option<Decimal>,
+    tip_rate: Option<Decimal>,
+    discount_amount: Option<Decimal>,
+    discount_rate: Option<Decimal>,
+) -> Result<()> {
+    let non_zero = |v: Option<Decimal>| v.is_some_and(|d| !d.is_zero());
+    for (amount, rate, both) in [
+        (
+            "--tip-amount",
+            "--tip-rate",
+            non_zero(tip_amount) && non_zero(tip_rate),
+        ),
+        (
+            "--discount-amount",
+            "--discount-rate",
+            non_zero(discount_amount) && non_zero(discount_rate),
+        ),
+    ] {
+        if both {
+            anyhow::bail!("pass {amount} or {rate}, not both: they set the same value");
+        }
+    }
+    let min = Decimal::new(1, 2);
+    for (flag, value) in [
+        ("--tip-amount", tip_amount),
+        ("--discount-amount", discount_amount),
+    ] {
+        if let Some(v) = value {
+            if v < min {
+                anyhow::bail!("{flag} must be at least 0.01 (got {v})");
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Mirror the server's documented rules before spending a round trip.
@@ -121,23 +200,12 @@ pub fn validate_create_transaction(args: &CreateTransactionArgs) -> Result<Chose
             );
         }
     }
-    // The API refuses a charge that carries both halves of either pair.
-    for (amount, rate, both) in [
-        (
-            "--tip-amount",
-            "--tip-rate",
-            args.tip_amount.is_some() && args.tip_rate.is_some(),
-        ),
-        (
-            "--discount-amount",
-            "--discount-rate",
-            args.discount_amount.is_some() && args.discount_rate.is_some(),
-        ),
-    ] {
-        if both {
-            anyhow::bail!("pass {amount} or {rate}, not both: they set the same value");
-        }
-    }
+    validate_extra_amounts(
+        args.tip_amount,
+        args.tip_rate,
+        args.discount_amount,
+        args.discount_rate,
+    )?;
     validate_declared_bounds(args)?;
     Ok(chosen)
 }
@@ -165,7 +233,7 @@ pub(super) fn refuse_missing_ach_requirements(
     if instrument.sec_code.is_none() {
         missing.push("--sec-code");
     }
-    if !filled(&instrument.requester_ip_address) {
+    if instrument.requester_ip_address.as_deref() == Some("") {
         missing.push("--requester-ip");
     }
     if chosen == Chosen::NewAch {
@@ -194,16 +262,6 @@ pub(super) fn refuse_missing_ach_requirements(
 /// Bounds the schemas declare, refused here rather than spent on a 400.
 fn validate_declared_bounds(args: &CreateTransactionArgs) -> Result<()> {
     let min = Decimal::new(1, 2);
-    for (flag, value) in [
-        ("--tip-amount", args.tip_amount),
-        ("--discount-amount", args.discount_amount),
-    ] {
-        if let Some(v) = value {
-            if v < min {
-                anyhow::bail!("{flag} must be at least 0.01 (got {v})");
-            }
-        }
-    }
     if let Some(rate) = args.sales_tax_rate {
         if rate < min || rate > Decimal::from(100) {
             anyhow::bail!("--l2-tax-rate must be between 0.01 and 100 (got {rate})");
@@ -309,8 +367,12 @@ fn instrument_details(
             if let Some(sec) = args.sec_code {
                 inner.insert("secCode".into(), serde_json::json!(sec));
             }
-            if let Some(ip) = args.requester_ip_address.as_ref().filter(|s| !s.is_empty()) {
-                inner.insert("requesterIpAddress".into(), Value::String(ip.clone()));
+            let ip = args
+                .requester_ip_address
+                .as_deref()
+                .unwrap_or(DEFAULT_REQUESTER_IP);
+            if !ip.is_empty() {
+                inner.insert("requesterIpAddress".into(), Value::String(ip.into()));
             }
             if args.is_same_day_processing {
                 inner.insert("isSameDayProcessing".into(), Value::Bool(true));

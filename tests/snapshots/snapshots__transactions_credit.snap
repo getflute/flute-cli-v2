@@ -40,7 +40,7 @@ Options:
       --sec-code <SEC_CODE>
           ACH SEC code: `web`, `ppd` or `ccd`. Required for ACH [possible values: web, ppd, ccd]
       --requester-ip <REQUESTER_IP>
-          End-customer IP address. Default `127.0.0.1`. Required for ACH [default: 127.0.0.1]
+          End-customer IP address. Default `127.0.0.1`. Required for ACH
       --same-day
           Request same-day settlement
       --contact-first-name <FIRST_NAME>

@@ -235,27 +235,82 @@ fn calculate_amount_sends_the_amount_and_omits_every_absent_option() {
 
 #[test]
 fn calculate_amount_carries_every_option_under_its_wire_name() {
-    let args = CalculateAmountArgs {
+    let amounts = CalculateAmountArgs {
         base_amount: "100.00".parse().unwrap(),
         currency_code: Some("USD".into()),
         pricing_type: Some(PricingType::Card),
         tip_amount: Some("15.00".parse().unwrap()),
-        tip_rate: Some("0.1500".parse().unwrap()),
         discount_amount: Some("5.00".parse().unwrap()),
-        discount_rate: Some("0.0500".parse().unwrap()),
         surcharge_rate: Some("0.0300".parse().unwrap()),
+        ..Default::default()
     };
-    let body = build_calculate_amount_body(&args).unwrap();
+    let body = build_calculate_amount_body(&amounts).unwrap();
     assert_eq!(body["currencyCode"], "USD");
     assert_eq!(body["pricingType"], "Card");
-    for key in [
-        "tipAmount",
-        "tipRate",
-        "discountAmount",
-        "discountRate",
-        "surchargeRate",
-    ] {
+    for key in ["tipAmount", "discountAmount", "surchargeRate"] {
         assert!(body.get(key).is_some(), "{key} missing");
+    }
+
+    let rates = CalculateAmountArgs {
+        base_amount: "100.00".parse().unwrap(),
+        tip_rate: Some("0.1500".parse().unwrap()),
+        discount_rate: Some("0.0500".parse().unwrap()),
+        ..Default::default()
+    };
+    let body = build_calculate_amount_body(&rates).unwrap();
+    for key in ["tipRate", "discountRate"] {
+        assert!(body.get(key).is_some(), "{key} missing");
+    }
+}
+
+/// The amount-or-rate exclusions and the declared minimums are `create`'s.
+#[test]
+fn calculate_amount_refuses_a_non_zero_amount_and_rate_pair() {
+    let base = || CalculateAmountArgs {
+        base_amount: "100.00".parse().unwrap(),
+        ..Default::default()
+    };
+    let mut tip = base();
+    tip.tip_amount = Some("5.00".parse().unwrap());
+    tip.tip_rate = Some("10".parse().unwrap());
+    let err = build_calculate_amount_body(&tip).unwrap_err().to_string();
+    assert!(err.contains("--tip-amount or --tip-rate"), "{err}");
+
+    let mut discount = base();
+    discount.discount_amount = Some("5.00".parse().unwrap());
+    discount.discount_rate = Some("10".parse().unwrap());
+    let err = build_calculate_amount_body(&discount)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("--discount-amount or --discount-rate"),
+        "{err}"
+    );
+
+    // A zero rate beside an amount is not a non-zero pair.
+    let mut zero_rate = base();
+    zero_rate.tip_amount = Some("5.00".parse().unwrap());
+    zero_rate.tip_rate = Some(Decimal::ZERO);
+    assert!(build_calculate_amount_body(&zero_rate).is_ok());
+}
+
+#[test]
+fn calculate_amount_refuses_an_amount_below_the_declared_minimum() {
+    for (tip, discount, flag) in [
+        (Some(Decimal::ZERO), None, "--tip-amount"),
+        (None, Some(Decimal::ZERO), "--discount-amount"),
+    ] {
+        let args = CalculateAmountArgs {
+            base_amount: "100.00".parse().unwrap(),
+            tip_amount: tip,
+            discount_amount: discount,
+            ..Default::default()
+        };
+        let err = build_calculate_amount_body(&args).unwrap_err().to_string();
+        assert!(
+            err.contains(&format!("{flag} must be at least 0.01")),
+            "{err}"
+        );
     }
 }
 
@@ -445,6 +500,7 @@ fn a_new_ach_credit_names_every_missing_requirement_at_once() {
         ach_routing_number: Some("021000021".into()),
         ach_account_type: Some(AccountType::Checking),
         ach_account_holder_type: Some(AccountHolderType::Personal),
+        requester_ip_address: Some(String::new()),
         ..Default::default()
     };
     let err = build_credit_body(&args).unwrap_err().to_string();

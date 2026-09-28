@@ -414,7 +414,9 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   `--ach-account-type`, `--ach-account-holder-type`), or a saved one
   (`--payment-method-id` with `--instrument ach`). `--instrument` is required
   alongside a stored id, because nothing in the id says which container it
-  belongs in.
+  belongs in. `--sec-code`, `--requester-ip` and `--same-day` with a card, and
+  `--ach-tax-id` with anything but a new bank account, are refused rather than
+  dropped. `credit` takes the same instrument flags under the same rules.
 - **`--capture-method manual` creates an authorization** to capture later;
   `auto`, the default, charges immediately. It applies to a card only: on an
   ACH instrument, new or saved, `manual` is refused before the wire.
@@ -440,9 +442,10 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   not by naming nothing. `tip-adjust`'s `--tip-amount` and `--tip-rate` carry
   the same floor — zero moves no tip, so either is refused before the wire.
 - **A tip or a discount is an amount or a rate, not both.** `transactions
-  create` refuses `--tip-amount` with `--tip-rate`, and `--discount-amount`
-  with `--discount-rate`; `pos create` and `tip-adjust` refuse the tip pair.
-  The API rejects a charge that carries both.
+  create` and `calculate-amount` refuse a non-zero `--tip-amount` with a
+  non-zero `--tip-rate`, and likewise for `--discount-amount` and
+  `--discount-rate`; `pos create` and `tip-adjust` refuse the tip pair. The
+  API rejects a charge that carries both.
 - **The ACH actions answer with a `referenceId` the API assigned.** `ach-hold`,
   `ach-release` and a `reversal` of an ACH transaction each replace the
   merchant reference the transaction was created with, so
