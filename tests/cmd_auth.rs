@@ -229,8 +229,7 @@ fn logout_without_a_keychain_refuses_rather_than_reporting_removal() {
 
 /// `auth login` prompts for a secret through `rpassword`, so the prompt itself
 /// cannot be driven by `assert_cmd`. What *is* checkable is that the command
-/// exists and says where the secret goes — which is the parity evidence for
-/// the capability. Its storage path is covered by the
+/// exists and says where the secret goes. Its storage path is covered by the
 /// keychain unit tests and its round trip by the live pass.
 #[test]
 fn login_is_reachable_and_documents_where_the_secret_goes() {

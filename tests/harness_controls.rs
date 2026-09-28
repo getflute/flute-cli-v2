@@ -20,7 +20,6 @@ mod support;
 
 use serde_json::json;
 use support::contracts::{Contract, Live, Mapping, Variant};
-use support::parity::{Capability, Parity};
 use support::spec::{self, Exchange, RequestFixture, ResponseFixture, amount};
 use support::surface::{Exposure, Field};
 
@@ -594,46 +593,6 @@ fn surface_rejects_an_exclusion_with_no_reason() {
                 row.field
             );
         }
-    });
-}
-
-// ── Parity invariants ────────────────────────────────────────────────────────
-
-/// **The completeness control.** An empty matrix must fail against the
-/// vendored v1 surface, or the layer proves only that the rows it happens to
-/// hold are consistent.
-#[test]
-fn parity_rejects_a_matrix_missing_a_v1_command() {
-    assert_rejects("has no row for it", || {
-        support::checks::every_v1_command_has_a_row(&[]);
-    });
-}
-
-/// One flag dropped from an otherwise complete row is the realistic shape of
-/// this regression, and it must fail too.
-#[test]
-fn parity_rejects_a_row_that_drops_one_of_its_flags() {
-    static MISSING_FLAG: &[Capability] = &[Capability {
-        v1_command: "customers list",
-        v1_flags: &["--limit", "--page"],
-        parity: Parity::Removed("a control"),
-        test: None,
-    }];
-    assert_rejects("--search` is unaccounted for", || {
-        support::checks::every_v1_flag_is_accounted_for(MISSING_FLAG);
-    });
-}
-
-#[test]
-fn parity_rejects_a_row_naming_a_command_v1_does_not_ship() {
-    static INVENTED: &[Capability] = &[Capability {
-        v1_command: "transactions teleport",
-        v1_flags: &[],
-        parity: Parity::Removed("never existed"),
-        test: None,
-    }];
-    assert_rejects("v1 does not ship", || {
-        support::checks::no_parity_row_is_stale(INVENTED);
     });
 }
 

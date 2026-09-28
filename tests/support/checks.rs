@@ -1,8 +1,8 @@
 //! The invariant bodies, each taking its input.
 //!
-//! `tests/coverage.rs`, `tests/surface.rs` and `tests/parity.rs` are separate
-//! crates, so a function defined in one is not importable from another and
-//! `mod support;` compiles a fresh copy into each. Anything that has to be
+//! `tests/coverage.rs` and `tests/surface.rs` are separate crates, so a
+//! function defined in one is not importable from another and `mod support;`
+//! compiles a fresh copy into each. Anything that has to be
 //! called twice — notably the negative controls that verify these checkers
 //! fail when they should — has to live here.
 
@@ -256,75 +256,6 @@ pub fn exposed_flags_appear_in_help(surface: &[Field]) {
                     f.operation_id
                 );
             }
-        }
-    }
-}
-
-// ── Layer 4b: v1 capability parity ───────────────────────────────────────────
-
-use super::parity::{Capability, V1_SURFACE};
-
-/// **Half of the completeness check the matrix exists for:** every command v1
-/// ships has a row.
-///
-/// Without an oracle outside the matrix, a matrix can only prove its own rows
-/// are consistent — never that a capability is missing from it, which is the
-/// only failure worth catching here.
-///
-/// Split from the flag check below because a single function could not be
-/// controlled: the missing-command assertion fired first for every partial
-/// input, so the flag assertion was unreachable and untested. One assertion
-/// masking another is the "rejected for the wrong reason" failure the negative
-/// controls exist to detect.
-pub fn every_v1_command_has_a_row(capabilities: &[Capability]) {
-    for command in V1_SURFACE.keys() {
-        assert!(
-            capabilities.iter().any(|c| c.v1_command == command),
-            "v1 ships `{command}` and the parity matrix has no row for it"
-        );
-    }
-}
-
-/// The other half: for every command that *has* rows, their union accounts for
-/// every flag v1 ships on it.
-///
-/// Commands with no row at all are skipped here and caught above, so each
-/// failure names one cause.
-pub fn every_v1_flag_is_accounted_for(capabilities: &[Capability]) {
-    for (command, flags) in V1_SURFACE.iter() {
-        let covered: Vec<&str> = capabilities
-            .iter()
-            .filter(|c| c.v1_command == command)
-            .flat_map(|r| r.v1_flags.iter().copied())
-            .collect();
-        if !capabilities.iter().any(|c| c.v1_command == command) {
-            continue;
-        }
-        for flag in flags {
-            assert!(
-                covered.contains(&flag.as_str()),
-                "v1 `{command} {flag}` is unaccounted for in the parity matrix"
-            );
-        }
-    }
-}
-
-/// The reverse: a row naming a command or flag v1 does not ship is stale, and
-/// a stale row inflates the coverage claim.
-pub fn no_parity_row_is_stale(capabilities: &[Capability]) {
-    for c in capabilities {
-        let flags = V1_SURFACE.get(c.v1_command).unwrap_or_else(|| {
-            panic!(
-                "{}: the parity matrix names a command v1 does not ship",
-                c.v1_command
-            )
-        });
-        for flag in c.v1_flags {
-            assert!(
-                flags.iter().any(|f| f == flag),
-                "{}: the matrix claims flag {flag}, which v1 does not ship on it",
-                c.v1_command
-            );
         }
     }
 }

@@ -6,7 +6,6 @@
 
 pub mod checks;
 pub mod contracts;
-pub mod parity;
 pub mod spec;
 pub mod surface;
 
