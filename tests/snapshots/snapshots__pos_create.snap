@@ -64,7 +64,7 @@ Options:
           Long-poll for terminal acceptance, then poll GET /v2/pos/transactions/{posTransactionId} every 2 seconds until the transaction leaves `InProgress` or the timeout expires
 
       --wait-timeout <WAIT_TIMEOUT>
-          Seconds to wait before giving up the poll (default 120, at most 86400). Requires `--wait`
+          Seconds to wait for the create and the poll together before giving up (default 120, at most 86400). Requires `--wait`
           
           [default: 120]
 

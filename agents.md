@@ -566,10 +566,11 @@ flute2 pos print-receipt [OPTIONS] --terminal-id <TERMINAL_ID> <POS_TRANSACTION_
   has acknowledged anything. The poll ends on any `posTransactionStatus` other
   than `InProgress`. `--wait-timeout` defaults to 120 seconds and accepts 0 to
   86400; anything outside that range is a usage error, exit 3, and it requires
-  `--wait`. The budget bounds the poll itself, not just the gaps between polls:
-  it expires while the API is holding a response open, and `0` therefore waits
-  no time at all. The budget, plus a short margin, bounds the create request
-  too, which the API holds open until the terminal accepts. A create that
+  `--wait`. One budget bounds the create and the poll together: it starts
+  before the create, the create request is bounded by the budget plus a short
+  margin, and the poll gets whatever the create left. It bounds the poll
+  itself, not just the gaps between polls: it expires while the API is holding
+  a response open, and `0` therefore waits no time at all. A create that
   outlasts it is a `transport` failure after which the transaction may exist,
   so reconcile with `pos list` before creating another.
 - **Ctrl-C during the create request** exits 130 with stdout empty in every

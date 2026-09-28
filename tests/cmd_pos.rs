@@ -1280,3 +1280,62 @@ async fn pos_create_interrupted_during_the_create_exits_130_with_stdout_empty() 
         );
     }
 }
+
+/// **One `--wait-timeout` budget covers the create and the poll together.**
+/// A create the terminal holds for most of the budget leaves the poll only
+/// what remains, so the wait ends near the budget rather than near the create
+/// time plus a whole second budget.
+#[tokio::test]
+async fn pos_create_wait_spends_one_budget_across_the_create_and_the_poll() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/pos/transactions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(in_progress())
+                .set_delay(std::time::Duration::from_secs(3)),
+        )
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/pos/transactions/{POS_TXN}")))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(completed())
+                .set_delay(std::time::Duration::from_secs(30)),
+        )
+        .mount(&server)
+        .await;
+
+    let started = std::time::Instant::now();
+    let out = support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "pos",
+            "create",
+            "--terminal-id",
+            TERMINAL,
+            "--pos-device-id",
+            DEVICE,
+            "--amount",
+            "42.75",
+            "--currency-code",
+            "USD",
+            "--wait",
+            "--wait-timeout",
+            "4",
+        ])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let elapsed = started.elapsed();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["data"]["posTransactionStatus"], "InProgress", "{v}");
+    assert!(
+        elapsed < std::time::Duration::from_secs(6),
+        "a 4 s budget with a 3 s create took {elapsed:?}"
+    );
+}

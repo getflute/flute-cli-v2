@@ -156,8 +156,8 @@ pub struct CreatePosTransactionArgs {
     /// transaction leaves `InProgress` or the timeout expires.
     #[arg(long)]
     pub wait: bool,
-    /// Seconds to wait before giving up the poll (default 120, at most
-    /// 86400). Requires `--wait`.
+    /// Seconds to wait for the create and the poll together before giving up
+    /// (default 120, at most 86400). Requires `--wait`.
     #[arg(long, requires = "wait", default_value_t = 120, value_parser = clap::value_parser!(u64).range(0..=86_400))]
     pub wait_timeout: u64,
 }
@@ -365,18 +365,16 @@ struct Waited {
 /// hold the connection — a `--wait-timeout` of zero included. The request
 /// carries the remaining budget as its own bound as well, because the
 /// client-wide one is shorter than a caller may ask to wait.
+///
+/// `deadline` is the one the create was bounded by, so the poll spends only
+/// what the create left of the budget.
 async fn wait_for_a_terminal_status(
     ctx: &Ctx,
     id: &str,
-    timeout: Duration,
+    deadline: Instant,
     mut last: Value,
     mut correlation_id: Option<String>,
 ) -> Waited {
-    // The argument is bounded, so this cannot overflow; a deadline the clock
-    // cannot represent is an immediate timeout rather than a panic.
-    let deadline = Instant::now()
-        .checked_add(timeout)
-        .unwrap_or_else(Instant::now);
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
         let resp = tokio::select! {
@@ -620,8 +618,15 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
 async fn create(ctx: &Ctx, args: CreatePosTransactionArgs) -> Result<()> {
     let body = build_pos_create_body(&args)?;
     money::note_fractional_rates(&[("--tip-rate", args.tip_rate)]);
-    let wait_budget = Duration::from_secs(args.wait_timeout);
-    let bound = args.wait.then_some(wait_budget + POLL_TIMEOUT_MARGIN);
+    // One deadline for the create and the poll together. The argument is
+    // bounded, so this cannot overflow; a deadline the clock cannot represent
+    // is an immediate timeout rather than a panic.
+    let deadline = Instant::now()
+        .checked_add(Duration::from_secs(args.wait_timeout))
+        .unwrap_or_else(Instant::now);
+    let bound = args
+        .wait
+        .then(|| deadline.saturating_duration_since(Instant::now()) + POLL_TIMEOUT_MARGIN);
     // `waitForAcceptanceByTerminal` holds the create open until the terminal
     // answers, which can outlast the client-wide bound. The interrupt is
     // selected first so its handler is in place before the request is sent:
@@ -654,8 +659,7 @@ async fn create(ctx: &Ctx, args: CreatePosTransactionArgs) -> Result<()> {
         ApiError::Decode("the create response carried no posTransactionId to poll".into())
     })?;
 
-    let waited =
-        wait_for_a_terminal_status(ctx, &id, wait_budget, created, resp.correlation_id).await;
+    let waited = wait_for_a_terminal_status(ctx, &id, deadline, created, resp.correlation_id).await;
 
     match waited.outcome {
         Outcome::Settled => render::one(ctx, &POS_TRANSACTION, &waited.last, waited.correlation_id),
