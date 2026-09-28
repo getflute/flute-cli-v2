@@ -427,7 +427,7 @@ The live sandbox suite is committed, `#[ignore]`d, and opted into by hand:
 
 ```sh
 source .flute2-live.env      # not committed; see .flute2-live.env.example
-cargo test --test live -- --ignored --test-threads=1 \
+cargo test --features live --test live -- --ignored --test-threads=1 \
     --skip attended --skip irreversible --skip needs_terminal
 ```
 
