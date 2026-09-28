@@ -18,12 +18,12 @@ pub fn build_list_transactions_query(
     common::push_str(&mut query, "fromDate", &args.from_date);
     common::push_str(&mut query, "toDate", &args.to_date);
     if let Some(source) = args.source_type {
-        query.push(("sourceType", source.wire().into()));
+        query.push(("sourceType", common::wire(source)));
     }
     common::push_str(&mut query, "sourceId", &args.source_id);
     common::push_str(&mut query, "batchId", &args.batch_id);
     if let Some(status) = args.transaction_status {
-        query.push(("transactionStatus", status.wire().into()));
+        query.push(("transactionStatus", common::wire(status)));
     }
     common::push_str(&mut query, "paymentMethodType", &args.payment_method_type);
     common::push_str(&mut query, "customerId", &args.customer_id);
@@ -147,10 +147,7 @@ pub fn build_share_receipt_body(args: &ShareReceiptArgs) -> Result<Value> {
         anyhow::bail!("--recipient is required");
     }
     Ok(Value::Object(Map::from_iter([
-        (
-            "shareBy".to_string(),
-            Value::String(args.share_by.wire().into()),
-        ),
+        ("shareBy".to_string(), serde_json::json!(args.share_by)),
         (
             "recipient".to_string(),
             Value::String(args.recipient.clone()),
@@ -174,7 +171,7 @@ pub fn build_calculate_amount_body(args: &CalculateAmountArgs) -> Result<Value> 
         body.insert("currencyCode".into(), Value::String(code.clone()));
     }
     if let Some(pricing) = args.pricing_type {
-        body.insert("pricingType".into(), Value::String(pricing.wire().into()));
+        body.insert("pricingType".into(), serde_json::json!(pricing));
     }
     for (key, value) in [
         ("tipAmount", args.tip_amount),

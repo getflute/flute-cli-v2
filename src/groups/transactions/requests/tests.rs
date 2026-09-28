@@ -74,11 +74,17 @@ fn every_transaction_filter_reaches_the_query_under_its_wire_name() {
 /// for a lowercase near-miss to be plausible.
 #[test]
 fn the_list_enums_keep_their_declared_casing() {
-    assert_eq!(SourceType::WebComponent.wire(), "WebComponent");
-    assert_eq!(SourceType::TapToPay.wire(), "TapToPay");
-    assert_eq!(TransactionStatus::HeldByProcessor.wire(), "HeldByProcessor");
-    assert_eq!(TransactionStatus::InProgress.wire(), "InProgress");
-    assert_eq!(ShareBy::Sms.wire(), "Sms");
+    assert_eq!(serde_json::json!(SourceType::WebComponent), "WebComponent");
+    assert_eq!(serde_json::json!(SourceType::TapToPay), "TapToPay");
+    assert_eq!(
+        serde_json::json!(TransactionStatus::HeldByProcessor),
+        "HeldByProcessor"
+    );
+    assert_eq!(
+        serde_json::json!(TransactionStatus::InProgress),
+        "InProgress"
+    );
+    assert_eq!(serde_json::json!(ShareBy::Sms), "Sms");
 }
 
 /// The schema declares `captureAmount`; the operation's own request

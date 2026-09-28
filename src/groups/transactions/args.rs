@@ -20,25 +20,17 @@ pub enum Instrument {
 
 /// Case-sensitive on the wire: the enum is exactly `Web`, `PPD` and `CCD`,
 /// which is neither all-caps nor all-title-case.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum SecCode {
     Web,
+    #[serde(rename = "PPD")]
     Ppd,
+    #[serde(rename = "CCD")]
     Ccd,
 }
 
-impl SecCode {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Web => "Web",
-            Self::Ppd => "PPD",
-            Self::Ccd => "CCD",
-        }
-    }
-}
-
 /// The declared `sourceType` values, capitalised on the wire.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum SourceType {
     ApiKey,
     Invoice,
@@ -51,24 +43,8 @@ pub enum SourceType {
     WebComponent,
 }
 
-impl SourceType {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::ApiKey => "ApiKey",
-            Self::Invoice => "Invoice",
-            Self::MobileApp => "MobileApp",
-            Self::Portal => "Portal",
-            Self::QuickPayment => "QuickPayment",
-            Self::Subscription => "Subscription",
-            Self::TapToPay => "TapToPay",
-            Self::Terminal => "Terminal",
-            Self::WebComponent => "WebComponent",
-        }
-    }
-}
-
 /// The declared `transactionStatus` values, capitalised on the wire.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum TransactionStatus {
     Authorized,
     Cancelled,
@@ -90,31 +66,6 @@ pub enum TransactionStatus {
     Voided,
 }
 
-impl TransactionStatus {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Authorized => "Authorized",
-            Self::Cancelled => "Cancelled",
-            Self::Captured => "Captured",
-            Self::ChargedBack => "ChargedBack",
-            Self::Cleared => "Cleared",
-            Self::Declined => "Declined",
-            Self::Failed => "Failed",
-            Self::Held => "Held",
-            Self::HeldByProcessor => "HeldByProcessor",
-            Self::Informational => "Informational",
-            Self::InProgress => "InProgress",
-            Self::PartiallyAuthorized => "PartiallyAuthorized",
-            Self::Pending => "Pending",
-            Self::Refunded => "Refunded",
-            Self::Scheduled => "Scheduled",
-            Self::Settled => "Settled",
-            Self::Verified => "Verified",
-            Self::Voided => "Voided",
-        }
-    }
-}
-
 /// How a receipt is shared.
 ///
 /// **SMS is the only channel the endpoint accepts.** Its validator answers
@@ -123,17 +74,9 @@ impl TransactionStatus {
 /// published `shareBy` documents an Email/None/Sms table anyway, and declares
 /// an E.164 pattern its own `Sms` example fails — the conformance harness
 /// carries a narrow exemption for the pattern.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum ShareBy {
     Sms,
-}
-
-impl ShareBy {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Sms => "Sms",
-        }
-    }
 }
 
 /// One variant per command, and the arg-bearing ones are large.

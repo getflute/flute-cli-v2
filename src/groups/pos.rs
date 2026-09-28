@@ -35,55 +35,26 @@ const POLL_INTERVAL: Duration = Duration::from_secs(2);
 const POLL_TIMEOUT_MARGIN: Duration = Duration::from_secs(5);
 
 /// `Cloud` or `Deeplink`, capitalised on the wire.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum InitiationChannel {
     Cloud,
     Deeplink,
 }
 
-impl InitiationChannel {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Cloud => "Cloud",
-            Self::Deeplink => "Deeplink",
-        }
-    }
-}
-
 /// `KeyedEntry` or `Regular`, capitalised on the wire.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum ReadingMethod {
     KeyedEntry,
     Regular,
 }
 
-impl ReadingMethod {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::KeyedEntry => "KeyedEntry",
-            Self::Regular => "Regular",
-        }
-    }
-}
-
 /// The four declared POS transaction statuses, capitalised on the wire.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum PosTransactionStatus {
     InProgress,
     Completed,
     Cancelled,
     Failed,
-}
-
-impl PosTransactionStatus {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::InProgress => IN_PROGRESS,
-            Self::Completed => "Completed",
-            Self::Cancelled => "Cancelled",
-            Self::Failed => "Failed",
-        }
-    }
 }
 
 /// One variant per command, and the arg-bearing ones are large.
@@ -285,16 +256,16 @@ pub fn build_pos_create_body(args: &CreatePosTransactionArgs) -> Result<Value> {
 
     body.insert(
         "captureMethod".into(),
-        Value::String(args.capture_method.wire().into()),
+        serde_json::json!(args.capture_method),
     );
     if let Some(v) = args.initiation_channel {
-        body.insert("initiationChannel".into(), Value::String(v.wire().into()));
+        body.insert("initiationChannel".into(), serde_json::json!(v));
     }
     if let Some(v) = args.reading_method {
-        body.insert("readingMethod".into(), Value::String(v.wire().into()));
+        body.insert("readingMethod".into(), serde_json::json!(v));
     }
     if let Some(v) = args.pricing_type {
-        body.insert("pricingType".into(), Value::String(v.wire().into()));
+        body.insert("pricingType".into(), serde_json::json!(v));
     }
     common::put_str(&mut body, "paymentProcessorId", &args.payment_processor_id);
     common::put_str(&mut body, "customerId", &args.customer_id);
@@ -343,7 +314,7 @@ pub fn build_list_pos_transactions_query(
     let mut query = args.pagination.query();
     query.extend(common::sort_order(args.asc, args.desc));
     if let Some(status) = args.pos_transaction_status {
-        query.push(("posTransactionStatus", status.wire().into()));
+        query.push(("posTransactionStatus", common::wire(status)));
     }
     common::push_str(&mut query, "sortBy", &args.sort_by);
     common::push_str(&mut query, "terminalId", &args.terminal_id);

@@ -18,23 +18,12 @@ use serde_json::{Map, Value};
 /// from the response field of the same name. Offering it as an enum rather
 /// than a free string is what turns a misspelling into a rejected flag
 /// instead of a silently empty page.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum BatchStatus {
     Open,
     PendingSettlement,
     Settled,
     Declined,
-}
-
-impl BatchStatus {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Open => "Open",
-            Self::PendingSettlement => "PendingSettlement",
-            Self::Settled => "Settled",
-            Self::Declined => "Declined",
-        }
-    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -120,7 +109,7 @@ pub fn build_list_batches_query(args: &ListBatchesArgs) -> Result<Vec<(&'static 
         query.push(("paymentProcessorIds", id.clone()));
     }
     if let Some(status) = args.batch_status {
-        query.push(("batchStatus", status.wire().into()));
+        query.push(("batchStatus", common::wire(status)));
     }
     Ok(query)
 }

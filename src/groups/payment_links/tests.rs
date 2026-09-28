@@ -321,10 +321,10 @@ fn a_share_with_no_recipient_is_refused() {
 /// this schema rejects.
 #[test]
 fn the_share_channel_offers_only_this_schemas_two_values() {
-    assert_eq!(ShareChannel::Email.wire(), "Email");
-    assert_eq!(ShareChannel::Sms.wire(), "Sms");
+    assert_eq!(serde_json::json!(ShareChannel::Email), "Email");
+    assert_eq!(serde_json::json!(ShareChannel::Sms), "Sms");
     for channel in [ShareChannel::Email, ShareChannel::Sms] {
-        assert_ne!(channel.wire(), "None");
+        assert_ne!(serde_json::json!(channel), "None");
     }
 }
 

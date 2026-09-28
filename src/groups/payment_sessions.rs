@@ -23,7 +23,7 @@ use rust_decimal::Decimal;
 use serde_json::{Map, Value};
 
 /// What the session is for.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum SessionMode {
     /// Take a payment (default).
     #[default]
@@ -35,14 +35,6 @@ pub enum SessionMode {
 }
 
 impl SessionMode {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Payment => "Payment",
-            Self::SaveMethod => "SaveMethod",
-            Self::PaymentAndSave => "PaymentAndSave",
-        }
-    }
-
     /// Whether this mode takes money, which is what decides the amount rule.
     fn charges(self) -> bool {
         matches!(self, Self::Payment | Self::PaymentAndSave)
@@ -50,19 +42,10 @@ impl SessionMode {
 }
 
 /// What happens to the payer's details once the session completes.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum CustomerHandling {
     CreateCustomer,
     TokenOnly,
-}
-
-impl CustomerHandling {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::CreateCustomer => "CreateCustomer",
-            Self::TokenOnly => "TokenOnly",
-        }
-    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -186,7 +169,7 @@ fn resolved_amount(args: &CreatePaymentSessionArgs) -> Result<Option<Decimal>> {
         (true, Some(v)) if v <= Decimal::ZERO => anyhow::bail!(
             "a {} session must charge more than zero. Omit --amount entirely for \
              a session the payer fills in at checkout.",
-            mode.wire()
+            common::wire(mode)
         ),
         (false, Some(v)) if v != Decimal::ZERO => anyhow::bail!(
             "a save-method session stores a payment method and charges nothing, \
@@ -204,7 +187,7 @@ fn resolved_amount(args: &CreatePaymentSessionArgs) -> Result<Option<Decimal>> {
 pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Result<Value> {
     let mut body = Map::new();
     if let Some(mode) = args.mode {
-        body.insert("mode".into(), Value::String(mode.wire().into()));
+        body.insert("mode".into(), serde_json::json!(mode));
     }
     if let Some(v) = resolved_amount(args)? {
         body.insert("amount".into(), to_amount_number(v)?);
@@ -216,7 +199,7 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
         body.insert("tipAmount".into(), to_amount_number(v)?);
     }
     if let Some(v) = args.customer_handling {
-        body.insert("customerHandling".into(), Value::String(v.wire().into()));
+        body.insert("customerHandling".into(), serde_json::json!(v));
     }
     // A bare switch cannot distinguish "not passed" from "passed false", so
     // only the true case is sent and the server's default governs otherwise.

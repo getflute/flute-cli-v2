@@ -18,23 +18,14 @@ use rust_decimal::Decimal;
 use serde_json::{Map, Value};
 
 /// `MultiUse` or `SingleUse`, capitalised on the wire.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum LinkType {
     MultiUse,
     SingleUse,
 }
 
-impl LinkType {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::MultiUse => "MultiUse",
-            Self::SingleUse => "SingleUse",
-        }
-    }
-}
-
 /// The four declared payment link statuses.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum PaymentLinkStatus {
     Active,
     Completed,
@@ -42,35 +33,15 @@ pub enum PaymentLinkStatus {
     Inactive,
 }
 
-impl PaymentLinkStatus {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Active => "Active",
-            Self::Completed => "Completed",
-            Self::Expired => "Expired",
-            Self::Inactive => "Inactive",
-        }
-    }
-}
-
 /// `SharePaymentLinkRequestDto.shareBy` declares exactly these two.
 ///
 /// Deliberately **not** `groups::transactions::ShareBy`, which carries `Sms`
 /// alone because that endpoint accepts no other channel. Sharing that enum
 /// would drop a channel this operation accepts.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum ShareChannel {
     Email,
     Sms,
-}
-
-impl ShareChannel {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Email => "Email",
-            Self::Sms => "Sms",
-        }
-    }
 }
 
 /// A field `--clear` can null out, and the wire key it nulls.
@@ -353,7 +324,7 @@ pub fn build_create_payment_link_body(args: &CreatePaymentLinkArgs) -> Result<Va
         body.insert("baseAmount".into(), to_amount_number(v)?);
     }
     if let Some(v) = args.link_type {
-        body.insert("linkType".into(), Value::String(v.wire().into()));
+        body.insert("linkType".into(), serde_json::json!(v));
     }
     common::put_str(&mut body, "currencyCode", &args.currency_code);
     common::put_str(&mut body, "customerId", &args.customer_id);
@@ -399,10 +370,10 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
         body.insert("baseAmount".into(), v);
     }
     if let Some(v) = args.link_type {
-        body.insert("linkType".into(), Value::String(v.wire().into()));
+        body.insert("linkType".into(), serde_json::json!(v));
     }
     if let Some(v) = args.payment_link_status {
-        body.insert("paymentLinkStatus".into(), Value::String(v.wire().into()));
+        body.insert("paymentLinkStatus".into(), serde_json::json!(v));
     }
     common::put_patch(&mut body, "currencyCode", &args.currency_code);
     common::put_patch(&mut body, "customerId", &args.customer_id);
@@ -437,10 +408,7 @@ pub fn build_share_payment_link_body(args: &SharePaymentLinkArgs) -> Result<Valu
         anyhow::bail!("--recipient is required: a share has to go somewhere");
     }
     Ok(Value::Object(Map::from_iter([
-        (
-            "shareBy".to_string(),
-            Value::String(args.share_by.wire().into()),
-        ),
+        ("shareBy".to_string(), serde_json::json!(args.share_by)),
         (
             "recipient".to_string(),
             Value::String(args.recipient.clone()),
@@ -460,10 +428,10 @@ pub fn build_list_payment_links_query(
     let mut query = args.pagination.query();
     query.extend(common::sort_order(args.asc, args.desc));
     if let Some(v) = args.link_type {
-        query.push(("linkType", v.wire().into()));
+        query.push(("linkType", common::wire(v)));
     }
     if let Some(v) = args.payment_link_status {
-        query.push(("paymentLinkStatus", v.wire().into()));
+        query.push(("paymentLinkStatus", common::wire(v)));
     }
     common::push_str(&mut query, "sortBy", &args.sort_by);
     common::push_str(&mut query, "search", &args.search);

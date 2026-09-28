@@ -25,7 +25,7 @@ fn every_exposed_flag_appears_in_help() {
     checks::exposed_flags_appear_in_help(&SURFACE);
 }
 
-/// One client-side `wire()` map, and the field whose bundle enum it must
+/// One client-side flag enum, and the field whose bundle enum it must
 /// equal.
 struct Vocabulary {
     /// The CLI type the row binds, for the failure message.
@@ -39,19 +39,19 @@ struct Vocabulary {
 
 /// The values a clap value-enum puts on the wire.
 ///
-/// Read from the type rather than restated here, so a wrong arm in the map and
-/// a variant nobody mapped both reach this comparison.
-fn vocabulary<T: clap::ValueEnum + Copy>(wire: fn(T) -> &'static str) -> BTreeSet<String> {
+/// Read from the type's `Serialize` derive rather than restated here, so a
+/// wrong rename and a variant spelt by its Rust name both reach this
+/// comparison.
+fn vocabulary<T: clap::ValueEnum + serde::Serialize>() -> BTreeSet<String> {
     T::value_variants()
         .iter()
-        .map(|v| wire(*v).to_string())
+        .map(flute_cli2::cli::common::wire)
         .collect()
 }
 
-/// Every `wire()` map the CLI offers a flag for, against the field it is sent
-/// as.
+/// Every flag enum the CLI sends, against the field it is sent as.
 ///
-/// A map used at several operations is bound once: the bundle declares one
+/// An enum used at several operations is bound once: the bundle declares one
 /// component per vocabulary, so a second row would re-read the same enum.
 /// `transactions share-receipt --share-by` is absent because
 /// `SendReceiptRequestDto.shareBy` declares a pattern where its description
@@ -61,109 +61,109 @@ fn vocabulary<T: clap::ValueEnum + Copy>(wire: fn(T) -> &'static str) -> BTreeSe
 static VOCABULARIES: &[Vocabulary] = &[
     Vocabulary {
         name: "transactions::SecCode",
-        values: || vocabulary(flute_cli2::groups::transactions::SecCode::wire),
+        values: || vocabulary::<flute_cli2::groups::transactions::SecCode>(),
         operation_id: "flute-v2-post-transactions",
         field: "/transactionDetails/achData/secCode",
     },
     Vocabulary {
         name: "transactions::SourceType",
-        values: || vocabulary(flute_cli2::groups::transactions::SourceType::wire),
+        values: || vocabulary::<flute_cli2::groups::transactions::SourceType>(),
         operation_id: "flute-v2-get-transactions",
         field: "?sourceType",
     },
     Vocabulary {
         name: "transactions::TransactionStatus",
-        values: || vocabulary(flute_cli2::groups::transactions::TransactionStatus::wire),
+        values: || vocabulary::<flute_cli2::groups::transactions::TransactionStatus>(),
         operation_id: "flute-v2-get-transactions",
         field: "?transactionStatus",
     },
     Vocabulary {
         name: "terminals::TerminalStatusFilter",
-        values: || vocabulary(flute_cli2::groups::terminals::TerminalStatusFilter::wire),
+        values: || vocabulary::<flute_cli2::groups::terminals::TerminalStatusFilter>(),
         operation_id: "flute-v2-get-terminals",
         field: "?terminalStatus",
     },
     Vocabulary {
         name: "terminals::TerminalMode",
-        values: || vocabulary(flute_cli2::groups::terminals::TerminalMode::wire),
+        values: || vocabulary::<flute_cli2::groups::terminals::TerminalMode>(),
         operation_id: "flute-v2-get-terminals",
         field: "?terminalMode",
     },
     Vocabulary {
         name: "terminals::ConnectionStatus",
-        values: || vocabulary(flute_cli2::groups::terminals::ConnectionStatus::wire),
+        values: || vocabulary::<flute_cli2::groups::terminals::ConnectionStatus>(),
         operation_id: "flute-v2-get-terminals",
         field: "?connectionStatus",
     },
     Vocabulary {
         name: "pos::InitiationChannel",
-        values: || vocabulary(flute_cli2::groups::pos::InitiationChannel::wire),
+        values: || vocabulary::<flute_cli2::groups::pos::InitiationChannel>(),
         operation_id: "flute-v2-post-pos-transactions",
         field: "/initiationChannel",
     },
     Vocabulary {
         name: "pos::ReadingMethod",
-        values: || vocabulary(flute_cli2::groups::pos::ReadingMethod::wire),
+        values: || vocabulary::<flute_cli2::groups::pos::ReadingMethod>(),
         operation_id: "flute-v2-post-pos-transactions",
         field: "/readingMethod",
     },
     Vocabulary {
         name: "pos::PosTransactionStatus",
-        values: || vocabulary(flute_cli2::groups::pos::PosTransactionStatus::wire),
+        values: || vocabulary::<flute_cli2::groups::pos::PosTransactionStatus>(),
         operation_id: "flute-v2-get-pos-transactions",
         field: "?posTransactionStatus",
     },
     Vocabulary {
         name: "payment_links::LinkType",
-        values: || vocabulary(flute_cli2::groups::payment_links::LinkType::wire),
+        values: || vocabulary::<flute_cli2::groups::payment_links::LinkType>(),
         operation_id: "flute-v2-post-payment-links",
         field: "/linkType",
     },
     Vocabulary {
         name: "payment_links::PaymentLinkStatus",
-        values: || vocabulary(flute_cli2::groups::payment_links::PaymentLinkStatus::wire),
+        values: || vocabulary::<flute_cli2::groups::payment_links::PaymentLinkStatus>(),
         operation_id: "flute-v2-patch-payment-links-paymentLinkId",
         field: "/paymentLinkStatus",
     },
     Vocabulary {
         name: "payment_links::ShareChannel",
-        values: || vocabulary(flute_cli2::groups::payment_links::ShareChannel::wire),
+        values: || vocabulary::<flute_cli2::groups::payment_links::ShareChannel>(),
         operation_id: "flute-v2-post-payment-links-paymentLinkId-share",
         field: "/shareBy",
     },
     Vocabulary {
         name: "payment_sessions::SessionMode",
-        values: || vocabulary(flute_cli2::groups::payment_sessions::SessionMode::wire),
+        values: || vocabulary::<flute_cli2::groups::payment_sessions::SessionMode>(),
         operation_id: "flute-v2-post-payment-sessions",
         field: "/mode",
     },
     Vocabulary {
         name: "payment_sessions::CustomerHandling",
-        values: || vocabulary(flute_cli2::groups::payment_sessions::CustomerHandling::wire),
+        values: || vocabulary::<flute_cli2::groups::payment_sessions::CustomerHandling>(),
         operation_id: "flute-v2-post-payment-sessions",
         field: "/customerHandling",
     },
     Vocabulary {
         name: "common::AccountType",
-        values: || vocabulary(flute_cli2::cli::common::AccountType::wire),
+        values: || vocabulary::<flute_cli2::cli::common::AccountType>(),
         operation_id: "flute-v2-post-payment-methods-ach",
         field: "/accountType",
     },
     Vocabulary {
         name: "common::AccountHolderType",
-        values: || vocabulary(flute_cli2::cli::common::AccountHolderType::wire),
+        values: || vocabulary::<flute_cli2::cli::common::AccountHolderType>(),
         operation_id: "flute-v2-post-payment-methods-ach",
         field: "/accountHolderType",
     },
     Vocabulary {
         name: "common::CaptureMethod",
-        values: || vocabulary(flute_cli2::cli::common::CaptureMethod::wire),
+        values: || vocabulary::<flute_cli2::cli::common::CaptureMethod>(),
         operation_id: "flute-v2-post-pos-transactions",
         field: "/captureMethod",
     },
     Vocabulary {
         name: "common::PricingType",
-        values: || vocabulary(flute_cli2::cli::common::PricingType::wire),
+        values: || vocabulary::<flute_cli2::cli::common::PricingType>(),
         operation_id: "flute-v2-post-transactions",
         field: "/pricingType",
     },
@@ -197,7 +197,7 @@ fn the_settlements_filters_match_the_bundle_where_it_declares_them() {
     // The `batchStatus` query parameter declares no enum, so the vocabulary
     // comes from the response field of the same name.
     assert_eq!(
-        vocabulary(flute_cli2::groups::settlements::BatchStatus::wire),
+        vocabulary::<flute_cli2::groups::settlements::BatchStatus>(),
         spec::response_enum("flute-v2-get-settlements-batches", "/items/[]/batchStatus"),
         "settlements::BatchStatus does not offer the values the batch list \
          reports"

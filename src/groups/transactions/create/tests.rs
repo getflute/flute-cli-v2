@@ -108,8 +108,8 @@ fn manual_capture_sends_the_capitalised_wire_value() {
         body["transactionDetails"]["cardData"]["captureMethod"],
         "Manual"
     );
-    assert_eq!(CaptureMethod::Auto.wire(), "Auto");
-    assert_eq!(CaptureMethod::Manual.wire(), "Manual");
+    assert_eq!(serde_json::json!(CaptureMethod::Auto), "Auto");
+    assert_eq!(serde_json::json!(CaptureMethod::Manual), "Manual");
 }
 
 /// Amounts must survive as exact decimals, never as floats.
@@ -260,11 +260,11 @@ fn a_new_ach_omits_an_absent_tax_id_and_same_day_flag() {
 /// Case-sensitive on the wire, and neither all-caps nor all-title-case.
 #[test]
 fn the_sec_code_enum_keeps_its_declared_casing() {
-    assert_eq!(SecCode::Web.wire(), "Web");
-    assert_eq!(SecCode::Ppd.wire(), "PPD");
-    assert_eq!(SecCode::Ccd.wire(), "CCD");
-    assert_eq!(PricingType::Card.wire(), "Card");
-    assert_eq!(PricingType::Cash.wire(), "Cash");
+    assert_eq!(serde_json::json!(SecCode::Web), "Web");
+    assert_eq!(serde_json::json!(SecCode::Ppd), "PPD");
+    assert_eq!(serde_json::json!(SecCode::Ccd), "CCD");
+    assert_eq!(serde_json::json!(PricingType::Card), "Card");
+    assert_eq!(serde_json::json!(PricingType::Cash), "Cash");
 }
 
 /// Exactly one instrument, and each of the four is recognised.

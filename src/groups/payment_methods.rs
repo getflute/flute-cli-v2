@@ -223,12 +223,9 @@ pub fn build_add_ach_body(args: &AddAchArgs) -> Result<Value> {
     );
     body.insert(
         "accountHolderType".into(),
-        Value::String(args.account_holder_type.wire().into()),
+        serde_json::json!(args.account_holder_type),
     );
-    body.insert(
-        "accountType".into(),
-        Value::String(args.account_type.wire().into()),
-    );
+    body.insert("accountType".into(), serde_json::json!(args.account_type));
     common::put_str(&mut body, "taxId", &args.tax_id);
     common::put_str(&mut body, "customerId", &args.customer_id);
     common::put_str(&mut body, "name", &args.name);
@@ -576,10 +573,10 @@ mod tests {
     /// forgiven by an `additionalProperties: false` schema.
     #[test]
     fn ach_enums_serialise_with_their_declared_casing() {
-        assert_eq!(AccountType::Checking.wire(), "Checking");
-        assert_eq!(AccountType::Savings.wire(), "Savings");
-        assert_eq!(AccountHolderType::Business.wire(), "Business");
-        assert_eq!(AccountHolderType::Personal.wire(), "Personal");
+        assert_eq!(serde_json::json!(AccountType::Checking), "Checking");
+        assert_eq!(serde_json::json!(AccountType::Savings), "Savings");
+        assert_eq!(serde_json::json!(AccountHolderType::Business), "Business");
+        assert_eq!(serde_json::json!(AccountHolderType::Personal), "Personal");
     }
 
     #[test]

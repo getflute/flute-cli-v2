@@ -208,75 +208,47 @@ pub fn sort_order(asc: bool, desc: bool) -> Option<(&'static str, String)> {
     }
 }
 
+/// A flag enum's wire spelling, as its `Serialize` derive writes it, for a
+/// query pair or a message.
+pub fn wire(value: impl serde::Serialize) -> String {
+    match serde_json::to_value(value) {
+        Ok(Value::String(s)) => s,
+        other => unreachable!("a flag enum serialises to a string, got {other:?}"),
+    }
+}
+
 /// Case-sensitive on the wire. `AccountType` declares exactly `Checking` and
 /// `Savings`, and the schema sets `additionalProperties: false`, so a
 /// lowercase near-miss is rejected rather than forgiven.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum AccountType {
     Checking,
     Savings,
 }
 
-impl AccountType {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Checking => "Checking",
-            Self::Savings => "Savings",
-        }
-    }
-}
-
 /// Case-sensitive on the wire: `Auto` or `Manual`. The `CaptureMethod` enum
 /// declares exactly those two with `Auto` as the default, and `"auto"` is not
-/// a near-miss the server forgives.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum)]
+/// a near-miss the server forgives. `--capture-method` accepts lowercase on
+/// the command line, as clap value-enums conventionally do.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum CaptureMethod {
     #[default]
     Auto,
     Manual,
 }
 
-impl CaptureMethod {
-    /// The capitalised wire value. `--capture-method` accepts lowercase on the
-    /// command line, as clap value-enums conventionally do.
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Auto => "Auto",
-            Self::Manual => "Manual",
-        }
-    }
-}
-
 /// `Card` or `Cash`, capitalised on the wire.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum PricingType {
     Card,
     Cash,
 }
 
-impl PricingType {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Card => "Card",
-            Self::Cash => "Cash",
-        }
-    }
-}
-
 /// Likewise `Business` and `Personal`.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum AccountHolderType {
     Business,
     Personal,
-}
-
-impl AccountHolderType {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Business => "Business",
-            Self::Personal => "Personal",
-        }
-    }
 }
 
 /// Parse `MM/YY` or `MM/YYYY` into `(month, year)`.

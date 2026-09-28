@@ -246,7 +246,7 @@ pub fn build_create_transaction_body(args: &CreateTransactionArgs) -> Result<Val
         body.insert("isCustomerInitiatedTransaction".into(), Value::Bool(true));
     }
     if let Some(pricing) = args.pricing_type {
-        body.insert("pricingType".into(), Value::String(pricing.wire().into()));
+        body.insert("pricingType".into(), serde_json::json!(pricing));
     }
     if let Some(extra) = extra_amounts(args)? {
         body.insert("extraAmounts".into(), extra);
@@ -280,7 +280,7 @@ fn instrument_details(
     let key = match chosen {
         Chosen::NewCard | Chosen::SavedCard => {
             if let Some(method) = capture_method {
-                inner.insert("captureMethod".into(), Value::String(method.wire().into()));
+                inner.insert("captureMethod".into(), serde_json::json!(method));
             }
             if chosen == Chosen::SavedCard {
                 inner.insert(
@@ -307,7 +307,7 @@ fn instrument_details(
         Chosen::NewAch | Chosen::SavedAch => {
             // Required by schema on `AchDataDto`, so both routes carry them.
             if let Some(sec) = args.sec_code {
-                inner.insert("secCode".into(), Value::String(sec.wire().into()));
+                inner.insert("secCode".into(), serde_json::json!(sec));
             }
             if let Some(ip) = args.requester_ip_address.as_ref().filter(|s| !s.is_empty()) {
                 inner.insert("requesterIpAddress".into(), Value::String(ip.clone()));
@@ -331,10 +331,10 @@ fn instrument_details(
                     Value::String(args.ach_routing_number.clone().unwrap_or_default()),
                 );
                 if let Some(ty) = args.ach_account_type {
-                    details.insert("accountType".into(), Value::String(ty.wire().into()));
+                    details.insert("accountType".into(), serde_json::json!(ty));
                 }
                 if let Some(ty) = args.ach_account_holder_type {
-                    details.insert("accountHolderType".into(), Value::String(ty.wire().into()));
+                    details.insert("accountHolderType".into(), serde_json::json!(ty));
                 }
                 if let Some(tax) = args.ach_tax_id.as_ref().filter(|s| !s.is_empty()) {
                     details.insert("taxId".into(), Value::String(tax.clone()));

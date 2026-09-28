@@ -15,54 +15,26 @@ use anyhow::Result;
 use reqwest::Method;
 
 /// The `terminalStatus` **query** enum, which is not the response enum.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum TerminalStatusFilter {
     Ready,
     Busy,
     Offline,
 }
 
-impl TerminalStatusFilter {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Ready => "Ready",
-            Self::Busy => "Busy",
-            Self::Offline => "Offline",
-        }
-    }
-}
-
 /// `Standalone` or `SemiIntegrated`. Only a semi-integrated terminal can take
 /// a POS transaction the CLI created.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum TerminalMode {
     Standalone,
     SemiIntegrated,
 }
 
-impl TerminalMode {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Standalone => "Standalone",
-            Self::SemiIntegrated => "SemiIntegrated",
-        }
-    }
-}
-
 /// `Online` or `Offline`: whether the device is reachable now.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum ConnectionStatus {
     Online,
     Offline,
-}
-
-impl ConnectionStatus {
-    pub fn wire(self) -> &'static str {
-        match self {
-            Self::Online => "Online",
-            Self::Offline => "Offline",
-        }
-    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -122,13 +94,13 @@ pub fn build_list_terminals_query(args: &ListTerminalsArgs) -> Result<Vec<(&'sta
     let mut query = args.pagination.query();
     query.extend(common::sort_order(args.asc, args.desc));
     if let Some(v) = args.terminal_status {
-        query.push(("terminalStatus", v.wire().into()));
+        query.push(("terminalStatus", common::wire(v)));
     }
     if let Some(v) = args.terminal_mode {
-        query.push(("terminalMode", v.wire().into()));
+        query.push(("terminalMode", common::wire(v)));
     }
     if let Some(v) = args.connection_status {
-        query.push(("connectionStatus", v.wire().into()));
+        query.push(("connectionStatus", common::wire(v)));
     }
     common::push_str(&mut query, "sortBy", &args.sort_by);
     common::push_str(&mut query, "serialNumber", &args.serial_number);
@@ -323,13 +295,13 @@ mod tests {
     /// be a filter the parameter does not document.
     #[test]
     fn the_status_filter_uses_the_query_enum_not_the_response_enum() {
-        assert_eq!(TerminalStatusFilter::Ready.wire(), "Ready");
+        assert_eq!(serde_json::json!(TerminalStatusFilter::Ready), "Ready");
         for variant in [
             TerminalStatusFilter::Ready,
             TerminalStatusFilter::Busy,
             TerminalStatusFilter::Offline,
         ] {
-            assert_ne!(variant.wire(), "Active");
+            assert_ne!(serde_json::json!(variant), "Active");
         }
     }
 
