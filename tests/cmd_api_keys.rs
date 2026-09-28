@@ -345,12 +345,12 @@ async fn api_key_list_table_shows_the_name_and_both_ids() {
 
     assert!(header.starts_with("CLIENT ID"), "{table}");
     assert!(header.contains("NAME"), "{table}");
-    // The merchant column is headed as v1 headed it.
+    // The merchant column is headed MERCHANT, not MERCHANT ID.
     assert!(
         header.contains("MERCHANT") && !header.contains("MERCHANT ID"),
         "{table}"
     );
-    // v1 carried a CREATED column; the v2 list item declares no timestamp.
+    // The list item declares no timestamp, so there is no CREATED column.
     assert!(!header.contains("CREATED"), "{table}");
     assert!(table.contains(CLIENT), "{table}");
     assert!(table.contains("Production API Key"), "{table}");

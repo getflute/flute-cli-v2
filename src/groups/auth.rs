@@ -48,9 +48,8 @@ pub fn logout(profile: &str) -> Result<()> {
 
 /// Set `default_profile` in the config file.
 ///
-/// v1 writes this key and never reads it, because its `--profile` flag
-/// carries a `default_value` and so is never absent. Here the write changes
-/// what the next command targets.
+/// `--profile` has no default value, so the key this writes decides what
+/// every later command without `--profile` or `FLUTE2_PROFILE` targets.
 pub fn switch(new_profile: &str) -> Result<()> {
     validate_switch_target(new_profile)?;
     let mut cfg = config::load_or_default();

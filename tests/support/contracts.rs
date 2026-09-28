@@ -138,7 +138,7 @@ pub static CONTRACTS: &[Contract] = &[
             Variant {
                 // No query at all: the flags are omitted when absent so the
                 // server's declared defaults (pageIndex 0, pageSize 20)
-                // govern. v1 always sent a --limit it had defaulted to 25.
+                // govern.
                 name: "first page, server defaults",
                 exchange: || Exchange {
                     request: req("GET", "/v2/customers"),
@@ -694,7 +694,7 @@ pub static CONTRACTS: &[Contract] = &[
             },
             Variant {
                 // Everything a level-3 card sale can carry, in one exchange:
-                // v1 reached five of these fields and v2 declares seventeen.
+                // v2 declares seventeen of these fields.
                 name: "card with level three data",
                 exchange: || Exchange {
                     request: RequestFixture {
@@ -914,9 +914,8 @@ pub static CONTRACTS: &[Contract] = &[
     Contract {
         operation_id: "flute-v2-post-transactions-transactionId-reversal",
         mapping: Mapping::Command("transactions reversal"),
-        // v1's `void` and `refund` were two commands against two endpoints;
-        // v2 has one endpoint and detects the settled state server-side, so
-        // the two v1 commands become these two variants.
+        // One endpoint detects the settled state server-side, so a void and a
+        // refund are these two variants.
         variants: &[
             Variant {
                 // An empty object, for the reason spelled out on `capture`:
@@ -1205,7 +1204,7 @@ pub static CONTRACTS: &[Contract] = &[
                 live: Live::Test("live_ach_credit"),
             },
             Variant {
-                // New in v2: v1 had `ach credit` and nothing else.
+                // A card credit, beside the ACH one; v1 ships only `ach credit`.
                 name: "new card",
                 exchange: || Exchange {
                     request: RequestFixture {

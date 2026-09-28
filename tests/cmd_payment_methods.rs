@@ -363,7 +363,7 @@ async fn list_table_shows_the_masked_number_for_either_instrument() {
         .stdout(predicate::str::contains("PAN/ACCT"))
         .stdout(predicate::str::contains("************1111"))
         .stdout(predicate::str::contains("****6789"))
-        // v1 rendered the expiry as MM/YYYY, zero-padded.
+        // The expiry renders as MM/YYYY, zero-padded.
         .stdout(predicate::str::contains("01/2033"))
         .stdout(predicate::str::contains("yes"))
         .stdout(predicate::str::contains("no"));
@@ -389,7 +389,7 @@ async fn get_table_shows_the_nested_ach_fields() {
         .stdout(predicate::str::contains("ach.accountHolderType"));
 }
 
-/// v1's `customers add-card --name` set the instrument's label. v2 spells it
+/// `--name` sets the instrument's label. The API spells it
 /// `paymentName` on the card route and `name` on the ACH route, so one flag
 /// covers an inconsistency in the API rather than exposing it.
 #[tokio::test]

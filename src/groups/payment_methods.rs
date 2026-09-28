@@ -1,10 +1,8 @@
 //! `payment-methods`: list, get, add-card, add-ach, update, delete, set-default.
 //!
-//! v1 reached these through `customers add-card`, `customers add-ach`,
-//! `customers methods` and `customers remove-method`. v2 has a top-level
-//! group because a payment method is a first-class resource here: it has its
-//! own list endpoint, its own filters, and it can exist with no customer at
-//! all.
+//! This is a top-level group because a payment method is a first-class
+//! resource: it has its own list endpoint, its own filters, and it can exist
+//! with no customer at all.
 
 use crate::Ctx;
 use crate::api::ApiPath;
@@ -289,11 +287,10 @@ pub fn build_update_payment_method_body(args: &UpdatePaymentMethodArgs) -> Resul
     )])))
 }
 
-/// v1's envelope names, kept as they were: `payment_method` for one and
-/// `payment_methods` for a collection. The plural is inconsistent with
-/// `customer_list`, and regularising it is a change to the output contract
-/// that the design does not enumerate — an agent branching on `object` would
-/// see it.
+/// The envelope names are `payment_method` for one and `payment_methods` for
+/// a collection. The plural is inconsistent with `customer_list`, and
+/// regularising it would change the output contract — an agent branching on
+/// `object` would see it.
 pub static PAYMENT_METHOD: Resource = Resource {
     object: "payment_method",
     object_list: "payment_methods",
@@ -316,7 +313,6 @@ pub static PAYMENT_METHOD: Resource = Resource {
         "/ach/companyName",
         "/ach/taxId",
     ],
-    // v1's columns exactly: ID, TYPE, PAN-or-account, EXP, DEFAULT.
     columns: &[
         Column {
             header: "ID",
@@ -357,7 +353,7 @@ fn masked_number(v: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
-/// Zero-padded `MM/YYYY`, as v1 rendered it. Cards only.
+/// Zero-padded `MM/YYYY`. Cards only.
 fn expiry(v: &Value) -> Option<String> {
     let month = v.pointer("/card/expirationMonth")?.as_u64()?;
     let year = v.pointer("/card/expirationYear")?.as_u64()?;
@@ -665,7 +661,7 @@ mod tests {
     }
 
     /// This endpoint declares a single `search`, unlike `customers list`'s
-    /// four named filters, so v1's `--search` carries over unchanged here.
+    /// four named filters, so `--search` maps straight onto it.
     #[test]
     fn every_payment_method_filter_reaches_the_query_under_its_wire_name() {
         let args = ListPaymentMethodsArgs {
@@ -715,7 +711,7 @@ mod tests {
         assert_eq!(masked_number(&serde_json::json!({"type": "Cash"})), None);
     }
 
-    /// Zero-padded, as v1 rendered it, and absent for a non-card.
+    /// Zero-padded, and absent for a non-card.
     #[test]
     fn the_expiry_column_is_zero_padded_and_card_only() {
         assert_eq!(

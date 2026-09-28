@@ -15,7 +15,7 @@ fn live_customer_list_first_page() {
     assert!(v["meta"]["page_info"].is_object(), "{v}");
 }
 
-/// The filters are the capability v1's single `--search` could not express.
+/// The four named filters express what a single `--search` cannot.
 /// A filter that matches nothing is still a successful empty page, not a 404.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]

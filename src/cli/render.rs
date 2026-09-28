@@ -40,8 +40,8 @@ pub struct Column {
 pub struct Resource {
     /// The envelope's `object` name for one resource.
     pub object: &'static str,
-    /// The envelope's `object` name for a collection of them. v1 spelled
-    /// these `customer_list`, and the name is part of the output contract.
+    /// The envelope's `object` name for a collection of them, such as
+    /// `customer_list`. The name is part of the output contract.
     pub object_list: &'static str,
     /// JSON pointer to the identifier `quiet` mode prints.
     pub id: &'static str,

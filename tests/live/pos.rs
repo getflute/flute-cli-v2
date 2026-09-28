@@ -46,8 +46,7 @@ fn live_pos_create_get_cancel_needs_terminal() {
 
 /// **The evidence that `referenceId` is optional.**
 ///
-/// v1 declared `--reference-id` required because the v1 API rejected creates
-/// without it. `CreatePosTransactionRequestDto` does not declare it required,
+/// `CreatePosTransactionRequestDto` does not declare it required,
 /// so v2 leaves it optional — and if this fails, the rejection is a
 /// documentation defect to file, not a flag to force back on.
 #[test]

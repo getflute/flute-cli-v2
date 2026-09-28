@@ -63,8 +63,7 @@ pub static TRANSACTION: Resource = Resource {
         "/refundDetails/availableRefundAmount",
         "/refundDetails/isFullyRefunded",
     ],
-    // v1's columns, with one substitution: its CUSTOMER column read
-    // `customerName`, which v2's list item does not carry.
+    // CUSTOMER reads `customerId`: the list item carries no `customerName`.
     columns: &[
         Column {
             header: "ID",

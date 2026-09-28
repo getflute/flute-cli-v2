@@ -113,8 +113,8 @@ async fn status_answered_with_a_server_error_fails_instead_of_reporting_false() 
         .failure();
 }
 
-/// v1 writes default_profile and never reads it, so `auth switch` is a no-op
-/// there. Here the write must actually change what the next command targets.
+/// The `default_profile` that `auth switch` writes must change what the next
+/// command targets.
 #[test]
 fn switch_writes_default_profile_and_the_next_command_honours_it() {
     let home = tempfile::tempdir().unwrap();
@@ -229,8 +229,8 @@ fn logout_without_a_keychain_refuses_rather_than_reporting_removal() {
 
 /// `auth login` prompts for a secret through `rpassword`, so the prompt itself
 /// cannot be driven by `assert_cmd`. What *is* checkable is that the command
-/// exists and says where the secret goes — which is the parity evidence that
-/// the capability was carried over at all. Its storage path is covered by the
+/// exists and says where the secret goes — which is the parity evidence for
+/// the capability. Its storage path is covered by the
 /// keychain unit tests and its round trip by the live pass.
 #[test]
 fn login_is_reachable_and_documents_where_the_secret_goes() {

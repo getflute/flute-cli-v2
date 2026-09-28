@@ -13,7 +13,7 @@ fn every_request_field_is_exposed_fixed_or_excluded() {
     checks::every_request_field_is_accounted_for(SURFACE);
 }
 
-/// The reverse: a row naming a field the spec no longer has is stale.
+/// The reverse: a row naming a field the spec does not have is stale.
 #[test]
 fn no_surface_row_names_a_field_that_does_not_exist() {
     checks::no_surface_row_is_stale(SURFACE);
@@ -239,8 +239,8 @@ static DEPARTURES: &[(&str, &str)] = &[
 ///
 /// A hand-written table omits whatever arrived last, so the declarations are
 /// the oracle: every `pub fn wire` the CLI declares must be bound to the
-/// bundle or named as a departure, and a row naming a map that no longer
-/// exists is stale.
+/// bundle or named as a departure, and a row naming a map that does not
+/// exist is stale.
 #[test]
 fn every_wire_map_is_bound_or_a_named_departure() {
     let mut sources = support::group_sources();

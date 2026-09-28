@@ -835,7 +835,7 @@ async fn update_can_set_a_boolean_to_false() {
         .success();
 }
 
-/// Parity evidence for v1's single `customers list --search`: v2 declares
+/// Parity evidence for the single `customers list --search` v1 ships: v2 declares
 /// four named filters instead, and all four have to be reachable or the
 /// replacement is a regression.
 #[tokio::test]
@@ -888,9 +888,10 @@ async fn list_sends_every_named_filter_v1_search_replaces() {
     assert_eq!(pairs["createdTo"], "2026-12-31T23:59:59Z");
 }
 
-/// Parity evidence for v1's `customers update`: every field it could change
-/// is still reachable, under v2's wire names — `companyName` rather than
-/// `company`, and `stateCode`/`countryCode` rather than v1's two id flags.
+/// Parity evidence for `customers update` as v1 ships it: every field v1 can
+/// change is reachable, under v2's wire names — `companyName` rather than
+/// `company`, and `stateCode`/`countryCode` rather than the two id flags v1
+/// takes.
 #[tokio::test]
 async fn update_sends_every_v1_field_under_its_v2_wire_name() {
     let server = support::mock_with_token().await;
@@ -947,9 +948,8 @@ async fn update_sends_every_v1_field_under_its_v2_wire_name() {
 }
 
 /// The refusal precedes credential resolution, so a destructive command is
-/// refused for want of `--yes` rather than for want of a login — the order v1
-/// fixed, and the one that keeps the gate meaningful on an unconfigured
-/// machine.
+/// refused for want of `--yes` rather than for want of a login, which keeps
+/// the gate meaningful on an unconfigured machine.
 #[test]
 fn delete_without_yes_is_refused_before_credentials_are_resolved() {
     let out = support::bin_without_credentials()

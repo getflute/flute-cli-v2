@@ -13,9 +13,10 @@ use anyhow::Result;
 use axoupdater::{AxoUpdater, ReleaseSource, ReleaseSourceType};
 
 /// These three identify **v2**, and getting one wrong is not a wrong result
-/// but a wrong target: `flute2 update` would query v1's releases and, on an
-/// installer-managed machine, hand v1's installer a v2 update. Every request
-/// would be perfectly well-formed, so only an asserted constant catches it.
+/// but a wrong target: `flute2 update` would query the v1 project's releases
+/// and, on an installer-managed machine, hand the v1 installer a v2 update.
+/// Every request would be perfectly well-formed, so only an asserted
+/// constant catches it.
 pub const APP_NAME: &str = "flute2";
 pub const REPO_OWNER: &str = "getflute";
 pub const REPO_NAME: &str = "flute-cli-v2";
@@ -113,9 +114,9 @@ mod tests {
     use super::*;
 
     /// A wrong constant here is a well-formed request to the wrong project:
-    /// `flute2 update` would read v1's releases and, on an installer-managed
-    /// machine, hand v1's installer a v2 update. Nothing else in the suite
-    /// would see it.
+    /// `flute2 update` would read the v1 project's releases and, on an
+    /// installer-managed machine, hand the v1 installer a v2 update. Nothing
+    /// else in the suite would see it.
     #[test]
     fn update_targets_v2_everywhere_and_never_v1() {
         assert_eq!(APP_NAME, "flute2");

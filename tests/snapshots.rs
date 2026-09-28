@@ -179,14 +179,13 @@ fn no_help_text_explains_the_implementation() {
     }
 }
 
-/// A command carried over from the predecessor CLI keeps its wording.
+/// A command v1 also ships keeps v1's one-liner.
 ///
 /// Two commands stand for the whole tree: one flag-bearing write and one
 /// positional read. They are the cheapest possible guard against the help
-/// being paraphrased back into its own voice, which is what this repository's
-/// `--help` had drifted into.
+/// being paraphrased into a voice of its own.
 #[test]
-fn carried_over_commands_keep_their_original_one_liners() {
+fn commands_shared_with_v1_keep_the_v1_one_liners() {
     for (args, one_liner) in [
         (
             ["transactions", "capture"],
@@ -207,11 +206,12 @@ fn carried_over_commands_keep_their_original_one_liners() {
     }
 }
 
-/// Dropped v1 commands must fail as unrecognised, never silently succeed.
+/// A v1 command that v2 does not ship must fail as unrecognised, never
+/// silently succeed.
 ///
-/// The renames are an enumerated v2 change and there are no aliases, so a
-/// script written against v1 has to break loudly rather than charge something
-/// else. `devices` and `subscriptions` have no v2 endpoints at all.
+/// There are no aliases for the command names v1 uses, so a script written
+/// against v1 has to break loudly rather than charge something else.
+/// `devices` and `subscriptions` have no v2 endpoints at all.
 #[test]
 fn removed_v1_commands_are_not_accepted() {
     for args in [

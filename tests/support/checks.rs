@@ -77,7 +77,7 @@ pub fn variants_match_the_manifest(contracts: &[Contract], manifest: &str) {
     for (op, variant) in &listed {
         assert!(
             declared.contains(&(*op, *variant)),
-            "{op} / {variant} is listed and the matrix no longer declares it"
+            "{op} / {variant} is listed and the matrix does not declare it"
         );
     }
 }

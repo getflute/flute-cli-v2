@@ -396,8 +396,7 @@ mod tests {
     }
 
     /// Absent means absent: the parameter is not sent, so the server's own
-    /// defaults (0 and 20) govern. v1 always sent a `--limit` it had
-    /// defaulted to 25, which made the server default unreachable.
+    /// defaults (0 and 20) govern.
     #[test]
     fn absent_pagination_flags_send_no_query_at_all() {
         assert!(args(None, None, false).query().is_empty());

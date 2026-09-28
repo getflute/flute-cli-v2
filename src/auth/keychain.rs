@@ -4,8 +4,8 @@ use anyhow::{Context, Result, bail};
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
 
-/// Deliberately not v1's `flute-cli`. Two binaries must not read each other's
-/// credentials, even where the values would be identical.
+/// Deliberately not `flute-cli`, the entry v1 uses. Two binaries must not
+/// read each other's credentials, even where the values would be identical.
 const SERVICE: &str = "flute-cli-v2";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,9 +85,9 @@ fn delete_outcome(result: std::result::Result<(), keyring::Error>) -> Result<()>
 /// `Ok(None)` means "no environment credentials, use the keychain".
 /// `Err` means one of the pair is set and the other is not.
 ///
-/// v1 returns an `Option` here and treats a half-set pair as absent, so a CI
-/// job with a typo'd secret name silently authenticates as whoever last
-/// logged in on that machine.
+/// A half-set pair is an error rather than absent: treating it as absent
+/// would let a CI job with a typo'd secret name silently authenticate as
+/// whoever last logged in on that machine.
 pub(crate) fn creds_from_env() -> Result<Option<(String, String)>> {
     let id = non_empty("FLUTE2_CLIENT_ID");
     let secret = non_empty("FLUTE2_CLIENT_SECRET");
@@ -200,9 +200,9 @@ mod tests {
         );
     }
 
-    /// A half-set pair is a misconfiguration, and v1 answers it by silently
-    /// falling through to the keychain — so a CI job with a typo'd secret name
-    /// authenticates as whoever last logged in on that machine. v2 reports it.
+    /// A half-set pair is a misconfiguration, and it is reported: falling
+    /// through to the keychain would let a CI job with a typo'd secret name
+    /// authenticate as whoever last logged in on that machine.
     #[test]
     fn partial_env_credentials_are_an_error_not_a_fallthrough() {
         temp_env::with_vars(
@@ -244,7 +244,8 @@ mod tests {
         );
     }
 
-    /// v1's names must never be read; two binaries, two credential sets.
+    /// The `FLUTE_` names v1 reads are not read here; two binaries, two
+    /// credential sets.
     #[test]
     fn v1_env_names_are_not_read() {
         temp_env::with_vars(
@@ -258,8 +259,9 @@ mod tests {
         );
     }
 
-    /// The invariant is that it *differs* from v1's, so two binaries cannot
-    /// read each other's credentials. Assert the constant rather than trust it.
+    /// The invariant is that it *differs* from the entry v1 uses, so two
+    /// binaries cannot read each other's credentials. Assert the constant
+    /// rather than trust it.
     #[test]
     fn the_keychain_service_differs_from_v1() {
         assert_eq!(SERVICE, "flute-cli-v2");

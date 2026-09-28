@@ -204,9 +204,8 @@ pub static TERMINAL: Resource = Resource {
     yes_no: &[],
 };
 
-/// A terminal's live state is a different resource from the terminal, and v1
-/// gave it its own envelope name. The name is part of the output contract, so
-/// it is kept.
+/// A terminal's live state is a different resource from the terminal, so it
+/// has its own envelope name, which is part of the output contract.
 pub static TERMINAL_STATUS: Resource = Resource {
     object: "terminal_status",
     object_list: "terminal_statuses",

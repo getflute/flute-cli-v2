@@ -1,8 +1,7 @@
 //! One HTTP client, built once and injected. The seam the test strategy needs.
 //!
-//! v1 resolved credentials inside every dispatch arm, so no test could reach a
-//! request body through argv. Here `run()` builds one client and hands it
-//! down, which is what makes a mock server reachable from the compiled binary.
+//! `run()` builds one client and hands it down, which is what makes a mock
+//! server reachable from the compiled binary.
 
 use crate::api::error::{ApiError, parse_error_body};
 use crate::auth::token::{Fetcher, MissingCredentials, OAuth2Fetcher, TokenStore};
@@ -649,8 +648,7 @@ mod tests {
             ("client_id", "test-id"),
             ("client_secret", "test-secret"),
             ("grant_type", "client_credentials"),
-            // v2 declares scope required, an enum of exactly this value. v1
-            // sends the first three only, so a transplant would be malformed.
+            // v2 declares scope required, an enum of exactly this value.
             ("scope", "offline_access"),
         ]
         .iter()
@@ -689,9 +687,8 @@ mod tests {
         );
     }
 
-    /// v1 calls `.error_for_status()`, which discards the body, so the
-    /// OpenIddict shape is never parsed and `invalid_client` surfaces as a
-    /// bare status code.
+    /// The OpenIddict body is parsed, so `invalid_client` surfaces with its
+    /// description rather than as a bare status code.
     #[tokio::test]
     async fn an_openiddict_failure_is_parsed_not_swallowed() {
         let server = MockServer::start().await;

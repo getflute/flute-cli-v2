@@ -4,7 +4,7 @@
 
 mod support;
 
-/// **The documentation filenames are lowercase**, matching v1's.
+/// **The documentation filenames are lowercase**.
 ///
 /// Both documents are cross-linked from each other, and a link to
 /// `readme.md` is broken on a case-sensitive filesystem by a file named

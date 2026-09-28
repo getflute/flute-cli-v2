@@ -174,8 +174,8 @@ mod tests {
         );
     }
 
-    /// v1 asserts its notice says "flute update"; ours must say "flute2", or
-    /// a v2 user is told to run a binary that updates a different one.
+    /// The notice must say "flute2", or a v2 user is told to run a binary
+    /// that updates a different one.
     #[test]
     fn the_update_notice_names_the_v2_binary() {
         let n = notice_for("2.1.0");

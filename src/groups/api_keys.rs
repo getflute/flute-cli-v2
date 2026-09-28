@@ -105,10 +105,9 @@ fn explain_a_missing_feature(e: ApiError) -> ApiError {
 
 /// The keys of one account.
 ///
-/// v1 called the group `keys` and its envelope `api_token`. The command is
-/// renamed and the envelope name is not: renaming it would be a change to the
-/// output contract the design does not enumerate, and an agent branching on
-/// `object` would see it.
+/// The group is `api-keys` and its envelope is `api_token`. The envelope name
+/// is part of the output contract, and an agent branching on `object` would
+/// see a change to it.
 pub static API_KEY: Resource = Resource {
     object: "api_token",
     object_list: "api_token_list",

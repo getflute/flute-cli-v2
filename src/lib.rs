@@ -260,9 +260,8 @@ fn flute_prefixed_variable_notes(is_set: impl Fn(&str) -> bool) -> Vec<String> {
 
 /// Everything a command that talks to the API is handed.
 ///
-/// Built once, here, rather than resolved inside every dispatch arm as v1
-/// does — which is what lets a test point the compiled binary at a mock
-/// server.
+/// Built once, here, rather than resolved inside every dispatch arm, which is
+/// what lets a test point the compiled binary at a mock server.
 pub struct Ctx {
     pub api: ApiClient,
     pub profile: Profile,

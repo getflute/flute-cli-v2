@@ -1,8 +1,8 @@
 //! The v2 address shape.
 //!
-//! v2 spells these `addressLine1`, `stateCode` and `countryCode`. v1's
-//! `--billing-country-id` and `--billing-state-id` carried *ids*; v2 takes
-//! codes, so the flags are renamed rather than transplanted.
+//! v2 spells these `addressLine1`, `stateCode` and `countryCode`, and takes
+//! *codes* for the state and country, so the flags are `--billing-state` and
+//! `--billing-country` rather than id flags.
 //!
 //! Every argument carries an explicit `id`. clap derives an argument's id from
 //! its **field name**, not its long name, so two flattened structs that both
@@ -130,7 +130,7 @@ fn address(
 mod tests {
     use super::*;
 
-    /// v2's key names, not v1's. A wrong key here is silently dropped by an
+    /// The v2 key names. A wrong key here is silently dropped by an
     /// `additionalProperties: false` schema.
     #[test]
     fn uses_the_v2_address_key_names() {

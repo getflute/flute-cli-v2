@@ -171,8 +171,9 @@ mod tests {
         }
     }
 
-    /// The config carries v1's three keys under v1's names. `default_profile`
-    /// is the one `auth switch` writes and `--profile` absence reads.
+    /// The config carries the three keys v1 uses, under the same names.
+    /// `default_profile` is the one `auth switch` writes and `--profile`
+    /// absence reads.
     #[test]
     fn config_round_trips_v1_key_names() {
         let cfg: Config = toml::from_str(

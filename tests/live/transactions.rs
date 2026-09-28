@@ -2,8 +2,7 @@
 
 use crate::*;
 
-/// Charging an instrument that was stored earlier — the route v1 reached with
-/// `--payment-method-id` on four commands.
+/// Charging an instrument that was stored earlier, by `--payment-method-id`.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_saved_card_sale() {
@@ -197,9 +196,9 @@ fn live_saved_ach_debit_for_a_customer_needs_no_billing_address() {
         .success();
 }
 
-/// Level 2 and level 3 data, plus the extra amounts. v1 could reach five of
-/// these fields; v2 declares seventeen, and nothing but a live call says the
-/// API accepts them together.
+/// Level 2 and level 3 data, plus the extra amounts. v2 declares seventeen of
+/// these fields, and nothing but a live call says the API accepts them
+/// together.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_sale_with_level_three_data() {
@@ -375,8 +374,8 @@ fn live_full_capture_sends_no_body() {
     assert!(v["data"]["transactionId"].is_string(), "{v}");
 }
 
-/// `reversal` replaces v1's `void` **and** `refund`: one endpoint, with the
-/// settled state detected server-side.
+/// `reversal` is both a void **and** a refund: one endpoint, with the settled
+/// state detected server-side.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_reversal_of_a_sale() {
@@ -727,7 +726,7 @@ fn live_a_declined_card_exits_zero_and_reports_why() {
     let v = json(&args);
     assert_eq!(
         v["data"]["transactionStatus"], "Declined",
-        "the charge was not declined, so this scenario is no longer testing \
+        "the charge was not declined, so this scenario is not testing \
          the decline path: {}",
         v["data"]
     );

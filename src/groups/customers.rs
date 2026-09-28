@@ -459,9 +459,8 @@ pub static CUSTOMER: Resource = Resource {
         "/achAccounts/[]/accountType",
         "/achAccounts/[]/isDefault",
     ],
-    // v1's columns were ID, NAME, EMAIL, PHONE, CREATED. v2's list item
-    // carries no creation timestamp, so the last column reports the most
-    // recent transaction instead of inventing a value.
+    // The list item carries no creation timestamp, so the last column
+    // reports the most recent transaction instead of inventing a value.
     columns: &[
         Column {
             header: "ID",

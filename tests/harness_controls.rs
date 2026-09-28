@@ -689,7 +689,7 @@ fn the_variant_manifest_accepts_a_list_that_agrees_with_the_matrix() {
 /// exist.
 #[test]
 fn the_variant_manifest_rejects_a_variant_the_matrix_dropped() {
-    assert_rejects("is listed and the matrix no longer declares it", || {
+    assert_rejects("is listed and the matrix does not declare it", || {
         support::checks::variants_match_the_manifest(&[], "flute-v2-get-ping\tdefault\n");
     });
 }

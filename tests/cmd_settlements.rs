@@ -152,8 +152,8 @@ async fn settlement_close_without_a_processor_is_a_usage_error() {
     );
 }
 
-/// v1's columns were id, processor, date, count and three amounts. The v2
-/// list item drops none of them, so neither does the table.
+/// The table shows the id, processor, date, count and three amounts, all of
+/// which the list item carries.
 #[tokio::test]
 async fn settlement_list_table_shows_the_processor_the_counts_and_the_amounts() {
     let server = support::mock_with_token().await;

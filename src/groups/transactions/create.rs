@@ -86,7 +86,7 @@ pub fn chosen_instrument(args: &InstrumentArgs) -> Result<Chosen> {
 
 /// Mirror the server's documented rules before spending a round trip.
 ///
-/// v1 sent requests with no payment instrument at all, which the API answered
+/// A request with no payment instrument is refused here: the API answers one
 /// with a 500.
 pub fn validate_create_transaction(args: &CreateTransactionArgs) -> Result<Chosen> {
     if args.amount <= Decimal::ZERO {
@@ -452,9 +452,8 @@ enum Numeric {
 /// Parse one `--l3-product` value: comma-separated `key=value` pairs whose
 /// keys are the wire names.
 ///
-/// v1 took five positional comma-separated fields. v2's product declares
-/// **eight**, three of which v1 had no position for, and a positional list of
-/// eight is neither readable nor extendable. An unknown key is an error
+/// The product declares **eight** fields, and a positional list of eight is
+/// neither readable nor extendable. An unknown key is an error
 /// rather than a silent drop: the schema sets `additionalProperties: false`,
 /// so a typo would be rejected by the API anyway — with a worse message.
 pub fn parse_product(raw: &str) -> Result<Value> {

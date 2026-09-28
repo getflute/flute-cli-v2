@@ -113,9 +113,8 @@ async fn the_two_terminal_reads_carry_their_own_envelope_names() {
     assert_eq!(status["data"]["terminalStatus"], "Active");
 }
 
-/// v1's columns were ID and… nothing else worth keeping: it printed the two
-/// ids and the model. The serial number and the two live states are what a
-/// caller picking a terminal actually needs.
+/// The serial number and the two live states are what a caller picking a
+/// terminal needs.
 #[tokio::test]
 async fn terminal_list_table_shows_the_serial_the_mode_and_both_states() {
     let server = support::mock_with_token().await;

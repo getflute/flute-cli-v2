@@ -133,9 +133,9 @@ impl ErrorJson {
 
 /// Map an HTTP status to its exit code.
 ///
-/// 402, 409 and 429 are new in v2 and deliberately fall through the general
-/// arm: nothing can depend on a code the CLI has never emitted, so claiming
-/// one for them later stays backwards compatible.
+/// 402, 409 and 429 deliberately fall through the general arm: nothing can
+/// depend on a code the CLI does not emit, so assigning one to them later
+/// stays backwards compatible.
 pub fn exit_code_for_api(status: u16) -> i32 {
     match status {
         401 | 403 => 2,

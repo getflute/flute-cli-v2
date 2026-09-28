@@ -76,8 +76,8 @@ pub static CAPABILITIES: &[Capability] = &[
         parity: Parity::Replaced(
             "--profile",
             "same flag and same values, but parsed as Option<String> so the config \
-             file's default_profile is reachable; v1's clap default_value made \
-             the flag never-absent and stranded auth switch",
+             file's default_profile is reachable; v1's clap default_value makes \
+             the flag never-absent and strands auth switch",
         ),
         test: Some("profile_flag_overrides_the_stored_default"),
     },
@@ -182,7 +182,7 @@ pub static CAPABILITIES: &[Capability] = &[
         ],
         parity: Parity::Replaced(
             "customers create --billing-country/--billing-state",
-            "v2's AddressDto takes countryCode and stateCode, not the ids v1 sent, so one flag per component replaces v1's code-or-id pair",
+            "v2's AddressDto takes countryCode and stateCode, not the ids v1 sends, so one flag per component replaces v1's code-or-id pair",
         ),
         test: Some("create_sends_the_billing_address_under_v2_key_names"),
     },
@@ -229,7 +229,7 @@ pub static CAPABILITIES: &[Capability] = &[
         ],
         parity: Parity::Replaced(
             "transactions create --billing-country/--billing-state",
-            "v2's AddressDto takes countryCode and stateCode, not the ids v1 sent, so one flag per component replaces v1's code-or-id pair",
+            "v2's AddressDto takes countryCode and stateCode, not the ids v1 sends, so one flag per component replaces v1's code-or-id pair",
         ),
         test: Some("create_sends_the_billing_address_under_v2_key_names"),
     },
@@ -238,7 +238,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--currency-id"],
         parity: Parity::Replaced(
             "transactions create --currency-code",
-            "v2 takes an ISO currency code where v1 sent an internal id",
+            "v2 takes an ISO currency code where v1 sends an internal id",
         ),
         test: Some("create_posts_the_documented_and_undocumented_fields"),
     },
@@ -257,7 +257,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--payment-method-id"],
         parity: Parity::Replaced(
             "transactions create --payment-method-id --instrument card|ach",
-            "the id alone is no longer enough: v2 declares cardData and achData as \
+            "the id alone is not enough: v2 declares cardData and achData as \
              separate objects and a stored id does not say which it belongs in, so \
              --instrument decides",
         ),
@@ -276,9 +276,9 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--l3-product"],
         parity: Parity::Replaced(
             "transactions create --l3-product",
-            "same flag, different value syntax. v1 took five positional \
+            "same flag, different value syntax. v1 takes five positional \
              comma-separated fields; TransactionProductIsvDto declares eight, three of \
-             which v1 had no position for, so the value is comma-separated key=value \
+             which v1 has no position for, so the value is comma-separated key=value \
              pairs keyed by wire name",
         ),
         test: Some("transaction_create_level_three_exchange_matches_the_contract"),
@@ -314,7 +314,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--payment-method-id"],
         parity: Parity::Replaced(
             "transactions create --payment-method-id --instrument card|ach",
-            "the id alone is no longer enough: v2 declares cardData and achData as \
+            "the id alone is not enough: v2 declares cardData and achData as \
              separate objects and a stored id does not say which it belongs in, so \
              --instrument decides",
         ),
@@ -333,9 +333,9 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--l3-product"],
         parity: Parity::Replaced(
             "transactions create --l3-product",
-            "same flag, different value syntax. v1 took five positional \
+            "same flag, different value syntax. v1 takes five positional \
              comma-separated fields; TransactionProductIsvDto declares eight, three of \
-             which v1 had no position for, so the value is comma-separated key=value \
+             which v1 has no position for, so the value is comma-separated key=value \
              pairs keyed by wire name",
         ),
         test: Some("transaction_create_level_three_exchange_matches_the_contract"),
@@ -360,7 +360,7 @@ pub static CAPABILITIES: &[Capability] = &[
         ],
         parity: Parity::Replaced(
             "transactions create --billing-state/--billing-country",
-            "v1 carried ids; v2's AddressDto takes stateCode and countryCode",
+            "v1 carries ids; v2's AddressDto takes stateCode and countryCode",
         ),
         test: Some("transaction_create_new_ach_exchange_matches_the_contract"),
     },
@@ -369,7 +369,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--currency-id"],
         parity: Parity::Replaced(
             "transactions create --currency-code",
-            "v1 sent a numeric currency id; v2 declares currencyCode, an ISO code",
+            "v1 sends a numeric currency id; v2 declares currencyCode, an ISO code",
         ),
         test: Some("create_posts_the_documented_and_undocumented_fields"),
     },
@@ -386,7 +386,7 @@ pub static CAPABILITIES: &[Capability] = &[
             "transactions credit --ach-account-number/--ach-routing-number/\
              --ach-account-type/--ach-account-holder-type/--ach-tax-id",
             "v2 has no ach group: a credit is a transaction verb, and it takes a card \
-             as well as a bank account, which v1's `ach credit` could not",
+             as well as a bank account, which v1's `ach credit` cannot",
         ),
         test: Some("transaction_credit_ach_exchange_matches_the_contract"),
     },
@@ -441,7 +441,7 @@ pub static CAPABILITIES: &[Capability] = &[
         ],
         parity: Parity::Replaced(
             "transactions credit --billing-state/--billing-country",
-            "v1 carried ids; v2's AddressDto takes stateCode and countryCode",
+            "v1 carries ids; v2's AddressDto takes stateCode and countryCode",
         ),
         test: Some("transaction_credit_card_exchange_matches_the_contract"),
     },
@@ -450,7 +450,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--faster"],
         parity: Parity::Replaced(
             "transactions credit --same-day",
-            "as on the debit side: v1's flag named a speed, v2's field is \
+            "as on the debit side: v1's flag names a speed, v2's field is \
              isSameDayProcessing",
         ),
         test: Some("an_ach_charge_can_request_same_day_processing"),
@@ -530,7 +530,7 @@ pub static CAPABILITIES: &[Capability] = &[
         ],
         parity: Parity::Replaced(
             "transactions create --billing-state/--billing-country",
-            "v1 carried ids; v2's AddressDto takes stateCode and countryCode",
+            "v1 carries ids; v2's AddressDto takes stateCode and countryCode",
         ),
         test: Some("transaction_create_new_ach_exchange_matches_the_contract"),
     },
@@ -539,7 +539,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--faster"],
         parity: Parity::Replaced(
             "transactions create --same-day",
-            "v1's flag named a speed; v2's field is isSameDayProcessing, and the flag \
+            "v1's flag names a speed; v2's field is isSameDayProcessing, and the flag \
              names the thing it sets",
         ),
         test: Some("an_ach_charge_can_request_same_day_processing"),
@@ -549,7 +549,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--payment-method-id"],
         parity: Parity::Replaced(
             "transactions create --payment-method-id --instrument card|ach",
-            "the id alone is no longer enough: v2 declares cardData and achData as \
+            "the id alone is not enough: v2 declares cardData and achData as \
              separate objects and a stored id does not say which it belongs in, so \
              --instrument decides",
         ),
@@ -560,7 +560,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &[],
         parity: Parity::Replaced(
             "transactions reversal",
-            "v2 has one reversal endpoint where v1 had void and refund; the payment \
+            "v2 has one reversal endpoint where v1 has void and refund; the payment \
              method and the settled state are detected server-side, so the caller no \
              longer chooses between two commands",
         ),
@@ -571,7 +571,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &[],
         parity: Parity::Replaced(
             "transactions reversal",
-            "v2 has one reversal endpoint where v1 had void and refund; the payment \
+            "v2 has one reversal endpoint where v1 has void and refund; the payment \
              method and the settled state are detected server-side, so the caller no \
              longer chooses between two commands",
         ),
@@ -620,7 +620,7 @@ pub static CAPABILITIES: &[Capability] = &[
             "customers list --page-size",
             "same idea, different bound and default: v2 declares pageSize 1-100 with a \
              server default of 20, and the flag is omitted when absent so that default \
-             governs. v1 defaulted --limit to 25 and always sent it, which made the \
+             governs. v1 defaults --limit to 25 and always sends it, which makes the \
              server default unreachable",
         ),
         test: Some("customer_list_exchange_matches_the_contract"),
@@ -630,8 +630,8 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--page"],
         parity: Parity::Replaced(
             "customers list --page-index",
-            "0-based, mirroring the API's own pageIndex. v1's 1-based --page was \
-             friendlier in isolation and introduced a silent off-by-one against every \
+            "0-based, mirroring the API's own pageIndex. v1's 1-based --page is \
+             friendlier in isolation and introduces a silent off-by-one against every \
              example in the API documentation",
         ),
         test: Some("customer_list_filtered_exchange_matches_the_contract"),
@@ -651,9 +651,9 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &[],
         parity: Parity::Replaced(
             "payment-methods list",
-            "v1 could only list one customer's methods; v2's endpoint lists the \
-             merchant's, with --customer-id as a filter, so the capability grew rather \
-             than moved",
+            "v1 can only list one customer's methods; v2's endpoint lists the \
+             merchant's, with --customer-id as a filter, a superset of \
+             v1's",
         ),
         test: Some("payment_method_list_filtered_exchange_matches_the_contract"),
     },
@@ -701,7 +701,7 @@ pub static CAPABILITIES: &[Capability] = &[
         ],
         parity: Parity::Replaced(
             "customers update --billing-state/--billing-country",
-            "v1 carried ids; v2's AddressDto takes stateCode and countryCode, so the \
+            "v1 carries ids; v2's AddressDto takes stateCode and countryCode, so the \
              pair of id flags collapses into two code flags and the values differ",
         ),
         test: Some("update_sends_every_v1_field_under_its_v2_wire_name"),
@@ -807,7 +807,7 @@ pub static CAPABILITIES: &[Capability] = &[
         parity: Parity::Replaced(
             "pos create --currency-code",
             "CreatePosTransactionRequestDto declares currencyCode as an ISO 4217 \
-             string and requires it; v1 sent an integer currency id, which has no \
+             string and requires it; v1 sends an integer currency id, which has no \
              v2 field to reach",
         ),
         test: Some("pos_create_full_exchange_matches_the_contract"),
@@ -838,8 +838,8 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--transaction-type"],
         parity: Parity::Replaced(
             "pos create --capture-method auto|manual",
-            "a v2 POS create only creates, so the five v1 transaction types are \
-             gone; the one distinction it still carries, charge versus \
+            "a v2 POS create only creates, so the five v1 transaction types have no \
+             counterpart; the one distinction it carries, charge versus \
              authorization, is captureMethod",
         ),
         test: Some("pos_create_full_exchange_matches_the_contract"),
@@ -1050,8 +1050,8 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--transaction-id"],
         parity: Parity::Replaced(
             "transactions reversal --transaction-id",
-            "the flag carries over; the command it sits on does not, because v2 \
-             has one reversal endpoint where v1 had void and refund",
+            "the same flag on a different command, because v2 \
+             has one reversal endpoint where v1 has void and refund",
         ),
         test: Some("transaction_reversal_full_exchange_matches_the_contract"),
     },
@@ -1093,7 +1093,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--transaction-id"],
         parity: Parity::Replaced(
             "transactions reversal",
-            "v2 has one reversal endpoint where v1 had void and refund; the payment \
+            "v2 has one reversal endpoint where v1 has void and refund; the payment \
              method and the settled state are detected server-side, so the caller no \
              longer chooses between two commands",
         ),

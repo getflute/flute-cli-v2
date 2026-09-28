@@ -525,10 +525,9 @@ pub static POS_TRANSACTION: Resource = Resource {
         "/linkedTransaction/transactionType",
         "/linkedTransaction/processedAmount",
     ],
-    // v1's columns were ID, TERMINAL ID, TYPE, STATUS, AMOUNT, DONE. The v2
-    // list item declares neither a transaction type nor an `isCompleted`, so
-    // those two are gone rather than invented, and the creation timestamp
-    // takes the place the boolean held.
+    // The list item declares neither a transaction type nor an
+    // `isCompleted`, so the table shows neither rather than inventing them,
+    // and the creation timestamp fills the last column.
     columns: &[
         Column {
             header: "ID",
