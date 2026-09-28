@@ -193,6 +193,9 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
         body.insert("amount".into(), to_amount_number(v)?);
     }
     if let Some(v) = args.tip_amount {
+        if !args.mode.unwrap_or_default().charges() {
+            anyhow::bail!("a save-method session charges nothing, so it takes no --tip-amount");
+        }
         if v <= Decimal::ZERO {
             anyhow::bail!("--tip-amount must be greater than zero");
         }
@@ -496,6 +499,20 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("save-method"), "{err}");
+    }
+
+    /// A tip is money too, so a vault-only session refuses one.
+    #[test]
+    fn a_vault_only_session_refuses_a_tip() {
+        let args = CreatePaymentSessionArgs {
+            mode: Some(SessionMode::SaveMethod),
+            tip_amount: Some("5.00".parse().unwrap()),
+            ..Default::default()
+        };
+        let err = build_create_payment_session_body(&args)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("--tip-amount"), "{err}");
     }
 
     /// A paying session's zero is the other half of the same rule, and the

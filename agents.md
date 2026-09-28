@@ -551,6 +551,7 @@ flute2 payment-sessions cancel [OPTIONS] <PAYMENT_SESSION_ID>
   zero** for `--mode save-method`, which the CLI sends for you; **absent** for a
   flexible session the payer sets at checkout. All three are enforced before the
   wire, because OpenAPI can express none of them.
+  A save-method session refuses `--tip-amount` too, since it charges nothing.
 - `--metadata key=value` is repeatable and splits on the **first** `=`, so a URL
   or a query string survives as a value.
 - `cancel` requires `--yes`. A second cancel is a 400, exit 3, and a 404 is exit 4.
