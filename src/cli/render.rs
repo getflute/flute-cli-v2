@@ -233,11 +233,10 @@ fn more_pages_hint(shown: usize, page_info: &Value) -> Option<String> {
 
 /// Confirm a write whose success carries **no body**.
 ///
-/// Thirteen of the fifty operations answer with nothing, so there is no
-/// resource to render. The identity can only come from the request, and the
-/// verb is what the CLI knows happened — the same shape as `ping`, whose
-/// `reachable: true` is likewise the CLI's own statement rather than the
-/// API's.
+/// Some operations answer with nothing, so there is no resource to render.
+/// The identity can only come from the request, and the verb is what the CLI
+/// knows happened — the same shape as `ping`, whose `reachable: true` is
+/// likewise the CLI's own statement rather than the API's.
 ///
 /// An **empty** `id` is a singleton resource — a settings document lives at a
 /// fixed path and has none. It is then omitted rather than reported as an

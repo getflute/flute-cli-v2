@@ -69,7 +69,8 @@ impl<T: Serialize> Envelope<T> {
 ///
 /// A machine consumer must never see an empty stdout, so every failure
 /// classifies into one `kind`: `api` for an HTTP error carrying a status,
-/// `transport` for a connection failure, `auth` for OAuth or keychain,
+/// `transport` for a connection failure or a request that timed out after it
+/// was sent, `auth` for OAuth or keychain,
 /// `decode` for a body that could not be read, and `client` for everything
 /// else — config, usage, and client-side validation.
 #[derive(Debug, Serialize)]

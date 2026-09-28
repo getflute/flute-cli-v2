@@ -51,8 +51,9 @@ fn the_generated_facts_agree_with_the_surface_walker() {
         include_bytes!("../docs/reference/openapi-v2.json"),
         &facts.bundle_sha256,
     );
-    assert_eq!(facts.operation_count, 50);
-    assert_eq!(facts.operations.len(), 50);
+    let count = support::spec::non_webhook_routes().len();
+    assert_eq!(facts.operation_count, count);
+    assert_eq!(facts.operations.len(), count);
 
     for op in &facts.operations {
         let route = format!("{} {}", op.method.to_ascii_uppercase(), op.path);

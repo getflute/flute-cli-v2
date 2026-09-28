@@ -37,10 +37,10 @@ fn http_client(timeout: Duration) -> reqwest::Result<reqwest::Client> {
         .build()
 }
 
-/// A response, faithfully. `body` is `None` for a bodyless success, which is a
-/// documented outcome for thirteen of the fifty operations and not a decode
-/// error — reporting it as one inside transport puts it where no renderer can
-/// rescue it.
+/// A response, faithfully. `body` is `None` for a bodyless success, which is
+/// a documented outcome for every operation that declares no response body
+/// and not a decode error — reporting it as one inside transport puts it
+/// where no renderer can rescue it.
 #[derive(Debug, Clone)]
 pub struct Response {
     pub status: u16,
@@ -836,8 +836,8 @@ mod tests {
         }
     }
 
-    /// A bodyless 200 is a documented success for thirteen of the fifty
-    /// operations, `ping` among them. Reporting it as a decode error inside
+    /// A bodyless 200 is a documented success for every operation that
+    /// declares no response body, `ping` among them. Reporting it as a decode error inside
     /// transport puts it where no renderer can rescue it.
     #[tokio::test]
     async fn a_bodyless_success_is_not_a_decode_error() {

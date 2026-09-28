@@ -51,9 +51,9 @@ def resolve(doc, node):
 
 
 def is_array(schema):
-    """A nullable array's type is a list, so equality against the string
-    silently stops the walk — the defect that once reduced the surface matrix
-    to container rows."""
+    """A nullable array's type is a list such as `["array", "null"]`, so an
+    array is either spelling. Equality against the string alone would stop
+    the walk at every nullable array and leave only its container row."""
     t = schema.get("type")
     return t == "array" or (isinstance(t, list) and "array" in t)
 

@@ -158,8 +158,8 @@ mod patch_tests {
         );
     }
 
-    /// The existing rules still decide what a value may be; only the empty
-    /// case is new.
+    /// The patch parsers refuse everything the plain parsers refuse; the empty
+    /// value is the one input they read differently, as a clear.
     #[test]
     fn the_underlying_parser_still_refuses_what_it_refused() {
         for bad in ["abc", "1e5", "+1", "-1"] {

@@ -71,7 +71,7 @@ pub fn ok(body: Option<serde_json::Value>) -> ResponseFixture {
 }
 
 pub static CONTRACTS: &[Contract] = &[
-    // The token endpoint is one of the fifty, not an extra beside them. It
+    // The token endpoint is one of the bundle's operations, not an extra. It
     // needs no command: the client obtains a bearer on every authenticated
     // call, and `auth token` prints one.
     Contract {

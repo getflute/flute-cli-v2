@@ -154,8 +154,8 @@ fn all_operations() -> Vec<(String, String, &'static Value)> {
     out
 }
 
-/// Webhooks are out of scope by ticket, so they are excluded here rather than
-/// listed as exclusions in every matrix.
+/// Webhooks are out of scope for this CLI, so they are excluded here rather
+/// than listed as exclusions in every matrix.
 fn is_webhook(path: &str) -> bool {
     path.starts_with("/v2/webhooks")
 }

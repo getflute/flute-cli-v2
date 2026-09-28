@@ -706,6 +706,9 @@ refused**: a walk of everything and a starting page contradict each other.
 
 `--page-size` stays legal with `--all`. It is a batch size, not a position.
 
+`--all` walks by page index, so a row inserted or deleted while the walk runs
+can appear twice or not at all.
+
 A page is a JSON object. Its `items` is declared nullable and optional, so an
 absent one, a null one and an empty array are all an empty page. A body that is
 not an object, or an `items` that is present and is neither an array nor null,
