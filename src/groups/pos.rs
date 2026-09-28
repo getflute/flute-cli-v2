@@ -538,8 +538,7 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
             // `waitForTransactionProcessing` holds the response open until the
             // state moves, which can outlast the client-wide bound, so the
             // long poll gets the default wait budget a create's poll gets.
-            let bound =
-                wait.then(|| Duration::from_secs(DEFAULT_WAIT_TIMEOUT_SECS) + POLL_TIMEOUT_MARGIN);
+            let bound = get_wait_bound(wait);
             let resp = ctx
                 .api
                 .request_within(
@@ -698,6 +697,12 @@ async fn create(ctx: &Ctx, args: CreatePosTransactionArgs) -> Result<()> {
             Err(Reported { code: 130 }.into())
         }
     }
+}
+
+/// The bound on a `get --wait` long poll: the default wait budget plus the
+/// poll margin, which outlasts the client-wide request timeout on purpose.
+fn get_wait_bound(wait: bool) -> Option<Duration> {
+    wait.then(|| Duration::from_secs(DEFAULT_WAIT_TIMEOUT_SECS) + POLL_TIMEOUT_MARGIN)
 }
 
 #[cfg(test)]
@@ -953,5 +958,16 @@ mod tests {
     fn a_response_with_no_status_is_a_decode_error() {
         let err = declared_status(&serde_json::json!({"posTransactionId": "p-1"})).unwrap_err();
         assert!(matches!(err, ApiError::Decode(_)), "{err}");
+    }
+
+    /// `get --wait` passes its own bound, and that bound outlasts the
+    /// client-wide request timeout; without `--wait` the client-wide bound
+    /// governs. The client's own tests prove a request's bound wins over the
+    /// client-wide one.
+    #[test]
+    fn get_wait_is_bounded_beyond_the_client_wide_timeout() {
+        let bound = get_wait_bound(true).expect("a bound with --wait");
+        assert!(bound > crate::api::client::REQUEST_TIMEOUT, "{bound:?}");
+        assert_eq!(get_wait_bound(false), None);
     }
 }

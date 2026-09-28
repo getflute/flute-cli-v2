@@ -19,7 +19,7 @@ const USER_AGENT: &str = concat!("flute2/", env!("CARGO_PKG_VERSION"));
 
 /// A request that has not been answered in this long is not going to be, and
 /// a payment command that hangs is worse than one that fails.
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+pub(crate) const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// The one client this crate builds, for the API and the token exchange
 /// alike.

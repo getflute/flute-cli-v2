@@ -1339,34 +1339,3 @@ async fn pos_create_wait_spends_one_budget_across_the_create_and_the_poll() {
         "a 4 s budget with a 3 s create took {elapsed:?}"
     );
 }
-
-/// **`pos get --wait` is bounded by the default wait budget**, not by the
-/// client-wide 30 s request timeout: `waitForTransactionProcessing` holds the
-/// response open until the state moves, which can outlast that bound.
-///
-/// The hold is past 30 s because the client-wide bound has no shorter
-/// override to exercise it through.
-#[tokio::test]
-async fn pos_get_wait_outlasts_the_client_wide_request_timeout() {
-    let server = support::mock_with_token().await;
-    Mock::given(method("GET"))
-        .and(path(format!("/v2/pos/transactions/{POS_TXN}")))
-        .and(query_param("waitForTransactionProcessing", "true"))
-        .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_json(completed())
-                .set_delay(std::time::Duration::from_secs(32)),
-        )
-        .mount(&server)
-        .await;
-
-    let out = support::bin(&server)
-        .args(["--output", "json", "pos", "get", POS_TXN, "--wait"])
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-    assert_eq!(v["data"]["posTransactionStatus"], "Completed", "{v}");
-}

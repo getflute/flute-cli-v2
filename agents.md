@@ -302,8 +302,10 @@ of stdout from the exit code.
   to reconcile or cancel by. The failure is on stderr, and the exit code is the
   one that failure maps to in the table above: **1** for a `transport` failure,
   a 5xx or an unreadable poll response.
-- **Ctrl-C** — the last-known status goes to stderr, **stdout stays empty in
-  every output mode**, and the exit code is **130**.
+- **Ctrl-C** — during the poll, the last-known status goes to stderr; during
+  the create request, a line saying the transaction may exist goes to stderr
+  instead. **stdout stays empty in every output mode**, and the exit code is
+  **130**.
 
 The fourth is an **unparseable `--output` value**: the mode that would render
 the envelope is the thing being rejected, so clap's text goes to stderr, stdout
