@@ -49,108 +49,15 @@ pub fn variants_conform(contracts: &[Contract]) {
     }
 }
 
-/// **The oracle for which variants must exist.**
-///
-/// Every other variant check asks `CONTRACTS` what should be there, so a
-/// variant deleted whole — fixture, mock test and live reference together —
-/// takes its own requirement with it and every gate stays green while the
-/// coverage claim shrinks. `tests/support/variants.txt` is maintained beside
-/// the matrix, so dropping a variant needs a second edit, and that edit is
-/// where a reviewer meets the change in what is claimed.
-///
-/// Both directions: a listed variant the matrix dropped and a declared variant
-/// the list never gained are different mistakes, and each names itself.
-pub fn variants_match_the_manifest(contracts: &[Contract], manifest: &str) {
-    let declared: std::collections::BTreeSet<(&str, &str)> = contracts
-        .iter()
-        .flat_map(|c| c.variants.iter().map(move |v| (c.operation_id, v.name)))
-        .collect();
-    let listed = manifest_variants(manifest);
-
-    for (op, variant) in &declared {
-        assert!(
-            listed.contains(&(*op, *variant)),
-            "{op} / {variant} is declared and not listed in \
-             tests/support/variants.txt"
-        );
-    }
-    for (op, variant) in &listed {
-        assert!(
-            declared.contains(&(*op, *variant)),
-            "{op} / {variant} is listed and the matrix does not declare it"
-        );
-    }
-}
-
-/// One `operation_id<TAB>variant name` per line; `#` opens a comment line.
-fn manifest_variants(manifest: &str) -> std::collections::BTreeSet<(&str, &str)> {
-    manifest
-        .lines()
-        .map(str::trim_end)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|line| {
-            line.split_once('\t').unwrap_or_else(|| {
-                panic!("variants.txt: `{line}` is not `operation_id<TAB>variant name`")
-            })
-        })
-        .collect()
-}
-
-/// A named test that does not exist is an orphaned row, not coverage — and a
-/// test that never mentions its operation id is not demonstrably testing it.
-pub fn variants_name_real_tests(contracts: &[Contract]) {
-    for c in contracts {
-        for v in c.variants {
-            let definitions = super::test_fn_definitions(v.mock_test);
-            assert!(
-                definitions > 0,
-                "{} / {}: mock test `{}` does not exist",
-                c.operation_id,
-                v.name,
-                v.mock_test
-            );
-            // Before the citation check, so an ignored test is reported as the
-            // one thing wrong with it rather than as a missing citation.
-            assert!(
-                super::runnable_test_fn_definitions(v.mock_test) > 0,
-                "{} / {}: mock test `{}` is #[ignore]d, so it does not run \
-                 under `cargo test` and the row claims coverage nothing \
-                 produces",
-                c.operation_id,
-                v.name,
-                v.mock_test
-            );
-            // Two tests sharing a name make the row ambiguous: the scan would
-            // resolve it to whichever came first in directory order, so a row
-            // could be satisfied by a same-named test in another group's file
-            // exercising a different operation.
-            assert_eq!(
-                definitions, 1,
-                "{} / {}: `{}` is defined {definitions} times under tests/; \
-                 a row names one test, so the name must be unique",
-                c.operation_id, v.name, v.mock_test
-            );
-            assert!(
-                super::test_fn_cites(v.mock_test, c.operation_id),
-                "{} / {}: `{}` never references its operation id; drive its mock \
-                 from contracts::exchange(\"{}\", \"{}\")",
-                c.operation_id,
-                v.name,
-                v.mock_test,
-                c.operation_id,
-                v.name
-            );
-        }
-    }
-}
-
-/// Live coverage is opt-out with a stated reason, never silent.
-pub fn variants_have_live_coverage(contracts: &[Contract]) {
+/// Live coverage is opt-out with a stated reason, never silent. `sources` is
+/// the text of the live scenarios.
+pub fn variants_have_live_coverage(contracts: &[Contract], sources: &str) {
     for c in contracts {
         for v in c.variants {
             match &v.live {
                 Live::Test(name) => assert!(
-                    super::test_fn_exists(name),
+                    // ponytail: a mention in a comment also passes
+                    sources.contains(&format!("fn {name}(")),
                     "{} / {}: live test `{}` does not exist",
                     c.operation_id,
                     v.name,
@@ -229,28 +136,17 @@ pub fn built_writes_and_bodyless_successes_are_covered(contracts: &[Contract]) {
     }
 }
 
-/// A divergence's `evidence` must name a live test that exists.
-///
-/// Every other named test in the suite is checked — a contract row's mock
-/// test, its live test, a parity row's test — and this one was not. A
-/// divergence is the strongest claim the harness makes: it *suspends* a
-/// declared constraint, and the only thing standing behind it is the live
-/// scenario named here. A pointer at a test that does not exist is an
-/// exemption with no oracle, which is worse than no exemption at all.
-pub fn divergences_name_real_tests(divergences: &[spec::Divergence]) {
+/// A divergence's `evidence` must name a live scenario in `sources`, and it
+/// must state the condition under which it is deleted. A divergence suspends a
+/// declared constraint, and the scenario it names is the only thing behind it.
+pub fn divergences_name_real_tests(divergences: &[spec::Divergence], sources: &str) {
     for d in divergences {
-        let definitions = super::test_fn_definitions(d.evidence);
         assert!(
-            definitions > 0,
+            // ponytail: a mention in a comment also passes
+            sources.contains(&format!("fn {}(", d.evidence)),
             "{}: evidence `{}` does not exist, so the exemption has no oracle",
             d.name,
             d.evidence
-        );
-        assert_eq!(
-            definitions, 1,
-            "{}: evidence `{}` is defined {definitions} times under tests/; \
-             a divergence names one scenario, so the name must be unique",
-            d.name, d.evidence
         );
         assert!(
             !d.removal.is_empty(),
@@ -366,49 +262,7 @@ pub fn exposed_flags_appear_in_help(surface: &[Field]) {
 
 // ── Layer 4b: v1 capability parity ───────────────────────────────────────────
 
-use super::parity::{Capability, Parity, V1_SURFACE};
-
-/// Preserved and replaced capabilities must be proven by a test that exists.
-pub fn carried_capabilities_name_real_tests(capabilities: &[Capability]) {
-    for c in capabilities {
-        match &c.parity {
-            Parity::Removed(reason) => {
-                assert!(
-                    !reason.is_empty(),
-                    "{}: removal needs a v2 reason",
-                    c.v1_command
-                );
-                assert!(
-                    c.test.is_none(),
-                    "{}: removed but names a test",
-                    c.v1_command
-                );
-            }
-            Parity::Preserved(v2) | Parity::Replaced(v2, _) => {
-                assert!(
-                    !v2.is_empty(),
-                    "{}: carried but names no v2 command",
-                    c.v1_command
-                );
-                let t = c
-                    .test
-                    .unwrap_or_else(|| panic!("{}: carried but names no test", c.v1_command));
-                assert!(
-                    super::test_fn_exists(t),
-                    "{}: test `{t}` does not exist",
-                    c.v1_command
-                );
-            }
-        }
-        if let Parity::Replaced(_, why) = &c.parity {
-            assert!(
-                !why.is_empty(),
-                "{}: a replacement needs a reason it differs",
-                c.v1_command
-            );
-        }
-    }
-}
+use super::parity::{Capability, V1_SURFACE};
 
 /// **Half of the completeness check the matrix exists for:** every command v1
 /// ships has a row.

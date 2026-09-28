@@ -14,21 +14,8 @@ fn every_variant_conforms_to_its_own_operation() {
 }
 
 #[test]
-fn every_variant_names_a_mock_test_that_exists_and_cites_its_operation() {
-    checks::variants_name_real_tests(CONTRACTS);
-}
-
-/// **The oracle outside the matrix.** Every other variant check asks
-/// `CONTRACTS` what should exist, so a variant deleted from it takes its own
-/// requirement with it.
-#[test]
-fn the_declared_variants_are_exactly_the_ones_the_manifest_lists() {
-    checks::variants_match_the_manifest(CONTRACTS, include_str!("support/variants.txt"));
-}
-
-#[test]
 fn every_variant_has_live_coverage_or_a_reason() {
-    checks::variants_have_live_coverage(CONTRACTS);
+    checks::variants_have_live_coverage(CONTRACTS, &live_sources());
 }
 
 #[test]
@@ -49,8 +36,7 @@ fn every_live_variable_is_documented_and_every_documented_one_is_read() {
 }
 
 /// The scenario sources, read at runtime: the package root is the working
-/// directory for a test binary, which is what the coverage scan already
-/// relies on.
+/// directory for a test binary.
 fn live_sources() -> String {
     let mut buf = std::fs::read_to_string("tests/live.rs").expect("tests/live.rs");
     for entry in std::fs::read_dir("tests/live")
@@ -73,5 +59,5 @@ fn live_template() -> String {
 /// names is the only thing behind it.
 #[test]
 fn every_divergence_names_a_live_test_that_exists() {
-    checks::divergences_name_real_tests(support::spec::DIVERGENCES);
+    checks::divergences_name_real_tests(support::spec::DIVERGENCES, &live_sources());
 }

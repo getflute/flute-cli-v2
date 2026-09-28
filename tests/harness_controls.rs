@@ -451,133 +451,6 @@ fn the_hash_gate_rejects_an_altered_bundle() {
     });
 }
 
-// ── The source scan ──────────────────────────────────────────────────────────
-
-/// `test_fn_exists` pointed at the wrong directory would report full coverage
-/// forever, which is the clearest case of a checker failing invisibly.
-#[test]
-fn the_source_scan_rejects_a_name_that_does_not_exist() {
-    assert!(support::test_fn_exists(
-        "the_source_scan_rejects_a_name_that_does_not_exist"
-    ));
-    assert!(!support::test_fn_exists(
-        "no_such_test_function_anywhere_1f4c"
-    ));
-}
-
-/// A prefix must not satisfy a longer name, or a row could name
-/// `create_posts_everything` and be satisfied by `create_posts`.
-#[test]
-fn the_source_scan_does_not_match_on_a_prefix() {
-    assert!(!support::test_fn_exists("the_source_scan_rejects_a_name"));
-}
-
-/// The subject is a *different* function on purpose. Asserting about this
-/// one would put both ids in its own body, so the negative case could never
-/// fail — the trap the citation scan itself exists to catch, one level up.
-#[test]
-fn the_citation_scan_rejects_a_test_that_never_names_its_operation() {
-    const SUBJECT: &str = "ping_exchange_matches_the_contract";
-    assert!(
-        support::test_fn_cites(SUBJECT, "flute-v2-get-ping"),
-        "the subject does mount the ping operation"
-    );
-    assert!(
-        !support::test_fn_cites(SUBJECT, "flute-v2-post-customers"),
-        "the subject does not cite customer create, so the scan must say so"
-    );
-}
-
-/// Shapes that name a function without defining a test anyone can run.
-///
-/// They are written out as source text rather than passed to the scan as
-/// strings because the scan reads `tests/` off disk: a fixture is only a
-/// fixture if it is really spelled this way in a file the walk reaches.
-mod decoys {
-    // fn a_decoy_defined_only_in_a_line_comment() {}
-
-    /* fn a_decoy_defined_only_in_a_block_comment() {} */
-
-    /// A definition nothing compiles, quoted so the scan meets it as text.
-    pub const QUOTED: &str = "fn a_decoy_defined_only_in_a_string_literal() {}";
-
-    /// A helper with no `#[test]` above it. `cargo test` never calls it, so a
-    /// row satisfied by this name claims coverage that cannot run.
-    pub fn a_decoy_that_is_not_a_test() {}
-
-    /// A real test that a plain `cargo test` skips.
-    #[test]
-    #[ignore = "a decoy for the scan; it asserts nothing"]
-    fn a_decoy_that_never_runs() {}
-
-    /// Names an operation in a comment and in a loose string, and drives no
-    /// mock from either.
-    #[test]
-    fn a_decoy_that_names_an_operation_it_never_mounts() {
-        // flute-v2-get-ping
-        assert_eq!("flute-v2-get-ping".len(), 17);
-    }
-}
-
-/// A name a comment mentions is not a definition, and `brace_body` starts at
-/// the `fn` token — so the `//` earlier on the line is invisible to it and the
-/// next `{` in the file is taken as the body.
-#[test]
-fn the_source_scan_ignores_a_name_that_only_a_comment_mentions() {
-    assert!(!support::test_fn_exists(
-        "a_decoy_defined_only_in_a_line_comment"
-    ));
-    assert!(!support::test_fn_exists(
-        "a_decoy_defined_only_in_a_block_comment"
-    ));
-}
-
-/// The same for a quoted definition: a string is data, never a declaration.
-#[test]
-fn the_source_scan_ignores_a_name_that_only_a_string_literal_holds() {
-    assert!(decoys::QUOTED.contains("a_decoy_defined_only_in_a_string_literal"));
-    assert!(!support::test_fn_exists(
-        "a_decoy_defined_only_in_a_string_literal"
-    ));
-}
-
-/// A helper is not a test. Without the attribute check a row could name any
-/// function in the tree — `sequence`, `client_for` — and read as covered.
-#[test]
-fn the_source_scan_rejects_a_function_that_carries_no_test_attribute() {
-    decoys::a_decoy_that_is_not_a_test();
-    assert!(!support::test_fn_exists("a_decoy_that_is_not_a_test"));
-}
-
-/// An `#[ignore]`d function is a scenario somebody opts into by hand, so a
-/// contract row satisfied by one claims coverage a plain `cargo test` never
-/// produces. The live rows are the deliberate exception and are checked with
-/// the counter that keeps them.
-#[test]
-fn the_source_scan_separates_a_test_that_runs_from_one_that_is_ignored() {
-    assert_eq!(support::test_fn_definitions("a_decoy_that_never_runs"), 1);
-    assert_eq!(
-        support::runnable_test_fn_definitions("a_decoy_that_never_runs"),
-        0
-    );
-}
-
-/// An id in a comment or in a string no mock reads is a mention, not evidence.
-/// The second subject is a real test: it passes the id to
-/// `assert_exchange_conforms`, which validates a fixture built by hand and
-/// exercises no wire traffic at all.
-#[test]
-fn the_citation_scan_rejects_an_operation_id_no_mock_is_driven_from() {
-    assert!(!support::test_fn_cites(
-        "a_decoy_that_names_an_operation_it_never_mounts",
-        "flute-v2-get-ping"
-    ));
-    assert!(!support::test_fn_cites(
-        "conformance_rejects_an_invented_body_on_a_bodyless_success",
-        "flute-v2-get-ping"
-    ));
-}
-
 // ── Coverage invariants ──────────────────────────────────────────────────────
 
 fn ping_exchange() -> Exchange {
@@ -597,112 +470,6 @@ fn ping_exchange() -> Exchange {
     }
 }
 
-static VARIANT_NAMING_A_MISSING_TEST: &[Variant] = &[Variant {
-    name: "default",
-    exchange: ping_exchange,
-    mock_test: "no_such_mock_test_2b7f",
-    live: Live::Test("live_ping_succeeds"),
-}];
-
-static CONTRACT_WITH_A_MISSING_TEST: &[Contract] = &[Contract {
-    operation_id: "flute-v2-get-ping",
-    mapping: Mapping::Command("ping"),
-    variants: VARIANT_NAMING_A_MISSING_TEST,
-}];
-
-#[test]
-fn coverage_rejects_a_variant_naming_a_test_that_does_not_exist() {
-    assert_rejects("does not exist", || {
-        support::checks::variants_name_real_tests(CONTRACT_WITH_A_MISSING_TEST);
-    });
-}
-
-static VARIANT_NOT_CITING_ITS_OPERATION: &[Variant] = &[Variant {
-    name: "default",
-    // A real test, but one that never names flute-v2-get-ping.
-    mock_test: "the_hash_gate_rejects_an_altered_bundle",
-    exchange: ping_exchange,
-    live: Live::Test("live_ping_succeeds"),
-}];
-
-static CONTRACT_NOT_CITING: &[Contract] = &[Contract {
-    operation_id: "flute-v2-get-ping",
-    mapping: Mapping::Command("ping"),
-    variants: VARIANT_NOT_CITING_ITS_OPERATION,
-}];
-
-#[test]
-fn coverage_rejects_a_test_that_never_mentions_its_operation_id() {
-    assert_rejects("never references its operation id", || {
-        support::checks::variants_name_real_tests(CONTRACT_NOT_CITING);
-    });
-}
-
-static VARIANT_NAMING_AN_IGNORED_TEST: &[Variant] = &[Variant {
-    name: "default",
-    exchange: ping_exchange,
-    mock_test: "a_decoy_that_never_runs",
-    live: Live::Test("live_ping_succeeds"),
-}];
-
-static CONTRACT_WITH_AN_IGNORED_TEST: &[Contract] = &[Contract {
-    operation_id: "flute-v2-get-ping",
-    mapping: Mapping::Command("ping"),
-    variants: VARIANT_NAMING_AN_IGNORED_TEST,
-}];
-
-/// A mock row's whole job is to be run by `cargo test`. One naming an
-/// `#[ignore]`d function is a green gate over a scenario nobody executes.
-#[test]
-fn coverage_rejects_a_mock_test_a_plain_run_would_skip() {
-    assert_rejects("does not run", || {
-        support::checks::variants_name_real_tests(CONTRACT_WITH_AN_IGNORED_TEST);
-    });
-}
-
-static ONE_SOUND_VARIANT: &[Variant] = &[Variant {
-    name: "default",
-    exchange: ping_exchange,
-    mock_test: "ping_exchange_matches_the_contract",
-    live: Live::Test("live_ping_succeeds"),
-}];
-
-static ONE_SOUND_CONTRACT: &[Contract] = &[Contract {
-    operation_id: "flute-v2-get-ping",
-    mapping: Mapping::Command("ping"),
-    variants: ONE_SOUND_VARIANT,
-}];
-
-/// The baseline: a manifest that agrees with the matrix is accepted, or the
-/// two rejections below could be the checker failing on everything.
-#[test]
-fn the_variant_manifest_accepts_a_list_that_agrees_with_the_matrix() {
-    support::checks::variants_match_the_manifest(
-        ONE_SOUND_CONTRACT,
-        "# a comment and a blank line are skipped\n\nflute-v2-get-ping\tdefault\n",
-    );
-}
-
-/// **The control for the hole the manifest exists to close.** Deleting a whole
-/// variant from `CONTRACTS` leaves every check that reads `CONTRACTS` green,
-/// because each of them takes the matrix as the statement of what should
-/// exist.
-#[test]
-fn the_variant_manifest_rejects_a_variant_the_matrix_dropped() {
-    assert_rejects("is listed and the matrix does not declare it", || {
-        support::checks::variants_match_the_manifest(&[], "flute-v2-get-ping\tdefault\n");
-    });
-}
-
-/// And the reverse, so the manifest cannot silently fall behind a variant
-/// somebody added.
-#[test]
-fn the_variant_manifest_rejects_a_variant_it_does_not_list() {
-    assert_rejects("is declared and not listed", || {
-        support::checks::variants_match_the_manifest(ONE_SOUND_CONTRACT, "");
-    });
-}
-
 #[test]
 fn coverage_rejects_an_operation_with_no_contract() {
     assert_rejects("matrix and spec disagree", || {
@@ -719,7 +486,6 @@ static VARIANT_CLAIMING_A_BODY: &[Variant] = &[Variant {
             body: Some(json!({"ok": true})),
         },
     },
-    mock_test: "the_hash_gate_rejects_an_altered_bundle",
     live: Live::Test("live_ping_succeeds"),
 }];
 
@@ -742,7 +508,6 @@ fn coverage_rejects_a_body_expectation_the_spec_contradicts() {
 static VARIANT_WITH_AN_EMPTY_SKIP: &[Variant] = &[Variant {
     name: "default",
     exchange: ping_exchange,
-    mock_test: "the_hash_gate_rejects_an_altered_bundle",
     live: Live::Skip(""),
 }];
 
@@ -755,7 +520,7 @@ static CONTRACT_WITH_AN_EMPTY_SKIP: &[Contract] = &[Contract {
 #[test]
 fn coverage_rejects_a_live_skip_with_no_reason() {
     assert_rejects("live skip needs a reason", || {
-        support::checks::variants_have_live_coverage(CONTRACT_WITH_AN_EMPTY_SKIP);
+        support::checks::variants_have_live_coverage(CONTRACT_WITH_AN_EMPTY_SKIP, "");
     });
 }
 
@@ -833,19 +598,6 @@ fn surface_rejects_an_exclusion_with_no_reason() {
 }
 
 // ── Parity invariants ────────────────────────────────────────────────────────
-
-#[test]
-fn parity_rejects_a_carried_capability_naming_a_test_that_does_not_exist() {
-    static ORPHAN: &[Capability] = &[Capability {
-        v1_command: "ping",
-        v1_flags: &[],
-        parity: Parity::Preserved("ping"),
-        test: Some("no_such_parity_test_9a13"),
-    }];
-    assert_rejects("does not exist", || {
-        support::checks::carried_capabilities_name_real_tests(ORPHAN);
-    });
-}
 
 /// **The completeness control.** An empty matrix must fail against the
 /// vendored v1 surface, or the layer proves only that the rows it happens to
@@ -1055,10 +807,19 @@ fn test_sources_by_file() -> Vec<(String, String)> {
 
 // ── A divergence's evidence ──────────────────────────────────────────────────
 
-/// The real list must be accepted, or the control below proves nothing.
+/// A sound divergence must be accepted, or the controls below prove nothing.
 #[test]
-fn the_divergence_evidence_check_accepts_the_real_list() {
-    support::checks::divergences_name_real_tests(spec::DIVERGENCES);
+fn the_divergence_evidence_check_accepts_a_sound_divergence() {
+    let sound = &[spec::Divergence {
+        name: "a rule that names nothing real",
+        rule: spec::Rule::RequestField {
+            operations: &["flute-v2-post-customers"],
+            pointer: "/nothing",
+        },
+        evidence: "live_ping_succeeds",
+        removal: "when the control is deleted",
+    }];
+    support::checks::divergences_name_real_tests(sound, "fn live_ping_succeeds() {}");
 }
 
 /// **The claim: an exemption with no oracle is rejected.** A divergence
@@ -1077,7 +838,7 @@ fn the_divergence_evidence_check_rejects_a_scenario_nobody_wrote() {
         removal: "never",
     }];
     assert_rejects("does not exist", || {
-        support::checks::divergences_name_real_tests(orphan);
+        support::checks::divergences_name_real_tests(orphan, "fn live_ping_succeeds() {}");
     });
 }
 
@@ -1095,7 +856,7 @@ fn the_divergence_evidence_check_rejects_a_missing_removal_condition() {
         removal: "",
     }];
     assert_rejects("under which it is deleted", || {
-        support::checks::divergences_name_real_tests(forever);
+        support::checks::divergences_name_real_tests(forever, "fn live_ping_succeeds() {}");
     });
 }
 

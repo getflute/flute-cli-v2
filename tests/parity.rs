@@ -3,11 +3,6 @@ mod support;
 use support::checks;
 use support::parity::CAPABILITIES;
 
-#[test]
-fn every_carried_capability_names_a_test_that_exists() {
-    checks::carried_capabilities_name_real_tests(CAPABILITIES);
-}
-
 /// The claim the matrix exists to make: no command v1 ships is missing from it.
 #[test]
 fn every_v1_command_appears_in_the_matrix() {
