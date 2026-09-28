@@ -596,6 +596,104 @@ async fn list_all_stops_when_a_page_repeats_the_previous_one() {
     assert!(pages < 5, "the walk kept going: {pages} pages requested");
 }
 
+/// An empty page ends the walk whatever `hasMore` claims, and the items
+/// already collected are the answer.
+#[tokio::test]
+async fn list_all_stops_on_an_empty_page_that_claims_more() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/customers"))
+        .and(wiremock::matchers::query_param("pageIndex", "0"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "items": [{"customerId": "cus_1"}],
+            "pageInfo": {"pageIndex": 0, "pageSize": 1, "hasMore": true}})))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v2/customers"))
+        .and(wiremock::matchers::query_param("pageIndex", "1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "items": [],
+            "pageInfo": {"pageIndex": 1, "pageSize": 1, "hasMore": true}})))
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args(["--output", "json", "customers", "list", "--all"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        v["data"],
+        serde_json::json!([{"customerId": "cus_1"}]),
+        "{v}"
+    );
+
+    let pages = server
+        .received_requests()
+        .await
+        .unwrap()
+        .iter()
+        .filter(|r| r.url.path() == "/v2/customers")
+        .count();
+    assert_eq!(pages, 2, "the walk must end on the empty page");
+}
+
+/// Answers each `pageIndex` with a page of its own and `hasMore: true`, so
+/// no page repeats and the collection never ends.
+struct EndlessPages;
+
+impl wiremock::Respond for EndlessPages {
+    fn respond(&self, req: &wiremock::Request) -> ResponseTemplate {
+        let index = req
+            .url
+            .query_pairs()
+            .find(|(k, _)| k == "pageIndex")
+            .map(|(_, v)| v.into_owned())
+            .unwrap_or_default();
+        ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "items": [{"customerId": format!("cus_{index}")}],
+            "pageInfo": {"hasMore": true}}))
+    }
+}
+
+/// A walk that never exhausts is ended by the page cap as a decode failure.
+#[tokio::test]
+async fn list_all_gives_up_at_the_page_cap() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/customers"))
+        .respond_with(EndlessPages)
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args(["--output", "json", "customers", "list", "--all"])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "decode", "{v}");
+    assert!(
+        v["message"].as_str().unwrap().contains("10000 pages"),
+        "{v}"
+    );
+
+    let pages = server
+        .received_requests()
+        .await
+        .unwrap()
+        .iter()
+        .filter(|r| r.url.path() == "/v2/customers")
+        .count();
+    assert_eq!(pages, 10_000);
+}
+
 /// Destructive, so it is refused client-side and **no request is issued** —
 /// a confirmation gate that still reaches the API has already failed.
 #[tokio::test]
