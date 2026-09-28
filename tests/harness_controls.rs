@@ -490,6 +490,7 @@ static VARIANT_CLAIMING_A_BODY: &[Variant] = &[Variant {
 
 static CONTRACT_CLAIMING_A_BODY: &[Contract] = &[Contract {
     operation_id: "flute-v2-get-ping",
+    route: "GET /v2/ping",
     mapping: Mapping::Command("ping"),
     variants: VARIANT_CLAIMING_A_BODY,
 }];
@@ -512,6 +513,7 @@ static VARIANT_WITH_AN_EMPTY_SKIP: &[Variant] = &[Variant {
 
 static CONTRACT_WITH_AN_EMPTY_SKIP: &[Contract] = &[Contract {
     operation_id: "flute-v2-get-ping",
+    route: "GET /v2/ping",
     mapping: Mapping::Command("ping"),
     variants: VARIANT_WITH_AN_EMPTY_SKIP,
 }];

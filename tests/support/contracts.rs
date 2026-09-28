@@ -31,7 +31,11 @@ pub struct Variant {
 }
 
 pub struct Contract {
+    /// The harness's name for the operation, used by every other table here.
     pub operation_id: &'static str,
+    /// `METHOD /path/template`: the key the row is matched to its bundle
+    /// operation by.
+    pub route: &'static str,
     pub mapping: Mapping,
     pub variants: &'static [Variant],
 }
@@ -72,6 +76,7 @@ pub static CONTRACTS: &[Contract] = &[
     // call, and `auth token` prints one.
     Contract {
         operation_id: "flute-v2-get-ping",
+        route: "GET /v2/ping",
         mapping: Mapping::Command("ping"),
         variants: &[Variant {
             name: "default",
@@ -88,6 +93,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-customers",
+        route: "POST /v2/customers",
         mapping: Mapping::Command("customers create"),
         variants: &[Variant {
             name: "minimal",
@@ -107,6 +113,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-customers-customerId",
+        route: "GET /v2/customers/{customerId}",
         mapping: Mapping::Command("customers get"),
         variants: &[Variant {
             name: "default",
@@ -129,6 +136,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-customers",
+        route: "GET /v2/customers",
         mapping: Mapping::Command("customers list"),
         variants: &[
             Variant {
@@ -179,6 +187,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-patch-customers-customerId",
+        route: "PATCH /v2/customers/{customerId}",
         mapping: Mapping::Command("customers update"),
         variants: &[Variant {
             name: "changed fields",
@@ -208,6 +217,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-delete-customers-customerId",
+        route: "DELETE /v2/customers/{customerId}",
         mapping: Mapping::Command("customers delete"),
         variants: &[Variant {
             name: "default",
@@ -232,6 +242,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-payment-methods",
+        route: "GET /v2/payment-methods",
         mapping: Mapping::Command("payment-methods list"),
         variants: &[
             Variant {
@@ -280,6 +291,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-payment-methods-paymentMethodId",
+        route: "GET /v2/payment-methods/{paymentMethodId}",
         mapping: Mapping::Command("payment-methods get"),
         // Two requests, not one shape with two responses: a card and an ACH
         // account are different resources at different ids, and reading only
@@ -353,6 +365,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-payment-methods-cards",
+        route: "POST /v2/payment-methods/cards",
         mapping: Mapping::Command("payment-methods add-card"),
         variants: &[
             Variant {
@@ -394,6 +407,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-payment-methods-ach",
+        route: "POST /v2/payment-methods/ach",
         mapping: Mapping::Command("payment-methods add-ach"),
         variants: &[
             Variant {
@@ -440,6 +454,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-patch-payment-methods-paymentMethodId",
+        route: "PATCH /v2/payment-methods/{paymentMethodId}",
         mapping: Mapping::Command("payment-methods update"),
         variants: &[Variant {
             name: "rename",
@@ -465,6 +480,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-delete-payment-methods-paymentMethodId",
+        route: "DELETE /v2/payment-methods/{paymentMethodId}",
         mapping: Mapping::Command("payment-methods delete"),
         variants: &[Variant {
             name: "default",
@@ -489,6 +505,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-payment-methods-paymentMethodId-set-default",
+        route: "POST /v2/payment-methods/{paymentMethodId}/set-default",
         mapping: Mapping::Command("payment-methods set-default"),
         variants: &[Variant {
             // `customerId` is a **required query parameter**, and the success
@@ -520,6 +537,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions",
+        route: "POST /v2/transactions",
         mapping: Mapping::Command("transactions create"),
         variants: &[
             Variant {
@@ -730,6 +748,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-transactions-transactionId",
+        route: "GET /v2/transactions/{transactionId}",
         mapping: Mapping::Command("transactions get"),
         variants: &[Variant {
             name: "default",
@@ -755,6 +774,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-transactions",
+        route: "GET /v2/transactions",
         mapping: Mapping::Command("transactions list"),
         variants: &[
             Variant {
@@ -821,6 +841,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-transactionId-capture",
+        route: "POST /v2/transactions/{transactionId}/capture",
         mapping: Mapping::Command("transactions capture"),
         variants: &[
             Variant {
@@ -883,6 +904,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-transactionId-reversal",
+        route: "POST /v2/transactions/{transactionId}/reversal",
         mapping: Mapping::Command("transactions reversal"),
         // One endpoint detects the settled state server-side, so a void and a
         // refund are these two variants.
@@ -937,6 +959,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-transactionId-tip-adjustment",
+        route: "POST /v2/transactions/{transactionId}/tip-adjustment",
         mapping: Mapping::Command("transactions tip-adjust"),
         variants: &[
             Variant {
@@ -987,6 +1010,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-transactionId-ach-hold",
+        route: "POST /v2/transactions/{transactionId}/ach-hold",
         mapping: Mapping::Command("transactions ach-hold"),
         variants: &[Variant {
             // The operation declares no request body at all.
@@ -1025,6 +1049,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-transactionId-ach-release",
+        route: "POST /v2/transactions/{transactionId}/ach-release",
         mapping: Mapping::Command("transactions ach-release"),
         variants: &[Variant {
             name: "default",
@@ -1057,6 +1082,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-transactionId-share-receipt",
+        route: "POST /v2/transactions/{transactionId}/share-receipt",
         mapping: Mapping::Command("transactions share-receipt"),
         variants: &[Variant {
             name: "sms",
@@ -1086,6 +1112,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-calculate-amount",
+        route: "POST /v2/transactions/calculate-amount",
         mapping: Mapping::Command("transactions calculate-amount"),
         variants: &[Variant {
             name: "default",
@@ -1117,6 +1144,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-transactions-credit",
+        route: "POST /v2/transactions/credit",
         mapping: Mapping::Command("transactions credit"),
         // `referenceId` is **required** here and optional on `create`, and
         // `creditDetails.cardData` declares no `captureMethod` — a credit is
@@ -1198,6 +1226,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-pos-transactions",
+        route: "POST /v2/pos/transactions",
         mapping: Mapping::Command("pos create"),
         variants: &[
             Variant {
@@ -1292,6 +1321,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-pos-transactions-posTransactionId",
+        route: "GET /v2/pos/transactions/{posTransactionId}",
         mapping: Mapping::Command("pos get"),
         variants: &[
             Variant {
@@ -1352,6 +1382,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-pos-transactions",
+        route: "GET /v2/pos/transactions",
         mapping: Mapping::Command("pos list"),
         variants: &[
             Variant {
@@ -1402,6 +1433,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-pos-transactions-posTransactionId-cancel",
+        route: "POST /v2/pos/transactions/{posTransactionId}/cancel",
         mapping: Mapping::Command("pos cancel"),
         variants: &[Variant {
             // No request body, and the response is the create schema — whose
@@ -1431,6 +1463,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-pos-transactions-posTransactionId-print-receipt",
+        route: "POST /v2/pos/transactions/{posTransactionId}/print-receipt",
         mapping: Mapping::Command("pos print-receipt"),
         variants: &[Variant {
             name: "default",
@@ -1457,6 +1490,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-terminals",
+        route: "GET /v2/terminals",
         mapping: Mapping::Command("terminals list"),
         variants: &[
             Variant {
@@ -1516,6 +1550,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-terminals-terminalId-status",
+        route: "GET /v2/terminals/{terminalId}/status",
         mapping: Mapping::Command("terminals status"),
         variants: &[Variant {
             name: "default",
@@ -1549,6 +1584,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-settlements-batches",
+        route: "GET /v2/settlements/batches",
         // Two commands reach this one operation: `list` and the `get` that
         // has no endpoint of its own. `list` is named here because it is the
         // command carrying the flags the surface matrix asks `--help` about.
@@ -1647,6 +1683,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-settlements-batches-close",
+        route: "POST /v2/settlements/batches/close",
         mapping: Mapping::Command("settlements close"),
         variants: &[Variant {
             // One required field, and a response that carries the resulting
@@ -1665,6 +1702,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-settings-payment-config",
+        route: "GET /v2/settings/payment-config",
         mapping: Mapping::Command("settings payment-config"),
         variants: &[Variant {
             name: "default",
@@ -1699,6 +1737,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-settings-contact-information",
+        route: "GET /v2/settings/contact-information",
         mapping: Mapping::Command("settings contact-info"),
         variants: &[Variant {
             name: "default",
@@ -1723,6 +1762,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-settings-transaction-autofill",
+        route: "GET /v2/settings/transaction-autofill",
         mapping: Mapping::Command("settings autofill"),
         variants: &[Variant {
             name: "default",
@@ -1747,6 +1787,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-patch-settings-transaction-autofill",
+        route: "PATCH /v2/settings/transaction-autofill",
         mapping: Mapping::Command("settings update-autofill"),
         variants: &[
             Variant {
@@ -1795,6 +1836,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-payment-links",
+        route: "POST /v2/payment-links",
         mapping: Mapping::Command("payment-links create"),
         variants: &[
             Variant {
@@ -1875,6 +1917,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-payment-links-paymentLinkId",
+        route: "GET /v2/payment-links/{paymentLinkId}",
         mapping: Mapping::Command("payment-links get"),
         variants: &[Variant {
             name: "default",
@@ -1911,6 +1954,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-payment-links",
+        route: "GET /v2/payment-links",
         mapping: Mapping::Command("payment-links list"),
         variants: &[
             Variant {
@@ -1962,6 +2006,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-patch-payment-links-paymentLinkId",
+        route: "PATCH /v2/payment-links/{paymentLinkId}",
         mapping: Mapping::Command("payment-links update"),
         variants: &[
             Variant {
@@ -2024,6 +2069,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-delete-payment-links-paymentLinkId",
+        route: "DELETE /v2/payment-links/{paymentLinkId}",
         mapping: Mapping::Command("payment-links delete"),
         variants: &[Variant {
             // **204**, not the 200 every other delete in the API answers with.
@@ -2049,6 +2095,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-payment-links-paymentLinkId-share",
+        route: "POST /v2/payment-links/{paymentLinkId}/share",
         mapping: Mapping::Command("payment-links share"),
         variants: &[Variant {
             // Also **204**. `shareBy` here declares a clean two-value enum,
@@ -2080,6 +2127,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-payment-sessions",
+        route: "POST /v2/payment-sessions",
         mapping: Mapping::Command("payment-sessions create"),
         variants: &[
             Variant {
@@ -2162,6 +2210,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-payment-sessions-paymentSessionId",
+        route: "GET /v2/payment-sessions/{paymentSessionId}",
         mapping: Mapping::Command("payment-sessions get"),
         variants: &[Variant {
             // `GetPaymentSessionResponseDto` declares no identifier of any
@@ -2200,6 +2249,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-payment-sessions-paymentSessionId-cancel",
+        route: "POST /v2/payment-sessions/{paymentSessionId}/cancel",
         mapping: Mapping::Command("payment-sessions cancel"),
         variants: &[Variant {
             // No request body, 200 with no response body, and the one
@@ -2229,6 +2279,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-post-api-keys",
+        route: "POST /v2/api-keys",
         mapping: Mapping::Command("api-keys create"),
         variants: &[Variant {
             // Both fields are required, so there is one request shape. The
@@ -2251,6 +2302,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-get-api-keys",
+        route: "GET /v2/api-keys",
         mapping: Mapping::Command("api-keys list"),
         variants: &[
             Variant {
@@ -2290,6 +2342,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "flute-v2-delete-api-keys-clientId",
+        route: "DELETE /v2/api-keys/{clientId}",
         mapping: Mapping::Command("api-keys revoke"),
         variants: &[Variant {
             name: "default",
@@ -2314,6 +2367,7 @@ pub static CONTRACTS: &[Contract] = &[
     },
     Contract {
         operation_id: "get-oauth-token",
+        route: "POST /oauth2/token",
         mapping: Mapping::Internal("obtained by the client on every authenticated request"),
         // No command reaches it, and it is still an exchange the CLI makes on
         // every authenticated call — so it carries a fixture like the rest,

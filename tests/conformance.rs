@@ -18,7 +18,7 @@ fn vendored_bundle_matches_its_recorded_hash() {
 /// The bundle must hold exactly the operation set the design counted.
 #[test]
 fn the_bundle_declares_fifty_non_webhook_operations() {
-    assert_eq!(support::spec::non_webhook_operation_ids().len(), 50);
+    assert_eq!(support::spec::non_webhook_routes().len(), 50);
 }
 
 /// The generated fact sheet and the surface walker must mean the same thing by
@@ -38,7 +38,8 @@ fn the_generated_facts_agree_with_the_surface_walker() {
     }
     #[derive(serde::Deserialize)]
     struct Op {
-        operation_id: String,
+        method: String,
+        path: String,
         leaves: Vec<String>,
     }
 
@@ -54,7 +55,13 @@ fn the_generated_facts_agree_with_the_surface_walker() {
     assert_eq!(facts.operations.len(), 50);
 
     for op in &facts.operations {
-        let mut walker = support::spec::request_leaves(&op.operation_id);
+        let route = format!("{} {}", op.method.to_ascii_uppercase(), op.path);
+        let label = support::contracts::CONTRACTS
+            .iter()
+            .find(|c| c.route == route)
+            .unwrap_or_else(|| panic!("{route}: in the fact sheet, with no contract row"))
+            .operation_id;
+        let mut walker = support::spec::request_leaves(label);
         walker.sort();
         let mut sheet = op.leaves.clone();
         sheet.sort();
@@ -63,7 +70,7 @@ fn the_generated_facts_agree_with_the_surface_walker() {
             "{}: the fact sheet and the surface walker disagree on the leaf set. \
              Regenerate with `python3 docs/reference/group-facts.py`, and if they \
              still differ, one of the two walks is wrong.",
-            op.operation_id
+            route
         );
     }
 }

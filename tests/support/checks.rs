@@ -9,23 +9,29 @@
 use super::contracts::{Contract, Live, Mapping};
 use super::spec::{self, assert_exchange_conforms};
 
-/// Every non-webhook operation has exactly one contract row. Adding one
-/// upstream fails the build until somebody decides what it means for the CLI.
+/// Every non-webhook operation has exactly one contract row, matched by
+/// route, and no two rows share a name. Adding an operation upstream fails the
+/// build until somebody decides what it means for the CLI.
 pub fn operation_set_matches_spec(contracts: &[Contract]) {
-    let mut spec_ids = spec::non_webhook_operation_ids();
-    spec_ids.sort();
-    assert_eq!(spec_ids.len(), 50, "50 non-webhook operations expected");
+    let mut spec_routes = spec::non_webhook_routes();
+    spec_routes.sort();
+    assert_eq!(spec_routes.len(), 50, "50 non-webhook operations expected");
 
-    let mut accounted: Vec<String> = contracts
-        .iter()
-        .map(|c| c.operation_id.to_string())
-        .collect();
+    let mut accounted: Vec<String> = contracts.iter().map(|c| c.route.to_string()).collect();
     // A duplicate row leaves the sorted lists different lengths, so the one
     // comparison catches a missing row and a doubled one.
     accounted.sort();
     assert_eq!(
-        spec_ids, accounted,
+        spec_routes, accounted,
         "matrix and spec disagree on the operation set"
+    );
+
+    let names: std::collections::BTreeSet<&str> =
+        contracts.iter().map(|c| c.operation_id).collect();
+    assert_eq!(
+        names.len(),
+        contracts.len(),
+        "two contract rows share an operation_id"
     );
 }
 
@@ -85,7 +91,7 @@ pub fn body_expectations_match_the_spec(contracts: &[Contract]) {
             let ex = (v.exchange)();
             let spec_says_empty = bodyless
                 .iter()
-                .any(|(id, st)| id == c.operation_id && *st == ex.response.status);
+                .any(|(route, st)| route == c.route && *st == ex.response.status);
             assert_eq!(
                 ex.response.body.is_none(),
                 spec_says_empty,
@@ -103,11 +109,12 @@ pub fn body_expectations_match_the_spec(contracts: &[Contract]) {
 /// Both sets are derived, never typed by hand. A hard-coded count is how
 /// "every write endpoint -- nineteen" came to omit eleven of them.
 pub fn built_writes_and_bodyless_successes_are_covered(contracts: &[Contract]) {
-    for op_id in spec::write_operation_ids() {
+    for route in spec::write_routes() {
         let c = contracts
             .iter()
-            .find(|c| c.operation_id == op_id)
-            .unwrap_or_else(|| panic!("{op_id} is a write with no contract row"));
+            .find(|c| c.route == route)
+            .unwrap_or_else(|| panic!("{route} is a write with no contract row"));
+        let op_id = c.operation_id;
         let Mapping::Command(_) = &c.mapping else {
             continue;
         };
@@ -118,20 +125,20 @@ pub fn built_writes_and_bodyless_successes_are_covered(contracts: &[Contract]) {
             "{op_id} is a write and needs live coverage or an explicit Skip reason"
         );
     }
-    for (op_id, status) in spec::bodyless_successes() {
+    for (route, status) in spec::bodyless_successes() {
         let mapped = contracts
             .iter()
-            .any(|c| c.operation_id == op_id && matches!(c.mapping, Mapping::Command(_)));
+            .any(|c| c.route == route && matches!(c.mapping, Mapping::Command(_)));
         if !mapped {
             continue;
         }
         assert!(
-            contracts.iter().any(|c| c.operation_id == op_id
+            contracts.iter().any(|c| c.route == route
                 && c.variants.iter().any(|v| {
                     let ex = (v.exchange)();
                     ex.response.status == status && ex.response.body.is_none()
                 })),
-            "{op_id} answers {status} with no body; no variant exercises that"
+            "{route} answers {status} with no body; no variant exercises that"
         );
     }
 }

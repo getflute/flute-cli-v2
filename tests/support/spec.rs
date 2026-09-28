@@ -99,32 +99,39 @@ pub struct Exchange {
     pub response: ResponseFixture,
 }
 
-/// Locate an operation by id, returning its method, templated path, and a
-/// pointer into the relaxed bundle.
+/// The bundle operation a contract row names, found by the row's route
+/// rather than the bundle's `operationId`, so an upstream rename of an id that
+/// changes nothing on the wire changes nothing here. Returns its lowercase
+/// method, templated path, and a pointer into `spec`.
+fn lookup(spec: &'static Value, operation_id: &str) -> (String, String, &'static Value) {
+    let contract = super::contracts::CONTRACTS
+        .iter()
+        .find(|c| c.operation_id == operation_id)
+        .unwrap_or_else(|| panic!("no contract row for {operation_id}"));
+    let (method, path) = contract
+        .route
+        .split_once(' ')
+        .unwrap_or_else(|| panic!("{operation_id}: route is not `METHOD /path`"));
+    let method = method.to_ascii_lowercase();
+    let op = &spec["paths"][path][&method];
+    assert!(
+        op.is_object(),
+        "{operation_id}: no {} in the vendored spec",
+        contract.route
+    );
+    (method, path.to_string(), op)
+}
+
+/// Locate an operation by its contract row, returning its method, templated
+/// path, and a pointer into the relaxed bundle.
 pub fn operation(operation_id: &str) -> (String, String, &'static Value) {
-    let spec: &'static Value = &RELAXED;
-    for (path, item) in spec["paths"].as_object().unwrap() {
-        for (method, op) in item.as_object().unwrap() {
-            if op.is_object() && op["operationId"] == operation_id {
-                return (method.clone(), path.clone(), op);
-            }
-        }
-    }
-    panic!("no operation with id {operation_id} in the vendored spec");
+    lookup(&RELAXED, operation_id)
 }
 
 /// The same operation in the **unrelaxed** bundle, for reading annotations
 /// that `relax` drops.
 pub fn operation_raw(operation_id: &str) -> &'static Value {
-    let spec: &'static Value = &SPEC;
-    for (_, item) in spec["paths"].as_object().unwrap() {
-        for (_, op) in item.as_object().unwrap() {
-            if op.is_object() && op["operationId"] == operation_id {
-                return op;
-            }
-        }
-    }
-    panic!("no operation with id {operation_id} in the vendored spec");
+    lookup(&SPEC, operation_id).2
 }
 
 fn is_http_method(m: &str) -> bool {
@@ -153,18 +160,23 @@ fn is_webhook(path: &str) -> bool {
     path.starts_with("/v2/webhooks")
 }
 
-pub fn non_webhook_operation_ids() -> Vec<String> {
+/// `METHOD /path`, the spelling of a contract row's `route`.
+fn route(method: &str, path: &str) -> String {
+    format!("{} {path}", method.to_ascii_uppercase())
+}
+
+pub fn non_webhook_routes() -> Vec<String> {
     all_operations()
         .into_iter()
         .filter(|(_, path, _)| !is_webhook(path))
-        .map(|(_, _, op)| op["operationId"].as_str().unwrap().to_string())
+        .map(|(method, path, _)| route(&method, &path))
         .collect()
 }
 
-/// Non-webhook, non-OAuth `POST`/`PATCH`/`DELETE`. Derived, never counted by
-/// hand: a hard-coded total is how "every write endpoint -- nineteen" came to
-/// omit eleven of them.
-pub fn write_operation_ids() -> Vec<String> {
+/// Non-webhook, non-OAuth `POST`/`PATCH`/`DELETE`, by route. Derived, never
+/// counted by hand: a hard-coded total is how "every write endpoint --
+/// nineteen" came to omit eleven of them.
+pub fn write_routes() -> Vec<String> {
     all_operations()
         .into_iter()
         .filter(|(method, path, _)| {
@@ -172,24 +184,23 @@ pub fn write_operation_ids() -> Vec<String> {
                 && path != "/oauth2/token"
                 && matches!(method.as_str(), "post" | "patch" | "delete")
         })
-        .map(|(_, _, op)| op["operationId"].as_str().unwrap().to_string())
+        .map(|(method, path, _)| route(&method, &path))
         .collect()
 }
 
-/// Every 2xx response declaring no `application/json` content.
+/// Every 2xx response declaring no `application/json` content, by route.
 pub fn bodyless_successes() -> Vec<(String, u16)> {
     let mut out = Vec::new();
-    for (_, path, op) in all_operations() {
+    for (method, path, op) in all_operations() {
         if is_webhook(&path) {
             continue;
         }
-        let id = op["operationId"].as_str().unwrap().to_string();
         for (status, resp) in op["responses"].as_object().unwrap() {
             let Ok(code) = status.parse::<u16>() else {
                 continue;
             };
             if (200..300).contains(&code) && !resp["content"]["application/json"].is_object() {
-                out.push((id.clone(), code));
+                out.push((route(&method, &path), code));
             }
         }
     }
