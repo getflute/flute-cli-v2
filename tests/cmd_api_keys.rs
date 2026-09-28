@@ -356,26 +356,53 @@ async fn api_key_list_table_shows_the_name_and_both_ids() {
     assert!(table.contains("Production API Key"), "{table}");
 }
 
-/// `quiet` prints the client id, which is the only half of a new key that can
-/// be looked up again.
+/// `create` returns the client secret once, and `quiet` prints only an
+/// identifier, so a quiet create is refused before any request: the key would
+/// be live with its secret discarded. Quiet is refused from each of the three
+/// places the mode resolves from.
 #[tokio::test]
-async fn create_quiet_prints_the_client_id_and_not_the_secret() {
+async fn create_is_refused_under_quiet_output_from_every_source() {
     let server = support::mock_with_token().await;
     support::mount(&server, "flute-v2-post-api-keys", "default").await;
-    support::bin(&server)
-        .args([
-            "--output",
-            "quiet",
-            "api-keys",
-            "create",
-            "--merchant-id",
-            MERCHANT,
-            "--name",
-            "Production API Key",
-        ])
-        .assert()
-        .success()
-        .stdout(format!("{CLIENT}\n"));
+    let create = [
+        "api-keys",
+        "create",
+        "--merchant-id",
+        MERCHANT,
+        "--name",
+        "Production API Key",
+    ];
+    let home = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(home.path().join(".flute2")).unwrap();
+    std::fs::write(
+        home.path().join(".flute2").join("config.toml"),
+        "output = \"quiet\"\n",
+    )
+    .unwrap();
+
+    let mut from_flag = support::bin(&server);
+    from_flag.arg("--output").arg("quiet").args(create);
+    let mut from_env = support::bin(&server);
+    from_env.env("FLUTE2_OUTPUT", "quiet").args(create);
+    let mut from_config = support::bin(&server);
+    from_config
+        .env("HOME", home.path())
+        .env("XDG_CONFIG_HOME", home.path())
+        .env("USERPROFILE", home.path())
+        .args(create);
+
+    for mut command in [from_flag, from_env, from_config] {
+        command
+            .assert()
+            .code(3)
+            .stdout(predicate::str::is_empty())
+            .stderr(predicate::str::contains("shown once"))
+            .stderr(predicate::str::contains("--output quiet"));
+    }
+    assert!(
+        server.received_requests().await.unwrap().is_empty(),
+        "a refused create must send nothing, the token request included"
+    );
 }
 
 /// A bodyless success has no resource to print, so the revoke confirms from

@@ -307,6 +307,25 @@ pub async fn run(mut cli: Cli) -> (OutputFormat, anyhow::Result<()>) {
     if let Some(refusal) = unconfirmed_destructive_command(&command) {
         return (output, Err(anyhow::anyhow!(refusal)));
     }
+    // The resolved mode, so a quiet reached through FLUTE2_OUTPUT or the
+    // config file is refused as well as the flag.
+    if output == OutputFormat::Quiet
+        && matches!(
+            command,
+            Command::ApiKeys {
+                command: groups::api_keys::ApiKeysCommand::Create { .. }
+            }
+        )
+    {
+        return (
+            output,
+            Err(anyhow::anyhow!(
+                "api-keys create: the client secret is shown once, and --output quiet \
+                 would print only the client id and discard it. Use --output json \
+                 or --output table."
+            )),
+        );
+    }
 
     let notify = should_check_for_update(&command, &config, output, stderr_is_terminal());
     let result = dispatch(&cli, command, &config, output).await;

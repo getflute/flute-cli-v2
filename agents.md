@@ -634,7 +634,9 @@ flute2 api-keys revoke [OPTIONS] --client-id <CLIENT_ID>
 
 - `create` returns the client secret **once**. Capture it from the envelope; the
   API never returns it again. It is the only response body in the API carrying a
-  live credential, and it is not in the `--debug` trace.
+  live credential, and it is not in the `--debug` trace. Under `quiet` output,
+  from the flag, `FLUTE2_OUTPUT` or the config file, `create` is refused before
+  any request, exit 3, because the identifier alone would discard the secret.
 - **`list` is not paginated** — the response has no `pageInfo` — so it takes
   neither `--page-index`/`--page-size` nor `--all`, and its envelope carries no
   `page_info`. Its `apiKeys` may be absent or null — an empty collection — and
