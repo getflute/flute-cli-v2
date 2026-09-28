@@ -444,7 +444,8 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
 - **A tip or a discount is an amount or a rate, not both.** `transactions
   create` and `calculate-amount` refuse a non-zero `--tip-amount` with a
   non-zero `--tip-rate`, and likewise for `--discount-amount` and
-  `--discount-rate`; `pos create` and `tip-adjust` refuse the tip pair. The
+  `--discount-rate`; `pos create` and `tip-adjust` apply the same rule to
+  the tip pair. A zero half sets nothing, so it is not half of a pair. The
   API rejects a charge that carries both.
 - **The ACH actions answer with a `referenceId` the API assigned.** `ach-hold`,
   `ach-release` and a `reversal` of an ACH transaction each replace the

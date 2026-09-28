@@ -127,6 +127,20 @@ pub fn note_fractional_rates(rates: &[(&str, Option<Decimal>)]) {
     }
 }
 
+/// Refuse an amount and a rate given for the same value when both are
+/// non-zero: they set the same tip or discount, and the API refuses a request
+/// that carries both. A zero half sets nothing, so it is not half of a pair.
+pub fn refuse_non_zero_pair(
+    (amount_flag, amount): (&str, Option<Decimal>),
+    (rate_flag, rate): (&str, Option<Decimal>),
+) -> Result<()> {
+    let non_zero = |v: Option<Decimal>| v.is_some_and(|d| !d.is_zero());
+    if non_zero(amount) && non_zero(rate) {
+        bail!("pass {amount_flag} or {rate_flag}, not both: they set the same value");
+    }
+    Ok(())
+}
+
 /// Render a `Decimal` as a JSON number that keeps its exact decimal form.
 ///
 /// `baseAmount` is declared `number/double`, and routing it through `f64`

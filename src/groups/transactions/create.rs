@@ -7,7 +7,7 @@
 use super::*;
 use crate::cli::address::BillingArgs;
 use crate::cli::common::{CaptureMethod, parse_exp};
-use crate::cli::money::{parse_amount, parse_rate, to_amount_number};
+use crate::cli::money::{parse_amount, parse_rate, refuse_non_zero_pair, to_amount_number};
 use anyhow::Result;
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
@@ -124,31 +124,18 @@ fn refuse_fields_the_instrument_drops(args: &InstrumentArgs, chosen: Chosen) -> 
 }
 
 /// The amount-or-rate exclusions and the declared minimums shared by
-/// `transactions create` and `transactions calculate-amount`. A non-zero
-/// value cannot go to both halves of a pair.
+/// `transactions create` and `transactions calculate-amount`.
 pub(super) fn validate_extra_amounts(
     tip_amount: Option<Decimal>,
     tip_rate: Option<Decimal>,
     discount_amount: Option<Decimal>,
     discount_rate: Option<Decimal>,
 ) -> Result<()> {
-    let non_zero = |v: Option<Decimal>| v.is_some_and(|d| !d.is_zero());
-    for (amount, rate, both) in [
-        (
-            "--tip-amount",
-            "--tip-rate",
-            non_zero(tip_amount) && non_zero(tip_rate),
-        ),
-        (
-            "--discount-amount",
-            "--discount-rate",
-            non_zero(discount_amount) && non_zero(discount_rate),
-        ),
-    ] {
-        if both {
-            anyhow::bail!("pass {amount} or {rate}, not both: they set the same value");
-        }
-    }
+    refuse_non_zero_pair(("--tip-amount", tip_amount), ("--tip-rate", tip_rate))?;
+    refuse_non_zero_pair(
+        ("--discount-amount", discount_amount),
+        ("--discount-rate", discount_rate),
+    )?;
     let min = Decimal::new(1, 2);
     for (flag, value) in [
         ("--tip-amount", tip_amount),

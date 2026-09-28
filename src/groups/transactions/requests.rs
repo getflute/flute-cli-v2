@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::cli::common::parse_exp;
-use crate::cli::money::to_amount_number;
+use crate::cli::money::{refuse_non_zero_pair, to_amount_number};
 use anyhow::Result;
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
@@ -113,32 +113,29 @@ fn single_amount_body(key: &str, amount: Option<Decimal>) -> Result<Option<Value
 
 /// Build the `TipAdjustmentRequestDto` body.
 ///
-/// Exactly one of the two: an amount and a rate say different things about
-/// the same tip, and neither leaves nothing to adjust.
+/// An amount or a rate, under the non-zero pair rule `transactions create`
+/// applies. Each one given must be greater than zero: zero moves no tip.
 pub fn build_tip_adjustment_body(
     tip_amount: Option<Decimal>,
     tip_rate: Option<Decimal>,
 ) -> Result<Value> {
-    match (tip_amount, tip_rate) {
-        (Some(_), Some(_)) => {
-            anyhow::bail!("pass --tip-amount or --tip-rate, not both: they set the same tip")
+    refuse_non_zero_pair(("--tip-amount", tip_amount), ("--tip-rate", tip_rate))?;
+    let mut map = Map::new();
+    for (flag, key, value) in [
+        ("--tip-amount", "tipAmount", tip_amount),
+        ("--tip-rate", "tipRate", tip_rate),
+    ] {
+        if let Some(v) = value {
+            if v <= Decimal::ZERO {
+                anyhow::bail!("{flag} must be greater than zero");
+            }
+            map.insert(key.to_string(), to_amount_number(v)?);
         }
-        (None, None) => anyhow::bail!("pass --tip-amount or --tip-rate"),
-        (Some(v), None) if v <= Decimal::ZERO => {
-            anyhow::bail!("--tip-amount must be greater than zero")
-        }
-        (Some(v), None) => Ok(Value::Object(Map::from_iter([(
-            "tipAmount".to_string(),
-            to_amount_number(v)?,
-        )]))),
-        (None, Some(v)) if v <= Decimal::ZERO => {
-            anyhow::bail!("--tip-rate must be greater than zero")
-        }
-        (None, Some(v)) => Ok(Value::Object(Map::from_iter([(
-            "tipRate".to_string(),
-            to_amount_number(v)?,
-        )]))),
     }
+    if map.is_empty() {
+        anyhow::bail!("pass --tip-amount or --tip-rate");
+    }
+    Ok(Value::Object(map))
 }
 
 /// Build the `SendReceiptRequestDto` body. All three fields are required.

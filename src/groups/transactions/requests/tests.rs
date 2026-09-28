@@ -190,6 +190,27 @@ fn a_tip_adjustment_takes_exactly_one_of_amount_and_rate() {
     assert!(build_tip_adjustment_body(None, None).is_err());
 }
 
+/// The pair is refused only when both halves are non-zero, as on
+/// `transactions create`. A zero half is still no tip, so the floor refuses
+/// it by name rather than as half of a pair.
+#[test]
+fn a_tip_adjustment_with_a_zero_half_meets_the_floor_not_the_pair_rule() {
+    let err = build_tip_adjustment_body(Some(Decimal::ONE), Some(Decimal::ZERO))
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("--tip-rate must be greater than zero"),
+        "{err}"
+    );
+    let err = build_tip_adjustment_body(Some(Decimal::ZERO), Some(Decimal::ONE))
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("--tip-amount must be greater than zero"),
+        "{err}"
+    );
+}
+
 /// All three fields are required by schema, so all three are always sent
 /// — `hasCustomerConsent` false included, because omitting it would fail
 /// the required check rather than mean "no consent".

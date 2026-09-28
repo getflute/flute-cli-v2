@@ -217,9 +217,10 @@ pub fn validate_pos_create(args: &CreatePosTransactionArgs) -> Result<()> {
         "--payment-processor-id",
         args.payment_processor_id.as_deref(),
     )?;
-    if args.tip_amount.is_some() && args.tip_rate.is_some() {
-        anyhow::bail!("pass --tip-amount or --tip-rate, not both: they set the same tip");
-    }
+    money::refuse_non_zero_pair(
+        ("--tip-amount", args.tip_amount),
+        ("--tip-rate", args.tip_rate),
+    )?;
     if let Some(tip) = args.tip_amount {
         if tip < Decimal::new(1, 2) {
             anyhow::bail!("--tip-amount must be at least 0.01 (got {tip})");
@@ -842,6 +843,17 @@ mod tests {
             err.contains("--tip-amount or --tip-rate, not both"),
             "{err}"
         );
+    }
+
+    /// A zero half sets no tip, so it is not a pair: the rule
+    /// `transactions create` applies.
+    #[test]
+    fn a_tip_amount_beside_a_zero_rate_is_accepted() {
+        let mut args = minimal();
+        args.tip_amount = Some("1.50".parse().unwrap());
+        args.tip_rate = Some(Decimal::ZERO);
+        let body = build_pos_create_body(&args).unwrap();
+        assert_eq!(body["extraAmounts"]["tipAmount"].to_string(), "1.50");
     }
 
     /// The API requires the acceptance wait to be false on a deeplink, so the
