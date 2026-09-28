@@ -4,7 +4,7 @@
 //! server reachable from the compiled binary.
 
 use crate::api::error::{ApiError, parse_error_body};
-use crate::auth::token::{Fetcher, MissingCredentials, OAuth2Fetcher, TokenStore};
+use crate::auth::token::{Fetcher, OAuth2Fetcher, TokenStore};
 use crate::config::Profile;
 use reqwest::header::ACCEPT;
 use reqwest::{Method, StatusCode};
@@ -196,7 +196,9 @@ impl ApiClient {
             None => Ok(Self::with_fetcher(
                 base_url,
                 http_client(REQUEST_TIMEOUT)?,
-                Arc::new(MissingCredentials::new(&profile.name)),
+                Arc::new(Fetcher::MissingCredentials {
+                    profile: profile.name.clone(),
+                }),
             )),
         }
     }
@@ -215,14 +217,14 @@ impl ApiClient {
         let http = http_client(REQUEST_TIMEOUT)?;
         let (client_id, client_secret) = creds;
         let fetcher = OAuth2Fetcher::new(oauth_url, client_id, client_secret, http.clone());
-        Ok(Self::with_fetcher(base_url, http, Arc::new(fetcher)))
+        Ok(Self::with_fetcher(
+            base_url,
+            http,
+            Arc::new(Fetcher::OAuth2(fetcher)),
+        ))
     }
 
-    fn with_fetcher(
-        base_url: String,
-        http: reqwest::Client,
-        fetcher: Arc<dyn Fetcher + Send + Sync>,
-    ) -> Self {
+    fn with_fetcher(base_url: String, http: reqwest::Client, fetcher: Arc<Fetcher>) -> Self {
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             http,

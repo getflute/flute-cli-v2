@@ -13,7 +13,7 @@ const MAX_TOKEN_TTL_SECS: u64 = 86_400;
 #[derive(Clone)]
 pub struct TokenStore {
     inner: Arc<Mutex<Option<CachedToken>>>,
-    fetcher: Arc<dyn Fetcher + Send + Sync>,
+    fetcher: Arc<Fetcher>,
 }
 
 #[derive(Debug, Clone)]
@@ -22,13 +22,47 @@ struct CachedToken {
     expires_at: Instant,
 }
 
-#[async_trait::async_trait]
-pub trait Fetcher {
-    async fn fetch(&self) -> anyhow::Result<(String, Duration)>;
+/// Where a token comes from.
+pub enum Fetcher {
+    OAuth2(OAuth2Fetcher),
+    /// A profile whose credentials did not resolve, named for the message.
+    ///
+    /// A client is built either way, so the absence is reported when a token
+    /// is first needed rather than before the command has run at all — every
+    /// refusal the CLI can make on its own comes first, and a wrong invocation
+    /// on a machine that has never logged in is reported as the wrong
+    /// invocation.
+    MissingCredentials {
+        profile: String,
+    },
+    /// Numbered tokens with a fixed lifetime, counting each fetch.
+    #[cfg(test)]
+    Counting {
+        calls: std::sync::atomic::AtomicUsize,
+        ttl: Duration,
+    },
+}
+
+impl Fetcher {
+    async fn fetch(&self) -> anyhow::Result<(String, Duration)> {
+        match self {
+            Self::OAuth2(f) => f.fetch().await,
+            Self::MissingCredentials { profile } => Err(ApiError::Auth(format!(
+                "no credentials for [{profile}]; set FLUTE2_CLIENT_ID and FLUTE2_CLIENT_SECRET, \
+                 or run `flute2 auth login`"
+            ))
+            .into()),
+            #[cfg(test)]
+            Self::Counting { calls, ttl } => {
+                let n = calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Ok((format!("token-{n}"), *ttl))
+            }
+        }
+    }
 }
 
 impl TokenStore {
-    pub fn new(fetcher: Arc<dyn Fetcher + Send + Sync>) -> Self {
+    pub fn new(fetcher: Arc<Fetcher>) -> Self {
         Self {
             inner: Arc::new(Mutex::new(None)),
             fetcher,
@@ -68,36 +102,6 @@ impl TokenStore {
     }
 }
 
-/// The fetcher for a profile whose credentials did not resolve.
-///
-/// A client is built either way, so the absence is reported when a token is
-/// first needed rather than before the command has run at all — every refusal
-/// the CLI can make on its own comes first, and a wrong invocation on a
-/// machine that has never logged in is reported as the wrong invocation.
-pub struct MissingCredentials {
-    profile: String,
-}
-
-impl MissingCredentials {
-    pub fn new(profile: impl Into<String>) -> Self {
-        Self {
-            profile: profile.into(),
-        }
-    }
-}
-
-#[async_trait::async_trait]
-impl Fetcher for MissingCredentials {
-    async fn fetch(&self) -> anyhow::Result<(String, Duration)> {
-        Err(ApiError::Auth(format!(
-            "no credentials for [{}]; set FLUTE2_CLIENT_ID and FLUTE2_CLIENT_SECRET, \
-             or run `flute2 auth login`",
-            self.profile
-        ))
-        .into())
-    }
-}
-
 pub struct OAuth2Fetcher {
     oauth_url: String,
     client_id: String,
@@ -127,8 +131,7 @@ struct TokenResp {
     expires_in: u64,
 }
 
-#[async_trait::async_trait]
-impl Fetcher for OAuth2Fetcher {
+impl OAuth2Fetcher {
     async fn fetch(&self) -> anyhow::Result<(String, Duration)> {
         let resp = self
             .http
@@ -183,37 +186,32 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    struct CountingFetcher {
-        calls: AtomicUsize,
-        ttl: Duration,
+    fn counting(ttl: Duration) -> Arc<Fetcher> {
+        Arc::new(Fetcher::Counting {
+            calls: AtomicUsize::new(0),
+            ttl,
+        })
     }
 
-    #[async_trait::async_trait]
-    impl Fetcher for CountingFetcher {
-        async fn fetch(&self) -> anyhow::Result<(String, Duration)> {
-            let n = self.calls.fetch_add(1, Ordering::SeqCst);
-            Ok((format!("token-{n}"), self.ttl))
+    fn calls(f: &Fetcher) -> usize {
+        match f {
+            Fetcher::Counting { calls, .. } => calls.load(Ordering::SeqCst),
+            _ => unreachable!("a counting fetcher"),
         }
     }
 
     #[tokio::test]
     async fn caches_a_token_within_its_validity() {
-        let f = Arc::new(CountingFetcher {
-            calls: AtomicUsize::new(0),
-            ttl: Duration::from_secs(3600),
-        });
+        let f = counting(Duration::from_secs(3600));
         let store = TokenStore::new(f.clone());
         assert_eq!(store.bearer().await.unwrap(), "token-0");
         assert_eq!(store.bearer().await.unwrap(), "token-0");
-        assert_eq!(f.calls.load(Ordering::SeqCst), 1);
+        assert_eq!(calls(&f), 1);
     }
 
     #[tokio::test]
     async fn invalidate_forces_a_refetch() {
-        let f = Arc::new(CountingFetcher {
-            calls: AtomicUsize::new(0),
-            ttl: Duration::from_secs(3600),
-        });
+        let f = counting(Duration::from_secs(3600));
         let store = TokenStore::new(f.clone());
         assert_eq!(store.bearer().await.unwrap(), "token-0");
         store.invalidate().await;
@@ -225,14 +223,11 @@ mod tests {
     /// next call fetches, rather than overflowing the clock or being trusted.
     #[tokio::test]
     async fn a_ttl_that_would_overflow_the_clock_expires_at_once() {
-        let f = Arc::new(CountingFetcher {
-            calls: AtomicUsize::new(0),
-            ttl: Duration::MAX,
-        });
+        let f = counting(Duration::MAX);
         let store = TokenStore::new(f.clone());
         assert_eq!(store.bearer().await.unwrap(), "token-0");
         assert_eq!(store.bearer().await.unwrap(), "token-1");
-        assert_eq!(f.calls.load(Ordering::SeqCst), 2);
+        assert_eq!(calls(&f), 2);
     }
 
     /// `expires_in` is the server's claim about its own token, and the store
@@ -262,10 +257,7 @@ mod tests {
 
     #[tokio::test]
     async fn refreshes_inside_the_safety_margin() {
-        let f = Arc::new(CountingFetcher {
-            calls: AtomicUsize::new(0),
-            ttl: Duration::from_secs(30),
-        });
+        let f = counting(Duration::from_secs(30));
         let store = TokenStore::new(f.clone());
         assert_eq!(store.bearer().await.unwrap(), "token-0");
         assert_eq!(store.bearer().await.unwrap(), "token-1");
