@@ -422,6 +422,16 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
         body.insert("paymentMethods".into(), Value::Object(methods));
     }
 
+    if args
+        .base_amount
+        .and_then(PatchNumber::set)
+        .is_some_and(|v| v <= Decimal::ZERO)
+    {
+        anyhow::bail!(
+            "--amount must be greater than zero. Clear it with `--clear amount` \
+             for a link the payer fills in."
+        );
+    }
     if let Some(v) = common::patch_number(args.base_amount, to_amount_number)? {
         body.insert("baseAmount".into(), v);
     }

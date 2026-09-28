@@ -157,6 +157,20 @@ fn update_args() -> UpdatePaymentLinkArgs {
     }
 }
 
+/// On an update the flexible alternative is a clear, which the refusal names.
+#[test]
+fn an_update_refuses_a_zero_amount_with_the_clear_named() {
+    let args = UpdatePaymentLinkArgs {
+        base_amount: Some(PatchNumber::Set(Decimal::ZERO)),
+        ..update_args()
+    };
+    let err = build_update_payment_link_body(&args)
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("greater than zero"), "{err}");
+    assert!(err.contains("--clear amount"), "{err}");
+}
+
 #[test]
 fn every_update_flag_reaches_the_body_under_its_wire_name() {
     let args = UpdatePaymentLinkArgs {
