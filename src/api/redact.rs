@@ -27,7 +27,89 @@ pub fn redact(text: &str) -> String {
 /// wrong for a message somebody has to read. This masks the identifiers and
 /// keeps the prose.
 pub fn redact_message(text: &str) -> String {
-    scrub_bearer(&mask_digit_runs(text))
+    scrub_bearer(&mask_digit_runs(&mask_keyed_values(text)))
+}
+
+/// Mask the value that follows a sensitive key name in free text: the keys
+/// the JSON redactor masks, then `=`, `:` or whitespace, then the value.
+///
+/// A CVV or a short account number is sensitive only by the key before it.
+/// A value joined to its key with no space (`cvv=123`, `cvv:123`) or quoted
+/// is masked whatever it is. A value set off by whitespace (`cvv 123`,
+/// `securityCode: 123`) is masked only when it carries a digit, so prose
+/// that names a field (`Invalid token: The token has expired.`) survives.
+fn mask_keyed_values(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let is_key_char = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    let ends_value = |c: char| c.is_whitespace() || "&,;\"'<>()[]{}".contains(c);
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if !is_key_char(chars[i]) {
+            out.push(chars[i]);
+            i += 1;
+            continue;
+        }
+        let start = i;
+        while i < chars.len() && is_key_char(chars[i]) {
+            i += 1;
+        }
+        out.extend(&chars[start..i]);
+        let key = chars[start..i]
+            .iter()
+            .collect::<String>()
+            .to_ascii_lowercase();
+        let leaf = if is_full_secret_key(&key) {
+            Leaf::Secret
+        } else if is_account_like_key(&key) {
+            Leaf::Account
+        } else {
+            continue;
+        };
+
+        let mut j = i;
+        if matches!(chars.get(j), Some('"' | '\'')) {
+            j += 1;
+        }
+        let blank = |c: Option<&char>| matches!(c, Some(' ' | '\t'));
+        let mut spaced = false;
+        while blank(chars.get(j)) {
+            j += 1;
+            spaced = true;
+        }
+        let punct = matches!(chars.get(j), Some('=' | ':'));
+        if punct {
+            j += 1;
+            while blank(chars.get(j)) {
+                j += 1;
+                spaced = true;
+            }
+        }
+        if !spaced && !punct {
+            continue;
+        }
+        let quoted = matches!(chars.get(j), Some('"' | '\''));
+        let value_start = j + usize::from(quoted);
+        let mut end = value_start;
+        while end < chars.len() && !ends_value(chars[end]) {
+            end += 1;
+        }
+        // A sentence's closing full stop is not part of the value.
+        while end > value_start && chars[end - 1] == '.' {
+            end -= 1;
+        }
+        let value: String = chars[value_start..end].iter().collect();
+        if value.is_empty() || !(quoted || !spaced || value.chars().any(|c| c.is_ascii_digit())) {
+            continue;
+        }
+        out.extend(&chars[i..value_start]);
+        out.push_str(&match leaf {
+            Leaf::Secret => "***".into(),
+            Leaf::Account => mask_last4(&value),
+        });
+        i = end;
+    }
+    out
 }
 
 /// The shortest digit run treated as an account identifier.
@@ -506,6 +588,39 @@ mod tests {
     fn masks_a_pan_nested_in_an_array_value() {
         let out = redact(r#"{"Errors":{"cardNumber":["4111111111111111 is not acceptable"]}}"#);
         assert!(!out.contains("4111111111111111"), "{out}");
+    }
+
+    /// A short secret in prose is sensitive only by the key before it, so
+    /// the message masks a value that follows a sensitive key name.
+    #[test]
+    fn masks_a_value_after_a_sensitive_key_in_free_text() {
+        for (text, secret) in [
+            ("cvv=123", "123"),
+            ("securityCode: 123", "123"),
+            ("client_secret=abc", "abc"),
+            ("invalid request: cvv 987 rejected", "987"),
+            ("routingNumber=021000021", "02100"),
+            ("accountNumber: 12345678 is closed", "1234"),
+        ] {
+            let out = redact_message(text);
+            assert!(!out.contains(secret), "{text} -> {out}");
+        }
+        assert_eq!(redact_message("cvv=123"), "cvv=***");
+        assert_eq!(redact_message("securityCode: 123"), "securityCode: ***");
+    }
+
+    /// Prose that names a sensitive field without a value beside it survives.
+    #[test]
+    fn leaves_prose_around_sensitive_words_alone() {
+        for text in [
+            "The card was declined: insufficient funds (code 51).",
+            "Invalid token: The token has expired.",
+            "The password is wrong.",
+            "A security code is required.",
+            "cvv is required",
+        ] {
+            assert_eq!(redact_message(text), text);
+        }
     }
 
     /// Masking every digit run would destroy the messages worth reading. An

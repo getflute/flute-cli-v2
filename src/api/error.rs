@@ -288,6 +288,14 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
 mod tests {
     use super::*;
 
+    /// A body that is not JSON still has a short secret masked by its key.
+    #[test]
+    fn a_plain_text_body_masks_a_keyed_secret() {
+        let e = parse_error_body(400, "rejected: securityCode=123 client_secret=abc", None);
+        let msg = e.to_string();
+        assert!(!msg.contains("123") && !msg.contains("abc"), "{msg}");
+    }
+
     /// **The error path must redact by key, not only by digit-run length.**
     ///
     /// A CVV is three or four digits, so nothing about its shape marks it as
