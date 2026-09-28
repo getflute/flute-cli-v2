@@ -428,10 +428,10 @@ The live sandbox suite is committed, `#[ignore]`d, and opted into by hand:
 ```sh
 source .flute2-live.env      # not committed; see .flute2-live.env.example
 cargo test --features live --test live -- --ignored --test-threads=1 \
-    --skip attended --skip irreversible --skip needs_terminal
+    --skip attended --skip irreversible --skip needs_terminal --skip needs_partner
 ```
 
-Read the module documentation at the top of `tests/live.rs` first. The scenarios share one sandbox account, which is why the thread count is fixed and why the three name suffixes carry the tiers.
+Read the module documentation at the top of `tests/live.rs` first. The scenarios share one sandbox account, which is why the thread count is fixed and why the four name suffixes carry the tiers.
 
 Where the API's published reference and its behaviour disagree, the conformance layer carries a narrow, named exemption rather than relaxing the check: each one is scoped to the operations it covers, names the live scenario that is its only oracle, and states the condition that deletes it.
 
