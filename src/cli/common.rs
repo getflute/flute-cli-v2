@@ -131,6 +131,21 @@ impl PaginationArgs {
     }
 }
 
+/// The `sortOrder` pair for an `--asc`/`--desc` flag pair, or none when
+/// neither is set.
+///
+/// Both directions are sent explicitly: `sortOrder` declares a default of
+/// "asc", but an omitted one answers newest first.
+pub fn sort_order(asc: bool, desc: bool) -> Option<(&'static str, String)> {
+    if asc {
+        Some(("sortOrder", "asc".into()))
+    } else if desc {
+        Some(("sortOrder", "desc".into()))
+    } else {
+        None
+    }
+}
+
 /// Case-sensitive on the wire. `AccountType` declares exactly `Checking` and
 /// `Savings`, and the schema sets `additionalProperties: false`, so a
 /// lowercase near-miss is rejected rather than forgiven.

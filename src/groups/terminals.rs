@@ -120,13 +120,7 @@ pub struct ListTerminalsArgs {
 pub fn build_list_terminals_query(args: &ListTerminalsArgs) -> Result<Vec<(&'static str, String)>> {
     args.pagination.validate()?;
     let mut query = args.pagination.query();
-    // Both directions are sent explicitly: `sortOrder` declares a default of
-    // "asc", and the sibling lists answer newest first when it is omitted.
-    if args.asc {
-        query.push(("sortOrder", "asc".into()));
-    } else if args.desc {
-        query.push(("sortOrder", "desc".into()));
-    }
+    query.extend(common::sort_order(args.asc, args.desc));
     if let Some(v) = args.terminal_status {
         query.push(("terminalStatus", v.wire().into()));
     }

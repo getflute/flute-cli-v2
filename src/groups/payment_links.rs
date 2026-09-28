@@ -500,13 +500,7 @@ pub fn build_list_payment_links_query(
 ) -> Result<Vec<(&'static str, String)>> {
     args.pagination.validate()?;
     let mut query = args.pagination.query();
-    // Both directions are sent explicitly: `sortOrder` declares a default of
-    // "asc", but an omitted one answers newest first.
-    if args.asc {
-        query.push(("sortOrder", "asc".into()));
-    } else if args.desc {
-        query.push(("sortOrder", "desc".into()));
-    }
+    query.extend(common::sort_order(args.asc, args.desc));
     if let Some(v) = args.link_type {
         query.push(("linkType", v.wire().into()));
     }
