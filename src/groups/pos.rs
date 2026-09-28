@@ -68,8 +68,8 @@ pub enum PosCommand {
     /// Create a POS transaction (POST /v2/pos/transactions).
     ///
     /// Use `--wait` to long-poll until the terminal completes or rejects the
-    /// transaction. Ctrl-C gracefully interrupts the poll and prints the
-    /// last-known status.
+    /// transaction. Ctrl-C interrupts the create or the poll and exits 130;
+    /// during the poll it prints the last-known status.
     Create(CreatePosTransactionArgs),
     /// Fetch a single POS transaction by ID
     /// (GET /v2/pos/transactions/{posTransactionId}).
@@ -623,11 +623,23 @@ async fn create(ctx: &Ctx, args: CreatePosTransactionArgs) -> Result<()> {
     let wait_budget = Duration::from_secs(args.wait_timeout);
     let bound = args.wait.then_some(wait_budget + POLL_TIMEOUT_MARGIN);
     // `waitForAcceptanceByTerminal` holds the create open until the terminal
-    // answers, which can outlast the client-wide bound.
-    let resp = ctx
-        .api
-        .request_within(Method::POST, "/v2/pos/transactions", &[], Some(body), bound)
-        .await?;
+    // answers, which can outlast the client-wide bound. The interrupt is
+    // selected first so its handler is in place before the request is sent:
+    // a Ctrl-C while the terminal waits for a card would otherwise kill the
+    // process with nothing said about a transaction that may be live.
+    let resp = tokio::select! {
+        biased;
+        _ = tokio::signal::ctrl_c() => {
+            eprintln!(
+                "Interrupted while creating the POS transaction. It may exist on the \
+                 terminal: reconcile with `pos list` before creating another."
+            );
+            return Err(Reported { code: 130 }.into());
+        }
+        r = ctx
+            .api
+            .request_within(Method::POST, "/v2/pos/transactions", &[], Some(body), bound) => r?,
+    };
     let created = common::body_of(resp.body)?;
     if !args.wait {
         return render::one(ctx, &POS_TRANSACTION, &created, resp.correlation_id);

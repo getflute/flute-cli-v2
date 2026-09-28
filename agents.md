@@ -141,7 +141,7 @@ and `--version` are not failures: they print to stdout and exit 0.
 | `2` | authorisation: 401, 403, or no credentials at all |
 | `3` | validation: server 400 or 422, client-side refusals, and CLI usage errors |
 | `4` | not found: a 404 that was not mapped to success |
-| `130` | interrupted — Ctrl-C during a `pos create --wait` poll |
+| `130` | interrupted — Ctrl-C during a `pos create` request or its `--wait` poll |
 | `141` | the consumer of stdout stopped reading before the output was complete |
 
 `130` and `141` are in the table rather than in prose alone, so an agent that
@@ -571,6 +571,9 @@ flute2 pos print-receipt [OPTIONS] --terminal-id <TERMINAL_ID> <POS_TRANSACTION_
   no time at all. The budget, plus a short margin, bounds the create request
   too, which the API holds open until the terminal accepts. A create that
   outlasts it is a `transport` failure after which the transaction may exist,
+  so reconcile with `pos list` before creating another.
+- **Ctrl-C during the create request** exits 130 with stdout empty in every
+  output mode and one stderr line: the transaction may exist on the terminal,
   so reconcile with `pos list` before creating another.
 - `--wait` with `--initiation-channel deeplink` is refused before the wire: the
   API requires terminal acceptance to be false for that channel.

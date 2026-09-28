@@ -4,7 +4,7 @@ expression: help_for(&args)
 ---
 Create a POS transaction (POST /v2/pos/transactions).
 
-Use `--wait` to long-poll until the terminal completes or rejects the transaction. Ctrl-C gracefully interrupts the poll and prints the last-known status.
+Use `--wait` to long-poll until the terminal completes or rejects the transaction. Ctrl-C interrupts the create or the poll and exits 130; during the poll it prints the last-known status.
 
 Usage: flute2 pos create [OPTIONS] --terminal-id <TERMINAL_ID> --pos-device-id <POS_DEVICE_ID> --amount <AMOUNT> --currency-code <CURRENCY_CODE>
 

@@ -1193,3 +1193,90 @@ async fn pos_create_wait_interrupted_exits_130_with_stdout_empty() {
         );
     }
 }
+
+/// **Ctrl-C while the create is held open exits 130 with stdout empty in
+/// every output mode.** `waitForAcceptanceByTerminal` holds the create until
+/// the terminal answers, and the transaction may already be live on it, so
+/// stderr says to reconcile before creating another.
+#[cfg(unix)]
+#[tokio::test]
+async fn pos_create_interrupted_during_the_create_exits_130_with_stdout_empty() {
+    for mode in ["json", "table", "quiet"] {
+        let server = support::mock_with_token().await;
+        Mock::given(method("POST"))
+            .and(path("/v2/pos/transactions"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(in_progress())
+                    .set_delay(std::time::Duration::from_secs(60)),
+            )
+            .mount(&server)
+            .await;
+
+        let mut child = support::raw_bin_without_credentials()
+            .env("FLUTE2_API_BASE_URL", server.uri())
+            .env("FLUTE2_OAUTH_URL", format!("{}/oauth2/token", server.uri()))
+            .env("FLUTE2_CLIENT_ID", "test-id")
+            .env("FLUTE2_CLIENT_SECRET", "test-secret")
+            .args([
+                "--output",
+                mode,
+                "pos",
+                "create",
+                "--terminal-id",
+                TERMINAL,
+                "--pos-device-id",
+                DEVICE,
+                "--amount",
+                "42.75",
+                "--currency-code",
+                "USD",
+                "--wait",
+            ])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .expect("spawning flute2");
+
+        let held = tokio::time::timeout(std::time::Duration::from_secs(20), async {
+            loop {
+                let reqs = server.received_requests().await.unwrap();
+                if reqs.iter().any(|r| r.url.path() == "/v2/pos/transactions") {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            }
+        })
+        .await;
+        if held.is_err() {
+            child.kill().ok();
+            panic!("{mode}: the create never reached the server");
+        }
+
+        let sent = std::process::Command::new("kill")
+            .args(["-INT", &child.id().to_string()])
+            .status()
+            .expect("running kill");
+        assert!(sent.success(), "{mode}: kill -INT failed");
+
+        let out = child.wait_with_output().expect("waiting for flute2");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(
+            out.status.code(),
+            Some(130),
+            "{mode}: stderr was:\n{stderr}"
+        );
+        assert!(
+            out.stdout.is_empty(),
+            "{mode}: stdout was:\n{}",
+            String::from_utf8_lossy(&out.stdout)
+        );
+        assert!(
+            stderr.contains(
+                "Interrupted while creating the POS transaction. It may exist on the \
+                 terminal: reconcile with `pos list` before creating another."
+            ),
+            "{mode}: stderr was:\n{stderr}"
+        );
+    }
+}
