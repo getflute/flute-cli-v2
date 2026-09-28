@@ -573,6 +573,10 @@ flute2 pos print-receipt [OPTIONS] --terminal-id <TERMINAL_ID> <POS_TRANSACTION_
   a response open, and `0` therefore waits no time at all. A create that
   outlasts it is a `transport` failure after which the transaction may exist,
   so reconcile with `pos list` before creating another.
+- **`pos get --wait` is bounded by the default wait budget**, 120 seconds plus
+  the same short margin, rather than by the client-wide 30-second request
+  timeout. It takes no `--wait-timeout`. A long poll that outlasts the bound
+  is a `transport` failure, exit 1.
 - **Ctrl-C during the create request** exits 130 with stdout empty in every
   output mode and one stderr line: the transaction may exist on the terminal,
   so reconcile with `pos list` before creating another.

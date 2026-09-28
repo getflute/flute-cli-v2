@@ -29,6 +29,9 @@ const IN_PROGRESS: &str = "InProgress";
 /// server that answers instantly — not the thing that paces the wait.
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
 
+/// The `--wait-timeout` default, and the bound `pos get --wait` is given.
+const DEFAULT_WAIT_TIMEOUT_SECS: u64 = 120;
+
 /// Added to the budget each poll and a waiting create are given, so an
 /// answer that arrives as the deadline passes is read rather than cut off in
 /// transit.
@@ -158,7 +161,7 @@ pub struct CreatePosTransactionArgs {
     pub wait: bool,
     /// Seconds to wait for the create and the poll together before giving up
     /// (default 120, at most 86400). Requires `--wait`.
-    #[arg(long, requires = "wait", default_value_t = 120, value_parser = clap::value_parser!(u64).range(0..=86_400))]
+    #[arg(long, requires = "wait", default_value_t = DEFAULT_WAIT_TIMEOUT_SECS, value_parser = clap::value_parser!(u64).range(0..=86_400))]
     pub wait_timeout: u64,
 }
 
@@ -532,13 +535,19 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
             } else {
                 vec![]
             };
+            // `waitForTransactionProcessing` holds the response open until the
+            // state moves, which can outlast the client-wide bound, so the
+            // long poll gets the default wait budget a create's poll gets.
+            let bound =
+                wait.then(|| Duration::from_secs(DEFAULT_WAIT_TIMEOUT_SECS) + POLL_TIMEOUT_MARGIN);
             let resp = ctx
                 .api
-                .request(
+                .request_within(
                     Method::GET,
                     ApiPath::from("/v2/pos/transactions").id(&pos_transaction_id)?,
                     &query,
                     None,
+                    bound,
                 )
                 .await?;
             render::one(
