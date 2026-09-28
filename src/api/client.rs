@@ -165,7 +165,9 @@ fn resolve(profile: &Profile, var: &str, fallback: &str) -> anyhow::Result<Strin
 /// failure an operator has to go and fix. A request that never reached it is
 /// a transport failure, a 5xx or a 429 from it is a server answer to retry
 /// with backoff, and a success it cannot read is a decode failure: none of
-/// those says anything about the credentials, so each keeps its own kind.
+/// those says anything about the credentials, so each keeps its own kind. The
+/// server answer's message names the token request, as the transport one does,
+/// so it does not read as a failure of the API call.
 fn token_failure(err: anyhow::Error) -> ApiError {
     match err.downcast::<ApiError>() {
         Ok(
@@ -174,6 +176,15 @@ fn token_failure(err: anyhow::Error) -> ApiError {
                 ..
             },
         ) => ApiError::Auth(refused.to_string()),
+        Ok(ApiError::Api {
+            status,
+            correlation_id,
+            message,
+        }) => ApiError::Api {
+            status,
+            correlation_id,
+            message: format!("token request failed: {message}"),
+        },
         Ok(classified) => classified,
         Err(other) => ApiError::Auth(other.to_string()),
     }

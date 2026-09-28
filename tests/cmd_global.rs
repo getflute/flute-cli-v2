@@ -586,28 +586,35 @@ async fn a_token_endpoint_that_rejects_the_credentials_is_an_auth_failure() {
     assert_eq!(v["kind"], "auth", "{v}");
 }
 
-/// A token endpoint answering 5xx says nothing about the credentials, so it
-/// is an **api** failure with its status, exit 1, and the caller retries with
-/// backoff instead of sending an operator after a secret that may be fine.
+/// A token endpoint answering 5xx or 429 says nothing about the credentials,
+/// so it is an **api** failure with its status, exit 1, and the caller retries
+/// with backoff instead of sending an operator after a secret that may be
+/// fine. Its message names the token request as its source.
 #[tokio::test]
 async fn a_token_endpoint_that_fails_is_an_api_failure_not_an_auth_one() {
-    let server = wiremock::MockServer::start().await;
-    wiremock::Mock::given(wiremock::matchers::method("POST"))
-        .and(wiremock::matchers::path("/oauth2/token"))
-        .respond_with(wiremock::ResponseTemplate::new(503).set_body_string("upstream unavailable"))
-        .mount(&server)
-        .await;
+    for status in [503u16, 429] {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/oauth2/token"))
+            .respond_with(
+                wiremock::ResponseTemplate::new(status).set_body_string("upstream unavailable"),
+            )
+            .mount(&server)
+            .await;
 
-    let out = support::bin(&server)
-        .args(["--output", "json", "ping"])
-        .assert()
-        .code(1)
-        .get_output()
-        .stdout
-        .clone();
-    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-    assert_eq!(v["kind"], "api", "{v}");
-    assert_eq!(v["status"], 503, "{v}");
+        let out = support::bin(&server)
+            .args(["--output", "json", "ping"])
+            .assert()
+            .code(1)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "api", "{v}");
+        assert_eq!(v["status"], status, "{v}");
+        let message = v["message"].as_str().unwrap();
+        assert!(message.starts_with("token request failed: "), "{v}");
+    }
 }
 
 /// A token endpoint answering 200 with a body that is not a token is a
