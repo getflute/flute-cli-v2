@@ -210,6 +210,9 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
         body.insert("amount".into(), to_amount_number(v)?);
     }
     if let Some(v) = args.tip_amount {
+        if v <= Decimal::ZERO {
+            anyhow::bail!("--tip-amount must be greater than zero");
+        }
         body.insert("tipAmount".into(), to_amount_number(v)?);
     }
     if let Some(v) = args.customer_handling {
@@ -476,6 +479,24 @@ mod tests {
         assert_eq!(body["metadata"]["orderId"], "9921");
         assert_eq!(body["paymentMethods"]["card"]["processorId"], "pp-card");
         assert_eq!(body["paymentMethods"]["ach"]["processorId"], "pp-ach");
+    }
+
+    /// The schema requires a supplied tip to be greater than zero, so a zero
+    /// tip is refused before the wire rather than spent on a 400.
+    #[test]
+    fn a_zero_tip_is_refused() {
+        let args = CreatePaymentSessionArgs {
+            amount: Some("25.00".parse().unwrap()),
+            tip_amount: Some(Decimal::ZERO),
+            ..Default::default()
+        };
+        let err = build_create_payment_session_body(&args)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("--tip-amount must be greater than zero"),
+            "{err}"
+        );
     }
 
     /// A vault-only session's amount is **zero and present**, because absent
