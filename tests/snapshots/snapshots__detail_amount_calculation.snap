@@ -1,0 +1,14 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+currencyCode:               USD
+pricingType:                Card
+zeroCostProcessingOption:   Surcharge
+creditCard.baseAmount:      100.00
+creditCard.surchargeAmount: 3.50
+creditCard.tipAmount:       15.00
+creditCard.totalAmount:     118.50
+debitCard.totalAmount:      —
+cash.totalAmount:           —
+ach.totalAmount:            —

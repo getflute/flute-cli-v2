@@ -1,0 +1,20 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+paymentMethodId:       6e22f0f3-f3ed-407c-a46f-ec9cffde5d5b
+type:                  Card
+name:                  My Visa Card
+isDefault:             yes
+customerId:            588f57a5-fe6a-4844-851e-e98914e81980
+createdOn:             2026-01-15T10:30:00.000Z
+card.cardMask:         ************1111
+card.expirationMonth:  12
+card.expirationYear:   2033
+card.cardTokenType:    Local
+ach.accountNumber:     —
+ach.routingNumber:     —
+ach.accountType:       —
+ach.accountHolderType: —
+ach.companyName:       —
+ach.taxId:             —

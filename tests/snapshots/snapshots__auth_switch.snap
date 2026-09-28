@@ -1,0 +1,17 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Set the default profile in ~/.flute2/config.toml
+
+Usage: flute2 auth switch [OPTIONS] <PROFILE>
+
+Arguments:
+  <PROFILE>  `sandbox` (default) or `production`/`prod`
+
+Options:
+  -h, --help  Print help
+
+Global options:
+      --output <OUTPUT>  Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table` [env: FLUTE2_OUTPUT=] [possible values: table, json, quiet]
+      --debug            Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

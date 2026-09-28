@@ -1,0 +1,88 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Card or ACH credit payment (POST /v2/transactions/credit)
+
+Usage: flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <PAYMENT_PROCESSOR_ID> --reference-id <REFERENCE_ID>
+
+Options:
+      --amount <AMOUNT>
+          Transaction amount (required). Plain decimal, e.g. `500.00`
+      --payment-processor-id <PAYMENT_PROCESSOR_ID>
+          Payment processor UUID (required)
+      --reference-id <REFERENCE_ID>
+          Merchant-assigned reference ID for idempotency tracking (required)
+      --currency-code <CURRENCY_CODE>
+          Currency code, e.g. `USD`
+      --customer-id <CUSTOMER_ID>
+          Customer UUID for vault-linked credits
+      --card <CARD>
+          Card PAN (primary account number), e.g. `4111111111111111`
+      --exp <EXP>
+          Card expiry in MM/YY or MM/YYYY format, e.g. `12/26`
+      --cvv <CVV>
+          Card CVV/security code
+      --payment-method-id <PAYMENT_METHOD_ID>
+          Payment method UUID (stored card or bank account) to charge instead of raw details
+      --instrument <INSTRUMENT>
+          Which container `--payment-method-id` belongs in: `card` or `ach` [possible values: card, ach]
+      --ach-account-number <ACH_ACCOUNT_NUMBER>
+          Bank account number
+      --ach-routing-number <ACH_ROUTING_NUMBER>
+          Routing number (ABA)
+      --ach-account-type <ACH_ACCOUNT_TYPE>
+          Account type: `checking` or `savings` [possible values: checking, savings]
+      --ach-account-holder-type <ACH_ACCOUNT_HOLDER_TYPE>
+          Account holder type: `business` or `personal` [possible values: business, personal]
+      --ach-tax-id <ACH_TAX_ID>
+          Tax ID (optional)
+      --sec-code <SEC_CODE>
+          ACH SEC code: `web`, `ppd` or `ccd`. Required for ACH [possible values: web, ppd, ccd]
+      --requester-ip <REQUESTER_IP>
+          End-customer IP address. Default `127.0.0.1`. Required for ACH [default: 127.0.0.1]
+      --same-day
+          Request same-day settlement
+      --contact-first-name <FIRST_NAME>
+          Contact first name
+      --contact-last-name <LAST_NAME>
+          Contact last name
+      --contact-company <COMPANY_NAME>
+          Contact company name
+      --contact-email <EMAIL>
+          Contact email address
+      --contact-phone <MOBILE_PHONE_NUMBER>
+          Contact mobile/phone number in E.164 form. Required for new bank details
+      --contact-sms-consent
+          Record the contact's consent to receive SMS
+      --billing-line1 <LINE1>
+          AVS billing street line 1
+      --billing-line2 <LINE2>
+          AVS billing street line 2
+      --billing-city <CITY>
+          AVS billing city
+      --billing-state <STATE>
+          AVS billing state code (e.g. `CO`)
+      --billing-postal-code <POSTAL_CODE>
+          AVS billing postal / ZIP code
+      --billing-country <COUNTRY>
+          AVS billing country code (e.g. `US`)
+      --shipping-line1 <LINE1>
+          Shipping street line 1
+      --shipping-line2 <LINE2>
+          Shipping street line 2
+      --shipping-city <CITY>
+          Shipping city
+      --shipping-state <STATE>
+          Shipping state code (e.g. `CO`)
+      --shipping-postal-code <POSTAL_CODE>
+          Shipping postal / ZIP code
+      --shipping-country <COUNTRY>
+          Shipping country code (e.g. `US`)
+  -h, --help
+          Print help
+
+Global options:
+      --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]
+      --output <OUTPUT>    Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table` [env: FLUTE2_OUTPUT=] [possible values: table, json, quiet]
+      --debug              Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+CLIENT ID                             NAME                          MERCHANT                            
+--------------------------------------------------------------------------------------------------------
+aa98aa89-07ae-4a23-b441-48725f0386e6  Production API Key            8db2ff47-b143-4adb-ab58-a11111111111

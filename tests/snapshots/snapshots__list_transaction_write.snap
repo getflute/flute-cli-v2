@@ -1,0 +1,5 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+

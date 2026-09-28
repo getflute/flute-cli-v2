@@ -1,0 +1,89 @@
+# The variants the contract matrix must declare, one `operation_id<TAB>variant`
+# per line.
+#
+# Every other variant check reads `CONTRACTS`, so a whole variant deleted from
+# it — fixture, mock test and live reference together — leaves every gate green
+# while the coverage claim quietly shrinks. This list is the oracle outside the
+# matrix: removing a variant takes a second edit here, and that edit is where a
+# reviewer sees the claim change.
+#
+# Order is irrelevant; the comparison is a set, in both directions.
+flute-v2-delete-api-keys-clientId	default
+flute-v2-delete-customers-customerId	default
+flute-v2-delete-payment-links-paymentLinkId	default
+flute-v2-delete-payment-methods-paymentMethodId	default
+flute-v2-get-api-keys	every key
+flute-v2-get-api-keys	for one merchant
+flute-v2-get-customers	filtered and paged
+flute-v2-get-customers	first page, server defaults
+flute-v2-get-customers-customerId	default
+flute-v2-get-payment-links	every filter
+flute-v2-get-payment-links	first page, server defaults
+flute-v2-get-payment-links-paymentLinkId	default
+flute-v2-get-payment-methods	filtered by customer
+flute-v2-get-payment-methods	first page, server defaults
+flute-v2-get-payment-methods-paymentMethodId	ach
+flute-v2-get-payment-methods-paymentMethodId	card
+flute-v2-get-payment-sessions-paymentSessionId	default
+flute-v2-get-ping	default
+flute-v2-get-pos-transactions	every filter
+flute-v2-get-pos-transactions	first page, server defaults
+flute-v2-get-pos-transactions-posTransactionId	default
+flute-v2-get-pos-transactions-posTransactionId	long polling
+flute-v2-get-settings-contact-information	default
+flute-v2-get-settings-payment-config	default
+flute-v2-get-settings-transaction-autofill	default
+flute-v2-get-settlements-batches	every filter
+flute-v2-get-settlements-batches	first page, server defaults
+flute-v2-get-settlements-batches	one batch by id
+flute-v2-get-terminals	every filter
+flute-v2-get-terminals	first page, server defaults
+flute-v2-get-terminals-terminalId-status	default
+flute-v2-get-transactions	every filter
+flute-v2-get-transactions	first page, server defaults
+flute-v2-get-transactions-transactionId	default
+flute-v2-patch-customers-customerId	changed fields
+flute-v2-patch-payment-links-paymentLinkId	clearing a field
+flute-v2-patch-payment-links-paymentLinkId	rename
+flute-v2-patch-payment-methods-paymentMethodId	rename
+flute-v2-patch-settings-transaction-autofill	every field
+flute-v2-patch-settings-transaction-autofill	one rate
+flute-v2-post-api-keys	default
+flute-v2-post-customers	minimal
+flute-v2-post-payment-links	fully specified
+flute-v2-post-payment-links	required only
+flute-v2-post-payment-links-paymentLinkId-share	by sms
+flute-v2-post-payment-methods-ach	business account, fully specified
+flute-v2-post-payment-methods-ach	required only
+flute-v2-post-payment-methods-cards	linked to a customer and named
+flute-v2-post-payment-methods-cards	required only
+flute-v2-post-payment-methods-paymentMethodId-set-default	default
+flute-v2-post-payment-sessions	flexible amount
+flute-v2-post-payment-sessions	fully specified
+flute-v2-post-payment-sessions	vault only
+flute-v2-post-payment-sessions-paymentSessionId-cancel	default
+flute-v2-post-pos-transactions	fully specified
+flute-v2-post-pos-transactions	required only
+flute-v2-post-pos-transactions	waiting for terminal acceptance
+flute-v2-post-pos-transactions-posTransactionId-cancel	default
+flute-v2-post-pos-transactions-posTransactionId-print-receipt	default
+flute-v2-post-settlements-batches-close	default
+flute-v2-post-transactions	card with level three data
+flute-v2-post-transactions	new ACH
+flute-v2-post-transactions	new card, automatic capture
+flute-v2-post-transactions	new card, manual capture
+flute-v2-post-transactions	saved ACH
+flute-v2-post-transactions	saved card
+flute-v2-post-transactions-calculate-amount	default
+flute-v2-post-transactions-credit	new ACH
+flute-v2-post-transactions-credit	new card
+flute-v2-post-transactions-transactionId-ach-hold	default
+flute-v2-post-transactions-transactionId-ach-release	default
+flute-v2-post-transactions-transactionId-capture	full
+flute-v2-post-transactions-transactionId-capture	partial
+flute-v2-post-transactions-transactionId-reversal	full
+flute-v2-post-transactions-transactionId-reversal	partial
+flute-v2-post-transactions-transactionId-share-receipt	sms
+flute-v2-post-transactions-transactionId-tip-adjustment	amount
+flute-v2-post-transactions-transactionId-tip-adjustment	rate
+get-oauth-token	client credentials

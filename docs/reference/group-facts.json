@@ -1,0 +1,2239 @@
+{
+ "bundle_sha256": "d67ff8f2a00fff6cc295a4f95c28453a7ab4c06465cacbae23c09b5ae626e478",
+ "operation_count": 50,
+ "operations": [
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "api-keys",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-api-keys",
+   "path": "/v2/api-keys",
+   "query": [
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "merchantId",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "GetApiKeysResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreateApiKeyRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "api-keys",
+   "leaves": [
+    "/apiKeyName",
+    "/merchantId"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-api-keys",
+   "path": "/v2/api-keys",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "apiKeyName",
+    "merchantId"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CreateApiKeyResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "api-keys",
+   "leaves": [],
+   "method": "DELETE",
+   "operation_id": "flute-v2-delete-api-keys-clientId",
+   "path": "/v2/api-keys/{clientId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [
+    "application/x-www-form-urlencoded"
+   ],
+   "group": "auth",
+   "leaves": [],
+   "method": "POST",
+   "operation_id": "get-oauth-token",
+   "path": "/oauth2/token",
+   "query": [],
+   "request_body_required_flag": true,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "customers",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-customers",
+   "path": "/v2/customers",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": true,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "asc",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "fullName",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "email",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "companyName",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "mobilePhoneNumber",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "createdFrom",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "createdTo",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfListCustomersResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreateCustomerRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "customers",
+   "leaves": [
+    "/billingAddress/addressLine1",
+    "/billingAddress/addressLine2",
+    "/billingAddress/city",
+    "/billingAddress/countryCode",
+    "/billingAddress/postalCode",
+    "/billingAddress/stateCode",
+    "/companyName",
+    "/email",
+    "/firstName",
+    "/hasSmsConsent",
+    "/lastName",
+    "/mobilePhoneNumber",
+    "/paymentMethodsAchAccounts/[]/accountHolderType",
+    "/paymentMethodsAchAccounts/[]/accountNumber",
+    "/paymentMethodsAchAccounts/[]/accountType",
+    "/paymentMethodsAchAccounts/[]/paymentName",
+    "/paymentMethodsAchAccounts/[]/routingNumber",
+    "/paymentMethodsAchAccounts/[]/taxId",
+    "/paymentMethodsCards/[]/cardNumber",
+    "/paymentMethodsCards/[]/expirationMonth",
+    "/paymentMethodsCards/[]/expirationYear",
+    "/paymentMethodsCards/[]/paymentName",
+    "/paymentMethodsCards/[]/securityCode",
+    "/shippingAddress/addressLine1",
+    "/shippingAddress/addressLine2",
+    "/shippingAddress/city",
+    "/shippingAddress/countryCode",
+    "/shippingAddress/postalCode",
+    "/shippingAddress/stateCode",
+    "/shouldUseBillingAsShippingAddress"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-customers",
+   "path": "/v2/customers",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "firstName",
+    "lastName"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CreateCustomerResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "customers",
+   "leaves": [],
+   "method": "DELETE",
+   "operation_id": "flute-v2-delete-customers-customerId",
+   "path": "/v2/customers/{customerId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "customers",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-customers-customerId",
+   "path": "/v2/customers/{customerId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "GetCustomerResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "UpdateCustomerRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "customers",
+   "leaves": [
+    "/billingAddress/addressLine1",
+    "/billingAddress/addressLine2",
+    "/billingAddress/city",
+    "/billingAddress/countryCode",
+    "/billingAddress/postalCode",
+    "/billingAddress/stateCode",
+    "/companyName",
+    "/email",
+    "/firstName",
+    "/hasSmsConsent",
+    "/lastName",
+    "/mobilePhoneNumber",
+    "/shippingAddress/addressLine1",
+    "/shippingAddress/addressLine2",
+    "/shippingAddress/city",
+    "/shippingAddress/countryCode",
+    "/shippingAddress/postalCode",
+    "/shippingAddress/stateCode",
+    "/shouldUseBillingAsShippingAddress"
+   ],
+   "method": "PATCH",
+   "operation_id": "flute-v2-patch-customers-customerId",
+   "path": "/v2/customers/{customerId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-links",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-payment-links",
+   "path": "/v2/payment-links",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "search",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "MultiUse",
+      "SingleUse"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "linkType",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "Active",
+      "Completed",
+      "Expired",
+      "Inactive"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "paymentLinkStatus",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": "asc",
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfPaymentLinkResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreatePaymentLinkRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "payment-links",
+   "leaves": [
+    "/baseAmount",
+    "/currencyCode",
+    "/customerId",
+    "/description",
+    "/expiresOn",
+    "/linkType",
+    "/name",
+    "/paymentMethods/ach/enabled",
+    "/paymentMethods/ach/processorId",
+    "/paymentMethods/card/enabled",
+    "/paymentMethods/card/processorId",
+    "/referenceId"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-payment-links",
+   "path": "/v2/payment-links",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "paymentMethods"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PaymentLinkResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-links",
+   "leaves": [],
+   "method": "DELETE",
+   "operation_id": "flute-v2-delete-payment-links-paymentLinkId",
+   "path": "/v2/payment-links/{paymentLinkId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 204
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-links",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-payment-links-paymentLinkId",
+   "path": "/v2/payment-links/{paymentLinkId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PaymentLinkResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "UpdatePaymentLinkRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "payment-links",
+   "leaves": [
+    "/baseAmount",
+    "/currencyCode",
+    "/customerId",
+    "/description",
+    "/expiresOn",
+    "/linkType",
+    "/name",
+    "/paymentLinkStatus",
+    "/paymentMethods/ach/enabled",
+    "/paymentMethods/ach/processorId",
+    "/paymentMethods/card/enabled",
+    "/paymentMethods/card/processorId",
+    "/referenceId"
+   ],
+   "method": "PATCH",
+   "operation_id": "flute-v2-patch-payment-links-paymentLinkId",
+   "path": "/v2/payment-links/{paymentLinkId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [],
+     "schema": "PaymentLinkResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "SharePaymentLinkRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "payment-links",
+   "leaves": [
+    "/hasCustomerConsent",
+    "/recipient",
+    "/shareBy"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-payment-links-paymentLinkId-share",
+   "path": "/v2/payment-links/{paymentLinkId}/share",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "hasCustomerConsent",
+    "recipient",
+    "shareBy"
+   ],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 204
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-methods",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-payment-methods",
+   "path": "/v2/payment-methods",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": true,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "asc",
+     "required": false,
+     "type": "boolean"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "search",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "createdFrom",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "createdTo",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "customerId",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfPaymentMethodResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreateAchPaymentMethodRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "payment-methods",
+   "leaves": [
+    "/accountHolderType",
+    "/accountNumber",
+    "/accountType",
+    "/companyName",
+    "/customerId",
+    "/name",
+    "/routingNumber",
+    "/taxId"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-payment-methods-ach",
+   "path": "/v2/payment-methods/ach",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "accountHolderType",
+    "accountNumber",
+    "accountType",
+    "routingNumber"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CreatePaymentMethodResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreateCardPaymentMethodRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "payment-methods",
+   "leaves": [
+    "/cardNumber",
+    "/customerId",
+    "/expirationMonth",
+    "/expirationYear",
+    "/paymentName",
+    "/securityCode"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-payment-methods-cards",
+   "path": "/v2/payment-methods/cards",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "cardNumber",
+    "expirationMonth",
+    "expirationYear"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CreatePaymentMethodResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-methods",
+   "leaves": [],
+   "method": "DELETE",
+   "operation_id": "flute-v2-delete-payment-methods-paymentMethodId",
+   "path": "/v2/payment-methods/{paymentMethodId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-methods",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-payment-methods-paymentMethodId",
+   "path": "/v2/payment-methods/{paymentMethodId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "ACH payment method (orphan, business)",
+      "Card payment method (customer-linked, default)"
+     ],
+     "schema": "PaymentMethodResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "UpdatePaymentMethodRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "payment-methods",
+   "leaves": [
+    "/paymentName"
+   ],
+   "method": "PATCH",
+   "operation_id": "flute-v2-patch-payment-methods-paymentMethodId",
+   "path": "/v2/payment-methods/{paymentMethodId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-methods",
+   "leaves": [],
+   "method": "POST",
+   "operation_id": "flute-v2-post-payment-methods-paymentMethodId-set-default",
+   "path": "/v2/payment-methods/{paymentMethodId}/set-default",
+   "query": [
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "customerId",
+     "required": true,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreatePaymentSessionRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "payment-sessions",
+   "leaves": [
+    "/afterCompletionMessage",
+    "/amount",
+    "/customerHandling",
+    "/customerId",
+    "/expiresAt",
+    "/metadata",
+    "/mode",
+    "/pageName",
+    "/paymentMethods/ach/enabled",
+    "/paymentMethods/ach/processorId",
+    "/paymentMethods/card/enabled",
+    "/paymentMethods/card/processorId",
+    "/paymentNotes",
+    "/referenceId",
+    "/returnUrl",
+    "/skipAddressVerification",
+    "/tipAmount"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-payment-sessions",
+   "path": "/v2/payment-sessions",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [],
+     "schema": "CreatePaymentSessionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-sessions",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-payment-sessions-paymentSessionId",
+   "path": "/v2/payment-sessions/{paymentSessionId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [],
+     "schema": "GetPaymentSessionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "payment-sessions",
+   "leaves": [],
+   "method": "POST",
+   "operation_id": "flute-v2-post-payment-sessions-paymentSessionId-cancel",
+   "path": "/v2/payment-sessions/{paymentSessionId}/cancel",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "ping",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-ping",
+   "path": "/v2/ping",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "pos",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-pos-transactions",
+   "path": "/v2/pos/transactions",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": "asc",
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "terminalId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "fromDate",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "toDate",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "InProgress",
+      "Completed",
+      "Cancelled",
+      "Failed"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "posTransactionStatus",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfListPosTransactionsResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreatePosTransactionRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "pos",
+   "leaves": [
+    "/baseAmount",
+    "/captureMethod",
+    "/currencyCode",
+    "/customerId",
+    "/extraAmounts/tipAmount",
+    "/extraAmounts/tipRate",
+    "/initiationChannel",
+    "/paymentProcessorId",
+    "/posDeviceId",
+    "/pricingType",
+    "/readingMethod",
+    "/referenceId",
+    "/requestPaymentMethodStorageConsent",
+    "/terminalId",
+    "/waitForAcceptanceByTerminal"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-pos-transactions",
+   "path": "/v2/pos/transactions",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "baseAmount",
+    "currencyCode",
+    "posDeviceId",
+    "terminalId"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CreatePosTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "pos",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-pos-transactions-posTransactionId",
+   "path": "/v2/pos/transactions/{posTransactionId}",
+   "query": [
+    {
+     "default": false,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "waitForTransactionProcessing",
+     "required": false,
+     "type": "boolean"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "GetPosTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "pos",
+   "leaves": [],
+   "method": "POST",
+   "operation_id": "flute-v2-post-pos-transactions-posTransactionId-cancel",
+   "path": "/v2/pos/transactions/{posTransactionId}/cancel",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CreatePosTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "PrintTransactionReceiptRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "pos",
+   "leaves": [
+    "/terminalId"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-pos-transactions-posTransactionId-print-receipt",
+   "path": "/v2/pos/transactions/{posTransactionId}/print-receipt",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "terminalId"
+   ],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "settings",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-settings-contact-information",
+   "path": "/v2/settings/contact-information",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "ContactInfoResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "settings",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-settings-payment-config",
+   "path": "/v2/settings/payment-config",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PaymentConfigurationResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "settings",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-settings-transaction-autofill",
+   "path": "/v2/settings/transaction-autofill",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "TransactionAutofillResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "UpdateTransactionAutofillRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "settings",
+   "leaves": [
+    "/level2Settings/taxRate",
+    "/level3Settings/dutyChargeRate",
+    "/level3Settings/product/code",
+    "/level3Settings/product/description",
+    "/level3Settings/product/discountPercentage",
+    "/level3Settings/product/measurementUnit",
+    "/level3Settings/product/productName",
+    "/level3Settings/product/quantity",
+    "/level3Settings/product/unitPrice",
+    "/level3Settings/shippingChargeRate"
+   ],
+   "method": "PATCH",
+   "operation_id": "flute-v2-patch-settings-transaction-autofill",
+   "path": "/v2/settings/transaction-autofill",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "settlements",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-settlements-batches",
+   "path": "/v2/settlements/batches",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": "desc",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "fromDate",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "toDate",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "batchIds",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "paymentProcessorIds",
+     "required": false,
+     "type": "array"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "batchStatus",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfListBatchesResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "SettleTransactionsRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "settlements",
+   "leaves": [
+    "/paymentProcessorId"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-settlements-batches-close",
+   "path": "/v2/settlements/batches/close",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "paymentProcessorId"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "SettleTransactionsResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "terminals",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-terminals",
+   "path": "/v2/terminals",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": "asc",
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "Ready",
+      "Busy",
+      "Offline"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "terminalStatus",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "Standalone",
+      "SemiIntegrated"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "terminalMode",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "Online",
+      "Offline"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "connectionStatus",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "serialNumber",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "search",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfListTerminalsResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "terminals",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-terminals-terminalId-status",
+   "path": "/v2/terminals/{terminalId}/status",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "GetTerminalStatusResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "transactions",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-transactions",
+   "path": "/v2/transactions",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": "asc",
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortOrder",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "fromDate",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date-time",
+     "maximum": null,
+     "minimum": null,
+     "name": "toDate",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "ApiKey",
+      "Invoice",
+      "MobileApp",
+      "Portal",
+      "QuickPayment",
+      "Subscription",
+      "TapToPay",
+      "Terminal",
+      "WebComponent"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sourceType",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "sourceId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "batchId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": [
+      "Authorized",
+      "Cancelled",
+      "Captured",
+      "ChargedBack",
+      "Cleared",
+      "Declined",
+      "Failed",
+      "Held",
+      "HeldByProcessor",
+      "Informational",
+      "InProgress",
+      "PartiallyAuthorized",
+      "Pending",
+      "Refunded",
+      "Scheduled",
+      "Settled",
+      "Verified",
+      "Voided"
+     ],
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "transactionStatus",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "paymentMethodType",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "customerId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "merchantId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "double",
+     "maximum": null,
+     "minimum": null,
+     "name": "minAmount",
+     "required": false,
+     "type": "number"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "double",
+     "maximum": null,
+     "minimum": null,
+     "name": "maxAmount",
+     "required": false,
+     "type": "number"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "referenceId",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreateTransactionRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/appVersion",
+    "/baseAmount",
+    "/billingAddress/addressLine1",
+    "/billingAddress/addressLine2",
+    "/billingAddress/city",
+    "/billingAddress/countryCode",
+    "/billingAddress/postalCode",
+    "/billingAddress/stateCode",
+    "/contactInfo/companyName",
+    "/contactInfo/email",
+    "/contactInfo/firstName",
+    "/contactInfo/hasSmsConsent",
+    "/contactInfo/lastName",
+    "/contactInfo/mobilePhoneNumber",
+    "/currencyCode",
+    "/deviceId",
+    "/extraAmounts/discountAmount",
+    "/extraAmounts/discountRate",
+    "/extraAmounts/surchargeRate",
+    "/extraAmounts/tipAmount",
+    "/extraAmounts/tipRate",
+    "/isCustomerInitiatedTransaction",
+    "/paymentProcessorId",
+    "/platform",
+    "/pricingType",
+    "/referenceId",
+    "/sdkVersion",
+    "/shippingAddress/addressLine1",
+    "/shippingAddress/addressLine2",
+    "/shippingAddress/city",
+    "/shippingAddress/countryCode",
+    "/shippingAddress/postalCode",
+    "/shippingAddress/stateCode",
+    "/transactionDetails/achData/isSameDayProcessing",
+    "/transactionDetails/achData/paymentMethodDetails/accountHolderType",
+    "/transactionDetails/achData/paymentMethodDetails/accountNumber",
+    "/transactionDetails/achData/paymentMethodDetails/accountType",
+    "/transactionDetails/achData/paymentMethodDetails/routingNumber",
+    "/transactionDetails/achData/paymentMethodDetails/taxId",
+    "/transactionDetails/achData/paymentMethodId",
+    "/transactionDetails/achData/requesterIpAddress",
+    "/transactionDetails/achData/secCode",
+    "/transactionDetails/cardData/paymentMethodDetails/cardNumber",
+    "/transactionDetails/cardData/paymentMethodDetails/expirationMonth",
+    "/transactionDetails/cardData/paymentMethodDetails/expirationYear",
+    "/transactionDetails/cardData/paymentMethodDetails/securityCode",
+    "/transactionDetails/cardData/paymentMethodId",
+    "/transactionEnhancedData/dutyCharges",
+    "/transactionEnhancedData/invoiceNumber",
+    "/transactionEnhancedData/products/[]/discountRate",
+    "/transactionEnhancedData/products/[]/measurementUnit",
+    "/transactionEnhancedData/products/[]/productCode",
+    "/transactionEnhancedData/products/[]/productDescription",
+    "/transactionEnhancedData/products/[]/productName",
+    "/transactionEnhancedData/products/[]/quantity",
+    "/transactionEnhancedData/products/[]/taxAmount",
+    "/transactionEnhancedData/products/[]/unitPrice",
+    "/transactionEnhancedData/purchaseOrder",
+    "/transactionEnhancedData/salesTaxRate",
+    "/transactionEnhancedData/shippingCharges"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions",
+   "path": "/v2/transactions",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "baseAmount",
+    "paymentProcessorId",
+    "transactionDetails"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "Create transaction response (ACH)",
+      "Create transaction response (Authorization)",
+      "Create transaction response (Sale)"
+     ],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/baseAmount",
+    "/currencyCode",
+    "/discountAmount",
+    "/discountRate",
+    "/pricingType",
+    "/surchargeRate",
+    "/tipAmount",
+    "/tipRate"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-calculate-amount",
+   "path": "/v2/transactions/calculate-amount",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CalculateAmountResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreditRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/baseAmount",
+    "/billingAddress/addressLine1",
+    "/billingAddress/addressLine2",
+    "/billingAddress/city",
+    "/billingAddress/countryCode",
+    "/billingAddress/postalCode",
+    "/billingAddress/stateCode",
+    "/contactInfo/companyName",
+    "/contactInfo/email",
+    "/contactInfo/firstName",
+    "/contactInfo/hasSmsConsent",
+    "/contactInfo/lastName",
+    "/contactInfo/mobilePhoneNumber",
+    "/creditDetails/achData/isSameDayProcessing",
+    "/creditDetails/achData/paymentMethodDetails/accountHolderType",
+    "/creditDetails/achData/paymentMethodDetails/accountNumber",
+    "/creditDetails/achData/paymentMethodDetails/accountType",
+    "/creditDetails/achData/paymentMethodDetails/routingNumber",
+    "/creditDetails/achData/paymentMethodDetails/taxId",
+    "/creditDetails/achData/paymentMethodId",
+    "/creditDetails/achData/requesterIpAddress",
+    "/creditDetails/achData/secCode",
+    "/creditDetails/cardData/paymentMethodDetails/cardNumber",
+    "/creditDetails/cardData/paymentMethodDetails/expirationMonth",
+    "/creditDetails/cardData/paymentMethodDetails/expirationYear",
+    "/creditDetails/cardData/paymentMethodDetails/securityCode",
+    "/creditDetails/cardData/paymentMethodId",
+    "/currencyCode",
+    "/customerId",
+    "/paymentProcessorId",
+    "/referenceId",
+    "/shippingAddress/addressLine1",
+    "/shippingAddress/addressLine2",
+    "/shippingAddress/city",
+    "/shippingAddress/countryCode",
+    "/shippingAddress/postalCode",
+    "/shippingAddress/stateCode"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-credit",
+   "path": "/v2/transactions/credit",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "baseAmount",
+    "creditDetails",
+    "paymentProcessorId",
+    "referenceId"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "transactions",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-transactions-transactionId",
+   "path": "/v2/transactions/{transactionId}",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "ACH transaction (Completed)",
+      "Card transaction (Completed)"
+     ],
+     "schema": "GetTransactionResponseDtoFull",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "transactions",
+   "leaves": [],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-transactionId-ach-hold",
+   "path": "/v2/transactions/{transactionId}/ach-hold",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "transactions",
+   "leaves": [],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-transactionId-ach-release",
+   "path": "/v2/transactions/{transactionId}/ach-release",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CaptureRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/captureAmount"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-transactionId-capture",
+   "path": "/v2/transactions/{transactionId}/capture",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "ReversalRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/reversalAmount"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-transactionId-reversal",
+   "path": "/v2/transactions/{transactionId}/reversal",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "SendReceiptRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/hasCustomerConsent",
+    "/recipient",
+    "/shareBy"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-transactionId-share-receipt",
+   "path": "/v2/transactions/{transactionId}/share-receipt",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "hasCustomerConsent",
+    "recipient",
+    "shareBy"
+   ],
+   "responses": [
+    {
+     "bodyless": true,
+     "example": false,
+     "examples": [],
+     "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "TipAdjustmentRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/tipAmount",
+    "/tipRate"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-transactionId-tip-adjustment",
+   "path": "/v2/transactions/{transactionId}/tip-adjustment",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "PageOfGetTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  }
+ ]
+}

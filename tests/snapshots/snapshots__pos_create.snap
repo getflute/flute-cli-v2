@@ -1,0 +1,87 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Create a POS transaction (POST /v2/pos/transactions).
+
+Use `--wait` to long-poll until the terminal completes or rejects the transaction. Ctrl-C gracefully interrupts the poll and prints the last-known status.
+
+Usage: flute2 pos create [OPTIONS] --terminal-id <TERMINAL_ID> --pos-device-id <POS_DEVICE_ID> --amount <AMOUNT> --currency-code <CURRENCY_CODE>
+
+Options:
+      --terminal-id <TERMINAL_ID>
+          Terminal UUID to send the transaction to (required)
+
+      --pos-device-id <POS_DEVICE_ID>
+          POS device ID (required)
+
+      --amount <AMOUNT>
+          Transaction amount (required). Plain decimal, e.g. `100.00`
+
+      --currency-code <CURRENCY_CODE>
+          Currency code, e.g. `USD` (required)
+
+      --capture-method <CAPTURE_METHOD>
+          Capture method: `auto` charges immediately, `manual` authorises for later capture
+          
+          [default: auto]
+          [possible values: auto, manual]
+
+      --initiation-channel <INITIATION_CHANNEL>
+          Initiation channel: `cloud` or `deeplink`. `deeplink` cannot be combined with `--wait`
+          
+          [possible values: cloud, deeplink]
+
+      --reading-method <READING_METHOD>
+          Reading method: `keyed-entry` or `regular`. Omit to let the server decide
+          
+          [possible values: keyed-entry, regular]
+
+      --pricing-type <PRICING_TYPE>
+          Pricing type: `card` or `cash`, for accounts with dual pricing enabled
+          
+          [possible values: card, cash]
+
+      --payment-processor-id <PAYMENT_PROCESSOR_ID>
+          Payment processor UUID. Defaults to the account's own
+
+      --customer-id <CUSTOMER_ID>
+          Customer UUID for vault-linked transactions
+
+      --reference-id <REFERENCE_ID>
+          Merchant-assigned reference ID, part of the duplicate-check key
+
+      --request-storage-consent
+          Ask on the terminal whether to save the payment method
+
+      --tip-amount <TIP_AMOUNT>
+          Tip amount. Plain decimal, e.g. `5.00`. At least 0.01
+
+      --tip-rate <TIP_RATE>
+          Tip rate as a percentage, e.g. `18.5` for 18.5%
+
+      --wait
+          Long-poll for terminal acceptance, then poll GET /v2/pos/transactions/{posTransactionId} every 2 seconds until the transaction leaves `InProgress` or the timeout expires
+
+      --wait-timeout <WAIT_TIMEOUT>
+          Seconds to wait before giving up the poll (default 120, at most 86400). Requires `--wait`
+          
+          [default: 120]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Global options:
+      --profile <PROFILE>
+          Active profile (environment). `sandbox` (default) or `production`/`prod`
+          
+          [env: FLUTE2_PROFILE=]
+
+      --output <OUTPUT>
+          Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table`
+          
+          [env: FLUTE2_OUTPUT=]
+          [possible values: table, json, quiet]
+
+      --debug
+          Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

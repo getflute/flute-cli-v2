@@ -1,0 +1,28 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+posTransactionId:                    7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05
+posTransactionStatus:                Completed
+captureMethod:                       —
+terminalId:                          b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31
+posDeviceId:                         POS-DEVICE-001
+referenceId:                         —
+baseAmount:                          —
+currencyCode:                        USD
+extraAmounts.tipAmount:              —
+extraAmounts.tipRate:                —
+extraAmounts.discountAmount:         —
+extraAmounts.discountRate:           —
+extraAmounts.surchargeRate:          —
+processedAmount:                     47.75
+transactionId:                       90d084d6-55b8-4fb8-b658-861534d07f9a
+createdOn:                           2026-06-03T21:59:31.891Z
+modifiedOn:                          —
+merchantId:                          —
+customerId:                          —
+paymentProcessorId:                  —
+linkedTransaction.transactionId:     —
+linkedTransaction.transactionStatus: —
+linkedTransaction.transactionType:   —
+linkedTransaction.processedAmount:   —

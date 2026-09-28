@@ -1,0 +1,32 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Vault an ACH account (POST /v2/payment-methods/ach)
+
+Usage: flute2 payment-methods add-ach [OPTIONS] --account <ACCOUNT_NUMBER> --routing <ROUTING_NUMBER> --account-holder-type <ACCOUNT_HOLDER_TYPE>
+
+Options:
+      --account <ACCOUNT_NUMBER>
+          Bank account number (required)
+      --routing <ROUTING_NUMBER>
+          ABA routing number (required)
+      --account-type <ACCOUNT_TYPE>
+          Account type: `checking` (default) or `savings` [default: checking] [possible values: checking, savings]
+      --account-holder-type <ACCOUNT_HOLDER_TYPE>
+          Account holder type: `business` or `personal` (required) [possible values: business, personal]
+      --tax-id <TAX_ID>
+          Tax ID (optional)
+      --customer-id <CUSTOMER_ID>
+          Customer UUID to vault the account against
+      --name <NAME>
+          Friendly label for this payment method
+      --company-name <COMPANY_NAME>
+          Company name, for a business account
+  -h, --help
+          Print help
+
+Global options:
+      --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]
+      --output <OUTPUT>    Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table` [env: FLUTE2_OUTPUT=] [possible values: table, json, quiet]
+      --debug              Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

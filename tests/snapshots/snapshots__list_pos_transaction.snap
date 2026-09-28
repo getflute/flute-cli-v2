@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+ID                                    TERMINAL ID                           STATUS                        AMOUNT        CREATED   
+----------------------------------------------------------------------------------------------------------------------------------
+7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05  b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31  Completed                     47.75         2026-06-03

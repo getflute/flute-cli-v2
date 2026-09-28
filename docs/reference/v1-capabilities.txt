@@ -1,0 +1,57 @@
+# v1 capability surface, generated from the v1 binary's --help tree.
+# One line per leaf command: `<command>\t<flags>`. Regenerate with
+# docs/reference/snapshot-v1-capabilities.py against a v1 checkout.
+#globals	--debug --output --profile
+ach credit	--account --account-holder-type --account-type --amount --billing-city --billing-country-id --billing-line1 --billing-line2 --billing-postal-code --billing-state --billing-state-id --contact-company --contact-email --contact-first-name --contact-last-name --contact-phone --customer-id --faster --payment-method-id --payment-processor-id --requester-ip --routing --sec-code --tax-id
+ach debit	--account --account-holder-type --account-type --amount --billing-city --billing-country-id --billing-line1 --billing-line2 --billing-postal-code --billing-state --billing-state-id --contact-company --contact-email --contact-first-name --contact-last-name --contact-phone --customer-id --faster --payment-method-id --payment-processor-id --requester-ip --routing --sec-code --tax-id
+ach refund	
+ach void	
+auth login	
+auth logout	
+auth status	
+auth switch	
+auth token	
+completion	
+customers add-ach	--account --account-holder-type --account-type --name --routing --tax-id
+customers add-card	--card --cvv --exp --name
+customers create	--billing-city --billing-country-id --billing-line1 --billing-line2 --billing-postal-code --billing-state --billing-state-id --company --email --first-name --last-name --mobile
+customers delete	--yes
+customers get	
+customers list	--limit --page --search
+customers methods	
+customers remove-method	--yes
+customers update	--billing-city --billing-country-id --billing-line1 --billing-line2 --billing-postal-code --billing-state --billing-state-id --company --email --first-name --last-name --mobile
+devices get	
+devices list	
+devices register	--name
+devices ttp-activate	
+devices ttp-jwt	--device-id
+keys create	--merchant-id --name
+keys list	--merchant-id
+keys revoke	--client-id --merchant-id --yes
+ping	
+pos cancel	
+pos create	--amount --currency-id --customer-id --payment-processor-id --pos-device-id --reading-method --reference-id --target-transaction-id --terminal-id --tip-amount --tip-rate --transaction-type --wait --wait-timeout
+pos get	
+pos list	--limit --page --terminal-id
+settlements get	
+settlements list	--from --limit --page --status --to
+subscriptions create	--amount --currency-id --customer-id --faster --interval --number-of-payments --payment-frequency --payment-method-id --payment-processor-id --requester-ip --sec-code --start-date --transaction-type
+subscriptions get	
+subscriptions list	--customer-id --limit --page --search --status
+subscriptions payments	
+subscriptions terminate	--yes
+terminals list	--limit --page
+terminals status	
+transactions auth	--amount --billing-city --billing-country-id --billing-line1 --billing-line2 --billing-postal-code --billing-state --billing-state-id --card --card-data-source --currency-id --customer-id --cvv --exp --l2-tax-rate --l3-invoice --l3-po --l3-product --payment-method-id --reference-id --tip-amount
+transactions capture	--amount --transaction-id
+transactions get	
+transactions inspect	
+transactions list	--from --limit --page --status --to --unsettled
+transactions refund	--amount --card-data-source --transaction-id
+transactions sale	--amount --billing-city --billing-country-id --billing-line1 --billing-line2 --billing-postal-code --billing-state --billing-state-id --card --card-data-source --currency-id --customer-id --cvv --exp --l2-tax-rate --l3-invoice --l3-po --l3-product --payment-method-id --reference-id --tip-amount
+transactions settle	--payment-processor-id
+transactions tip-adjust	--tip-amount --transaction-id
+transactions void	--transaction-id
+update	
+version	

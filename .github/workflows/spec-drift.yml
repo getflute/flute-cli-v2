@@ -1,0 +1,30 @@
+name: spec-drift
+
+# `cargo test` is hermetic and offline, so the hash test can only prove the
+# vendored file has not been edited locally. Detecting that the *published*
+# bundle has moved needs a fetch, which belongs on a schedule rather than
+# blocking every pull request on a third-party request.
+on:
+  schedule: [{ cron: "0 7 * * 1" }]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Compare the published bundle against the vendored copy
+        run: |
+          curl -sSf -o /tmp/upstream.json \
+            'https://developer.flute.com/_bundle/api-reference/@v2/index.json'
+          upstream=$(shasum -a 256 /tmp/upstream.json | awk '{print $1}')
+          vendored=$(cat docs/reference/openapi-v2.sha256)
+          if [ "$upstream" != "$vendored" ]; then
+            echo "::error::published v2 bundle has changed; re-vendor and read the diff"
+            diff <(jq -S . docs/reference/openapi-v2.json) <(jq -S . /tmp/upstream.json) || true
+            exit 1
+          fi

@@ -1,0 +1,9 @@
+# **`stable`, not the MSRV.** The MSRV *claim* is `rust-version` in
+# Cargo.toml, and the job that checks it is `msrv` in CI, which runs
+# `cargo +1.85 test --locked`. Pinning it here instead cost twice over:
+# `wiremock` 0.6.5 uses `let`-chains and cannot compile on 1.85, and no code in
+# this crate could use one either. Neither cost bought anything the CI job does
+# not buy better.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]

@@ -1,0 +1,500 @@
+//! The invariant bodies, each taking its input.
+//!
+//! `tests/coverage.rs`, `tests/surface.rs` and `tests/parity.rs` are separate
+//! crates, so a function defined in one is not importable from another and
+//! `mod support;` compiles a fresh copy into each. Anything that has to be
+//! called twice — notably the negative controls that verify these checkers
+//! fail when they should — has to live here.
+
+use super::contracts::{Contract, Live, Mapping};
+use super::spec::{self, assert_exchange_conforms};
+
+/// Every non-webhook operation has exactly one contract row. Adding one
+/// upstream fails the build until somebody decides what it means for the CLI.
+pub fn operation_set_matches_spec(contracts: &[Contract]) {
+    let mut spec_ids = spec::non_webhook_operation_ids();
+    spec_ids.sort();
+    assert_eq!(spec_ids.len(), 50, "50 non-webhook operations expected");
+
+    let mut accounted: Vec<String> = contracts
+        .iter()
+        .map(|c| c.operation_id.to_string())
+        .collect();
+    // A duplicate row leaves the sorted lists different lengths, so the one
+    // comparison catches a missing row and a doubled one.
+    accounted.sort();
+    assert_eq!(
+        spec_ids, accounted,
+        "matrix and spec disagree on the operation set"
+    );
+}
+
+/// **The invariant that makes the matrix mean something.** Every variant's
+/// fixture is validated against its own operation: method, rendered path, path
+/// parameters, required and undeclared query parameters, content type, request
+/// body, declared status, empty-versus-JSON, and response body.
+pub fn variants_conform(contracts: &[Contract]) {
+    for c in contracts {
+        if let Mapping::Command(cmd) = &c.mapping {
+            assert!(
+                !c.variants.is_empty(),
+                "{} ({cmd}): no variants",
+                c.operation_id
+            );
+        }
+        for v in c.variants {
+            let ex = (v.exchange)();
+            assert_exchange_conforms(c.operation_id, &ex.request, &ex.response);
+        }
+    }
+}
+
+/// **The oracle for which variants must exist.**
+///
+/// Every other variant check asks `CONTRACTS` what should be there, so a
+/// variant deleted whole — fixture, mock test and live reference together —
+/// takes its own requirement with it and every gate stays green while the
+/// coverage claim shrinks. `tests/support/variants.txt` is maintained beside
+/// the matrix, so dropping a variant needs a second edit, and that edit is
+/// where a reviewer meets the change in what is claimed.
+///
+/// Both directions: a listed variant the matrix dropped and a declared variant
+/// the list never gained are different mistakes, and each names itself.
+pub fn variants_match_the_manifest(contracts: &[Contract], manifest: &str) {
+    let declared: std::collections::BTreeSet<(&str, &str)> = contracts
+        .iter()
+        .flat_map(|c| c.variants.iter().map(move |v| (c.operation_id, v.name)))
+        .collect();
+    let listed = manifest_variants(manifest);
+
+    for (op, variant) in &declared {
+        assert!(
+            listed.contains(&(*op, *variant)),
+            "{op} / {variant} is declared and not listed in \
+             tests/support/variants.txt"
+        );
+    }
+    for (op, variant) in &listed {
+        assert!(
+            declared.contains(&(*op, *variant)),
+            "{op} / {variant} is listed and the matrix no longer declares it"
+        );
+    }
+}
+
+/// One `operation_id<TAB>variant name` per line; `#` opens a comment line.
+fn manifest_variants(manifest: &str) -> std::collections::BTreeSet<(&str, &str)> {
+    manifest
+        .lines()
+        .map(str::trim_end)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| {
+            line.split_once('\t').unwrap_or_else(|| {
+                panic!("variants.txt: `{line}` is not `operation_id<TAB>variant name`")
+            })
+        })
+        .collect()
+}
+
+/// A named test that does not exist is an orphaned row, not coverage — and a
+/// test that never mentions its operation id is not demonstrably testing it.
+pub fn variants_name_real_tests(contracts: &[Contract]) {
+    for c in contracts {
+        for v in c.variants {
+            let definitions = super::test_fn_definitions(v.mock_test);
+            assert!(
+                definitions > 0,
+                "{} / {}: mock test `{}` does not exist",
+                c.operation_id,
+                v.name,
+                v.mock_test
+            );
+            // Before the citation check, so an ignored test is reported as the
+            // one thing wrong with it rather than as a missing citation.
+            assert!(
+                super::runnable_test_fn_definitions(v.mock_test) > 0,
+                "{} / {}: mock test `{}` is #[ignore]d, so it does not run \
+                 under `cargo test` and the row claims coverage nothing \
+                 produces",
+                c.operation_id,
+                v.name,
+                v.mock_test
+            );
+            // Two tests sharing a name make the row ambiguous: the scan would
+            // resolve it to whichever came first in directory order, so a row
+            // could be satisfied by a same-named test in another group's file
+            // exercising a different operation.
+            assert_eq!(
+                definitions, 1,
+                "{} / {}: `{}` is defined {definitions} times under tests/; \
+                 a row names one test, so the name must be unique",
+                c.operation_id, v.name, v.mock_test
+            );
+            assert!(
+                super::test_fn_cites(v.mock_test, c.operation_id),
+                "{} / {}: `{}` never references its operation id; drive its mock \
+                 from contracts::exchange(\"{}\", \"{}\")",
+                c.operation_id,
+                v.name,
+                v.mock_test,
+                c.operation_id,
+                v.name
+            );
+        }
+    }
+}
+
+/// Live coverage is opt-out with a stated reason, never silent.
+pub fn variants_have_live_coverage(contracts: &[Contract]) {
+    for c in contracts {
+        for v in c.variants {
+            match &v.live {
+                Live::Test(name) => assert!(
+                    super::test_fn_exists(name),
+                    "{} / {}: live test `{}` does not exist",
+                    c.operation_id,
+                    v.name,
+                    name
+                ),
+                Live::Skip(reason) => assert!(
+                    !reason.is_empty(),
+                    "{} / {}: live skip needs a reason",
+                    c.operation_id,
+                    v.name
+                ),
+            }
+        }
+    }
+}
+
+/// Both directions. An operation that returns JSON must have at least one
+/// variant carrying a body, and one that returns none must have none — a
+/// one-way check would accept a fixture claiming a bodyless success for an
+/// endpoint that answers with a resource.
+pub fn body_expectations_match_the_spec(contracts: &[Contract]) {
+    let bodyless = spec::bodyless_successes();
+    for c in contracts {
+        for v in c.variants {
+            let ex = (v.exchange)();
+            let spec_says_empty = bodyless
+                .iter()
+                .any(|(id, st)| id == c.operation_id && *st == ex.response.status);
+            assert_eq!(
+                ex.response.body.is_none(),
+                spec_says_empty,
+                "{} / {}: fixture says body={}, spec says body={} for status {}",
+                c.operation_id,
+                v.name,
+                ex.response.body.is_some(),
+                !spec_says_empty,
+                ex.response.status
+            );
+        }
+    }
+}
+
+/// Both sets are derived, never typed by hand. A hard-coded count is how
+/// "every write endpoint -- nineteen" came to omit eleven of them.
+pub fn built_writes_and_bodyless_successes_are_covered(contracts: &[Contract]) {
+    for op_id in spec::write_operation_ids() {
+        let c = contracts
+            .iter()
+            .find(|c| c.operation_id == op_id)
+            .unwrap_or_else(|| panic!("{op_id} is a write with no contract row"));
+        let Mapping::Command(_) = &c.mapping else {
+            continue;
+        };
+        assert!(
+            c.variants
+                .iter()
+                .any(|v| matches!(v.live, Live::Test(_) | Live::Skip(_))),
+            "{op_id} is a write and needs live coverage or an explicit Skip reason"
+        );
+    }
+    for (op_id, status) in spec::bodyless_successes() {
+        let mapped = contracts
+            .iter()
+            .any(|c| c.operation_id == op_id && matches!(c.mapping, Mapping::Command(_)));
+        if !mapped {
+            continue;
+        }
+        assert!(
+            contracts.iter().any(|c| c.operation_id == op_id
+                && c.variants.iter().any(|v| {
+                    let ex = (v.exchange)();
+                    ex.response.status == status && ex.response.body.is_none()
+                })),
+            "{op_id} answers {status} with no body; no variant exercises that"
+        );
+    }
+}
+
+/// A divergence's `evidence` must name a live test that exists.
+///
+/// Every other named test in the suite is checked — a contract row's mock
+/// test, its live test, a parity row's test — and this one was not. A
+/// divergence is the strongest claim the harness makes: it *suspends* a
+/// declared constraint, and the only thing standing behind it is the live
+/// scenario named here. A pointer at a test that does not exist is an
+/// exemption with no oracle, which is worse than no exemption at all.
+pub fn divergences_name_real_tests(divergences: &[spec::Divergence]) {
+    for d in divergences {
+        let definitions = super::test_fn_definitions(d.evidence);
+        assert!(
+            definitions > 0,
+            "{}: evidence `{}` does not exist, so the exemption has no oracle",
+            d.name,
+            d.evidence
+        );
+        assert_eq!(
+            definitions, 1,
+            "{}: evidence `{}` is defined {definitions} times under tests/; \
+             a divergence names one scenario, so the name must be unique",
+            d.name, d.evidence
+        );
+        assert!(
+            !d.removal.is_empty(),
+            "{}: a divergence needs a condition under which it is deleted",
+            d.name
+        );
+    }
+}
+
+/// Every `FLUTE2_LIVE_*` variable the scenarios read is in the template, and
+/// every one in the template is read.
+///
+/// Both directions, because they fail differently. A variable a scenario reads
+/// and the template omits is a value nobody knows to supply: the scenario
+/// panics naming a name that appears nowhere in the setup instructions. A
+/// variable in the template that nothing reads is worse in a quieter way — it
+/// is a value somebody looked up, pasted, and got no use from, and it makes
+/// the setup look longer than it is.
+///
+/// The scan is a literal prefix search rather than a pattern: the prefix is
+/// fixed, the characters after it are an obvious set, and a regex here would
+/// be a harder thing to read for no gain.
+pub fn live_variables_are_documented(sources: &str, template: &str) {
+    let read = live_variables_in(sources);
+    let documented = live_variables_in(template);
+
+    for var in &read {
+        assert!(
+            documented.contains(var),
+            "{var} is read by a live scenario and is not in \
+             .flute2-live.env.example, so nobody running the suite is told to \
+             set it"
+        );
+    }
+    for var in &documented {
+        assert!(
+            read.contains(var),
+            "{var} is in .flute2-live.env.example and no live scenario reads \
+             it, so it is setup work that buys nothing"
+        );
+    }
+}
+
+/// Every distinct `FLUTE2_LIVE_*` name in `text`.
+fn live_variables_in(text: &str) -> std::collections::BTreeSet<String> {
+    const PREFIX: &str = "FLUTE2_LIVE_";
+    let mut out = std::collections::BTreeSet::new();
+    let mut rest = text;
+    while let Some(at) = rest.find(PREFIX) {
+        let tail = &rest[at + PREFIX.len()..];
+        let end = tail
+            .find(|c: char| !c.is_ascii_uppercase() && !c.is_ascii_digit() && c != '_')
+            .unwrap_or(tail.len());
+        if end > 0 {
+            out.insert(format!("{PREFIX}{}", &tail[..end]));
+        }
+        rest = &tail[end..];
+    }
+    out
+}
+
+// ── Layer 4a: API surface ────────────────────────────────────────────────────
+
+use super::surface::{Exposure, Field};
+
+pub fn every_request_field_is_accounted_for(surface: &[Field]) {
+    for (op_id, field) in spec::request_fields_of_mapped_operations() {
+        let row = surface
+            .iter()
+            .find(|f| f.operation_id == op_id && f.field == field)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{op_id}: {field} is in the spec and unaccounted for. Add a \
+                     flag, fix it deliberately, or exclude it with a reason."
+                )
+            });
+        match &row.exposure {
+            Exposure::Flag(f) => assert!(f.starts_with("--"), "{op_id}/{field}: not a flag"),
+            Exposure::Fixed(v) => assert!(!v.is_empty(), "{op_id}/{field}: fixed to nothing"),
+            Exposure::Excluded(r) => assert!(!r.is_empty(), "{op_id}/{field}: needs a reason"),
+        }
+    }
+}
+
+pub fn no_surface_row_is_stale(surface: &[Field]) {
+    let known = spec::request_fields_of_mapped_operations();
+    for f in surface {
+        assert!(
+            known
+                .iter()
+                .any(|(o, x)| o == f.operation_id && x == f.field),
+            "{}: {} is not in the spec",
+            f.operation_id,
+            f.field
+        );
+    }
+}
+
+pub fn exposed_flags_appear_in_help(surface: &[Field]) {
+    for f in surface {
+        if let Exposure::Flag(flags) = &f.exposure {
+            let help = super::help_for_operation(f.operation_id);
+            for flag in flags.split('/') {
+                assert!(
+                    help.contains(flag),
+                    "{}: {flag} is claimed but absent from --help",
+                    f.operation_id
+                );
+            }
+        }
+    }
+}
+
+// ── Layer 4b: v1 capability parity ───────────────────────────────────────────
+
+use super::parity::{Capability, Parity, V1_SURFACE};
+
+/// Preserved and replaced capabilities must be proven by a test that exists.
+pub fn carried_capabilities_name_real_tests(capabilities: &[Capability]) {
+    for c in capabilities {
+        match &c.parity {
+            Parity::Removed(reason) => {
+                assert!(
+                    !reason.is_empty(),
+                    "{}: removal needs a v2 reason",
+                    c.v1_command
+                );
+                assert!(
+                    c.test.is_none(),
+                    "{}: removed but names a test",
+                    c.v1_command
+                );
+            }
+            Parity::Preserved(v2) | Parity::Replaced(v2, _) => {
+                assert!(
+                    !v2.is_empty(),
+                    "{}: carried but names no v2 command",
+                    c.v1_command
+                );
+                let t = c
+                    .test
+                    .unwrap_or_else(|| panic!("{}: carried but names no test", c.v1_command));
+                assert!(
+                    super::test_fn_exists(t),
+                    "{}: test `{t}` does not exist",
+                    c.v1_command
+                );
+            }
+        }
+        if let Parity::Replaced(_, why) = &c.parity {
+            assert!(
+                !why.is_empty(),
+                "{}: a replacement needs a reason it differs",
+                c.v1_command
+            );
+        }
+    }
+}
+
+/// **Half of the completeness check the matrix exists for:** every command v1
+/// ships has a row.
+///
+/// Without an oracle outside the matrix, a matrix can only prove its own rows
+/// are consistent — never that a capability is missing from it, which is the
+/// only failure worth catching here.
+///
+/// Split from the flag check below because a single function could not be
+/// controlled: the missing-command assertion fired first for every partial
+/// input, so the flag assertion was unreachable and untested. One assertion
+/// masking another is the "rejected for the wrong reason" failure the negative
+/// controls exist to detect.
+pub fn every_v1_command_has_a_row(capabilities: &[Capability]) {
+    for command in V1_SURFACE.keys() {
+        assert!(
+            capabilities.iter().any(|c| c.v1_command == command),
+            "v1 ships `{command}` and the parity matrix has no row for it"
+        );
+    }
+}
+
+/// The other half: for every command that *has* rows, their union accounts for
+/// every flag v1 ships on it.
+///
+/// Commands with no row at all are skipped here and caught above, so each
+/// failure names one cause.
+pub fn every_v1_flag_is_accounted_for(capabilities: &[Capability]) {
+    for (command, flags) in V1_SURFACE.iter() {
+        let covered: Vec<&str> = capabilities
+            .iter()
+            .filter(|c| c.v1_command == command)
+            .flat_map(|r| r.v1_flags.iter().copied())
+            .collect();
+        if !capabilities.iter().any(|c| c.v1_command == command) {
+            continue;
+        }
+        for flag in flags {
+            assert!(
+                covered.contains(&flag.as_str()),
+                "v1 `{command} {flag}` is unaccounted for in the parity matrix"
+            );
+        }
+    }
+}
+
+/// The reverse: a row naming a command or flag v1 does not ship is stale, and
+/// a stale row inflates the coverage claim.
+pub fn no_parity_row_is_stale(capabilities: &[Capability]) {
+    for c in capabilities {
+        let flags = V1_SURFACE.get(c.v1_command).unwrap_or_else(|| {
+            panic!(
+                "{}: the parity matrix names a command v1 does not ship",
+                c.v1_command
+            )
+        });
+        for flag in c.v1_flags {
+            assert!(
+                flags.iter().any(|f| f == flag),
+                "{}: the matrix claims flag {flag}, which v1 does not ship on it",
+                c.v1_command
+            );
+        }
+    }
+}
+
+/// The documentation filenames are lowercase, over a supplied listing.
+///
+/// A listing rather than the directory, and not because it is tidier: macOS is
+/// case-insensitive, so `README.md` and `readme.md` cannot coexist there and
+/// the duplicate arm is unreachable on the machine most likely to introduce
+/// it. Taking the names as an argument is what lets a control supply the pair.
+pub fn documentation_filenames_are_lowercase(names: &[String], expected: &[&str]) {
+    for want in expected {
+        assert!(
+            names.iter().any(|n| n == want),
+            "{want} is not in the package root; it holds {names:?}"
+        );
+        let wrong: Vec<&String> = names
+            .iter()
+            .filter(|n| n.eq_ignore_ascii_case(want) && *n != want)
+            .collect();
+        assert!(
+            wrong.is_empty(),
+            "{want} is also spelled {wrong:?}, and a cross-link resolves to \
+             only one of them on a case-sensitive filesystem"
+        );
+    }
+}

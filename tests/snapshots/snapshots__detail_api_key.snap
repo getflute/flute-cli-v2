@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+clientId:     aa98aa89-07ae-4a23-b441-48725f0386e6
+clientSecret: —
+apiKeyName:   Production API Key
+merchantId:   8db2ff47-b143-4adb-ab58-a11111111111
