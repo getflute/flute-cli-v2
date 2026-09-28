@@ -156,23 +156,16 @@ fn the_reinstall_hint_and_the_readme_name_one_installer() {
         );
     }
 
-    // The `brew install` line names the tap the release publishes to, so a
-    // formula the readme or the hint points at is one the release put there.
-    let manifest: toml::Value = std::fs::read_to_string("dist-workspace.toml")
-        .expect("dist-workspace.toml")
-        .parse()
-        .expect("dist-workspace.toml is valid TOML");
-    let tap = manifest["dist"]["tap"].as_str().expect("dist.tap");
-    let (owner, repo) = tap.split_once('/').expect("tap is owner/repo");
-    let short = repo
-        .strip_prefix("homebrew-")
-        .expect("tap repo is homebrew-*");
-    let brew = format!("brew install {owner}/{short}/flute2");
+    // The release publishes the formula to no tap, so a `brew install` line in
+    // either document names a formula nobody can resolve.
     for (document, text) in [
         ("the reinstall hint", hint.as_str()),
         ("readme.md", readme.as_str()),
     ] {
-        assert!(text.contains(&brew), "{document} does not carry `{brew}`");
+        assert!(
+            !text.contains("brew install"),
+            "{document} installs from a Homebrew tap"
+        );
     }
 }
 

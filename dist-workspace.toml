@@ -26,12 +26,11 @@ install-updater = false
 # side by side on purpose: `devices` and `subscriptions` exist only in v1, so a
 # formula that refused to coexist would take working commands away.
 #
-# The formula is pushed to the tap on every release. The `HOMEBREW_TAP_TOKEN`
-# secret on this repository carries a fine-grained PAT with Contents: write on
-# the tap; without it the homebrew publish job fails and the release page
-# still carries the `.rb` asset.
-tap = "getflute/homebrew-flute-cli-v2"
-publish-jobs = ["homebrew"]
+# No `tap` and no `publish-jobs`: without them cargo-dist attaches the formula
+# to the release page rather than pushing it to a tap. Publishing to
+# `getflute/homebrew-flute-cli-v2` needs a `HOMEBREW_TAP_TOKEN` secret on this
+# repository, a fine-grained PAT with Contents: write on the tap, and a first
+# commit on the tap for the publish job to check out.
 
 # `keyring`'s linux-native backend links against libdbus-1, so the Ubuntu
 # runner needs the headers or the build fails inside libdbus-sys.

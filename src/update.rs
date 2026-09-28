@@ -60,7 +60,6 @@ fn make_updater() -> (AxoUpdater, bool) {
 pub fn reinstall_hint() -> String {
     format!(
         "Reinstall using one of:\n  \
-         brew install {REPO_OWNER}/{REPO_NAME}/{APP_NAME}\n  \
          curl -LsSf https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/latest/download/{APP_NAME}-installer.sh | sh\n  \
          irm https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/latest/download/{APP_NAME}-installer.ps1 | iex"
     )
