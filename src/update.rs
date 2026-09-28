@@ -21,20 +21,12 @@ pub const APP_NAME: &str = "flute2";
 pub const REPO_OWNER: &str = "getflute";
 pub const REPO_NAME: &str = "flute-cli-v2";
 
-/// `Some(latest)` when GitHub has a strictly newer version. Every error maps
-/// to `None` so the silent startup check can never break the foreground
-/// command.
+/// The latest release's version, newer or not. Every error maps to `None` so
+/// the silent startup check can never break the foreground command.
 pub async fn query_latest_silently() -> Option<String> {
     let (mut updater, _) = make_updater();
     let latest = updater.query_new_version().await.ok().flatten()?;
-    let current = env!("CARGO_PKG_VERSION")
-        .parse::<axoupdater::Version>()
-        .ok()?;
-    if *latest > current {
-        Some(latest.to_string())
-    } else {
-        None
-    }
+    Some(latest.to_string())
 }
 
 fn make_updater() -> (AxoUpdater, bool) {
@@ -66,6 +58,25 @@ pub fn reinstall_hint() -> String {
     )
 }
 
+/// What `update` says without a receipt, given the latest release. Only a
+/// release strictly newer than this binary is offered, so a source build
+/// ahead of the latest release is not told to install an older one.
+fn no_receipt_notice(latest: &str) -> String {
+    if crate::update_check::is_newer_than_current(latest) {
+        format!(
+            "A newer version ({latest}) is available, but this binary was not \
+             installed via a cargo-dist installer, so `update` cannot \
+             replace it in place.\n{}",
+            reinstall_hint()
+        )
+    } else {
+        format!(
+            "Already on the latest version ({}).",
+            env!("CARGO_PKG_VERSION")
+        )
+    }
+}
+
 /// "Already on latest" and "no receipt" are informational, not failures.
 pub async fn run() -> Result<()> {
     let (mut updater, has_receipt) = make_updater();
@@ -78,15 +89,8 @@ pub async fn run() -> Result<()> {
             ))
         })?;
         match latest {
-            Some(v) if v.to_string() != env!("CARGO_PKG_VERSION") => {
-                println!(
-                    "A newer version ({v}) is available, but this binary was not \
-                     installed via a cargo-dist installer, so `update` cannot \
-                     replace it in place.\n{}",
-                    reinstall_hint()
-                );
-            }
-            _ => println!(
+            Some(v) => println!("{}", no_receipt_notice(&v.to_string())),
+            None => println!(
                 "Already on the latest version ({}).",
                 env!("CARGO_PKG_VERSION")
             ),
@@ -133,5 +137,16 @@ mod tests {
             assert!(!s.contains("flute-installer"), "{s}: v1 installer");
         }
         assert_ne!(REPO_NAME, "flute-cli");
+    }
+
+    #[test]
+    fn a_newer_release_is_offered_without_a_receipt() {
+        assert!(no_receipt_notice("999.0.0").contains("A newer version (999.0.0)"));
+    }
+
+    #[test]
+    fn an_older_release_is_not_offered_without_a_receipt() {
+        let n = no_receipt_notice("0.0.1");
+        assert!(n.starts_with("Already on the latest version"), "{n}");
     }
 }

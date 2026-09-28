@@ -25,10 +25,9 @@ const NETWORK_TIMEOUT_SECS: u64 = 3;
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Cache {
     checked_at_unix_secs: u64,
-    /// Latest version seen at the time of the check; `None` means we
-    /// confirmed the binary was on latest. We persist the answer either way
-    /// so a "no update" check still suppresses the next 24 h of network
-    /// calls.
+    /// The latest release seen by the check, newer than this binary or not,
+    /// so a check that found no update still suppresses the next 24 h of
+    /// network calls. `None` reads as no newer version.
     latest_version: Option<String>,
 }
 
@@ -50,23 +49,40 @@ pub fn opt_out(cfg: &Config) -> bool {
 /// Uses the on-disk cache when fresh; falls back to a network query (bounded
 /// by `NETWORK_TIMEOUT_SECS`) when the cache is stale or unreadable.
 pub async fn check_for_update() -> Option<String> {
-    if let Some(cached) = read_fresh_cache() {
-        return cached.latest_version.filter(|v| is_newer_than_current(v));
-    }
-
-    let latest: Option<String> = tokio::time::timeout(
-        Duration::from_secs(NETWORK_TIMEOUT_SECS),
+    check_for_update_at(
+        &cache_path(),
+        now_unix(),
         crate::update::query_latest_silently(),
     )
     .await
-    .unwrap_or_default();
+}
 
-    let _ = write_cache(&Cache {
-        checked_at_unix_secs: now_unix(),
-        latest_version: latest.clone(),
-    });
+/// Path- and query-injectable body of [`check_for_update`]. A query that
+/// fails or times out writes nothing, so the next run asks again rather than
+/// reading the failure as "on latest" for 24 h.
+async fn check_for_update_at(
+    path: &std::path::Path,
+    now_secs: u64,
+    query: impl std::future::Future<Output = Option<String>>,
+) -> Option<String> {
+    if let Some(cached) = read_fresh_cache_at(path, now_secs) {
+        return cached.latest_version.filter(|v| is_newer_than_current(v));
+    }
 
-    latest.filter(|v| is_newer_than_current(v))
+    let latest = tokio::time::timeout(Duration::from_secs(NETWORK_TIMEOUT_SECS), query)
+        .await
+        .ok()
+        .flatten()?;
+
+    let _ = write_cache_at(
+        path,
+        &Cache {
+            checked_at_unix_secs: now_secs,
+            latest_version: Some(latest.clone()),
+        },
+    );
+
+    Some(latest).filter(|v| is_newer_than_current(v))
 }
 
 /// Returns true only if `v` is *strictly newer* than the compiled binary
@@ -75,7 +91,7 @@ pub async fn check_for_update() -> Option<String> {
 /// running binary — e.g. cache "0.5.3" after the user upgraded to 0.5.4.
 /// If either side fails to parse as semver, fall back to false so a parse
 /// glitch can't trigger a spurious update prompt.
-fn is_newer_than_current(v: &str) -> bool {
+pub(crate) fn is_newer_than_current(v: &str) -> bool {
     let Ok(current) = env!("CARGO_PKG_VERSION").parse::<axoupdater::Version>() else {
         return false;
     };
@@ -94,14 +110,6 @@ fn now_unix() -> u64 {
 
 fn cache_path() -> std::path::PathBuf {
     config_dir().join(CACHE_FILE)
-}
-
-fn read_fresh_cache() -> Option<Cache> {
-    read_fresh_cache_at(&cache_path(), now_unix())
-}
-
-fn write_cache(c: &Cache) -> std::io::Result<()> {
-    write_cache_at(&cache_path(), c)
 }
 
 /// Path-injectable cache reader so tests don't have to touch `~/.flute2`.
@@ -244,10 +252,9 @@ mod tests {
     }
 
     #[test]
-    fn cache_with_no_update_still_persists_to_suppress_followups() {
-        // A "you're on latest" check writes a Cache with latest_version=None.
-        // The read path must round-trip that so we don't hit the network
-        // again for 24h after confirming no update is available.
+    fn cache_with_no_version_round_trips() {
+        // A fresh cache with latest_version=None still suppresses the
+        // network for 24 h and reads as no newer version.
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("update-check.json");
         let now = 1_700_000_000;
@@ -261,6 +268,45 @@ mod tests {
         .unwrap();
         let read = read_fresh_cache_at(&path, now + 60).expect("fresh");
         assert!(read.latest_version.is_none());
+    }
+
+    #[tokio::test]
+    async fn a_failed_query_writes_no_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("update-check.json");
+        assert!(
+            check_for_update_at(&path, 1_700_000_000, async { None })
+                .await
+                .is_none()
+        );
+        assert!(!path.exists(), "a failed query must not be cached");
+    }
+
+    #[tokio::test]
+    async fn a_failed_query_leaves_the_stale_cache_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("update-check.json");
+        let then = 1_700_000_000;
+        let stale = Cache {
+            checked_at_unix_secs: then,
+            latest_version: Some("9.9.9".into()),
+        };
+        write_cache_at(&path, &stale).unwrap();
+        let now = then + CACHE_TTL_SECS + 1;
+        check_for_update_at(&path, now, async { None }).await;
+        let raw: Cache = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(raw.checked_at_unix_secs, then);
+    }
+
+    #[tokio::test]
+    async fn a_successful_query_is_cached() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("update-check.json");
+        let now = 1_700_000_000;
+        let latest = check_for_update_at(&path, now, async { Some("999.0.0".into()) }).await;
+        assert_eq!(latest.as_deref(), Some("999.0.0"));
+        let read = read_fresh_cache_at(&path, now).expect("cached");
+        assert_eq!(read.latest_version.as_deref(), Some("999.0.0"));
     }
 
     #[test]
