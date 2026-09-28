@@ -423,35 +423,16 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
         } => {
             // A 404 here is exit 0 but not a removal: the server answers the
             // same for "already removed" and "never existed".
-            match ctx
-                .api
-                .request(
-                    Method::DELETE,
-                    ApiPath::from("/v2/payment-methods").id(&payment_method_id)?,
-                    &[],
-                    None,
-                )
-                .await
-            {
-                Ok(resp) => render::confirmed(
-                    ctx,
-                    &PAYMENT_METHOD,
-                    &payment_method_id,
-                    "deleted",
-                    &format!("Removed payment method {payment_method_id}."),
-                    resp.correlation_id,
-                ),
-                Err(crate::api::ApiError::Api { status: 404, .. }) => render::absent(
-                    ctx,
-                    &PAYMENT_METHOD,
-                    &payment_method_id,
-                    "deleted",
-                    &format!(
-                        "No payment method {payment_method_id} was found; nothing was removed."
-                    ),
-                ),
-                Err(e) => Err(e.into()),
-            }
+            common::delete(
+                ctx,
+                &PAYMENT_METHOD,
+                ApiPath::from("/v2/payment-methods").id(&payment_method_id)?,
+                &payment_method_id,
+                "deleted",
+                &format!("Removed payment method {payment_method_id}."),
+                &format!("No payment method {payment_method_id} was found; nothing was removed."),
+            )
+            .await
         }
         PaymentMethodsCommand::SetDefault {
             payment_method_id,

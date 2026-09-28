@@ -203,33 +203,16 @@ pub async fn dispatch(ctx: &Ctx, command: ApiKeysCommand) -> Result<()> {
             // A 404 here is the idempotent-revoke rule, **not** the feature
             // flag: the caller named a key, and a key that is gone is the
             // outcome they asked for — though not one this call produced.
-            match ctx
-                .api
-                .request(
-                    Method::DELETE,
-                    ApiPath::from("/v2/api-keys").id(&client_id)?,
-                    &[],
-                    None,
-                )
-                .await
-            {
-                Ok(resp) => render::confirmed(
-                    ctx,
-                    &API_KEY,
-                    &client_id,
-                    "revoked",
-                    &format!("Revoked key {client_id}."),
-                    resp.correlation_id,
-                ),
-                Err(ApiError::Api { status: 404, .. }) => render::absent(
-                    ctx,
-                    &API_KEY,
-                    &client_id,
-                    "revoked",
-                    &format!("No key {client_id} was found; nothing was revoked."),
-                ),
-                Err(e) => Err(e.into()),
-            }
+            common::delete(
+                ctx,
+                &API_KEY,
+                ApiPath::from("/v2/api-keys").id(&client_id)?,
+                &client_id,
+                "revoked",
+                &format!("Revoked key {client_id}."),
+                &format!("No key {client_id} was found; nothing was revoked."),
+            )
+            .await
         }
     }
 }

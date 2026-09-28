@@ -556,33 +556,16 @@ pub async fn dispatch(ctx: &Ctx, command: CustomersCommand) -> Result<()> {
             // A 404 here is exit 0 but not a deletion: the server answers the
             // same for "already deleted" and "never existed". A 404 from `get`
             // or `list` is still exit 4.
-            match ctx
-                .api
-                .request(
-                    Method::DELETE,
-                    ApiPath::from("/v2/customers").id(&customer_id)?,
-                    &[],
-                    None,
-                )
-                .await
-            {
-                Ok(resp) => render::confirmed(
-                    ctx,
-                    &CUSTOMER,
-                    &customer_id,
-                    "deleted",
-                    &format!("Deleted customer {customer_id}."),
-                    resp.correlation_id,
-                ),
-                Err(crate::api::ApiError::Api { status: 404, .. }) => render::absent(
-                    ctx,
-                    &CUSTOMER,
-                    &customer_id,
-                    "deleted",
-                    &format!("No customer {customer_id} was found; nothing was deleted."),
-                ),
-                Err(e) => Err(e.into()),
-            }
+            common::delete(
+                ctx,
+                &CUSTOMER,
+                ApiPath::from("/v2/customers").id(&customer_id)?,
+                &customer_id,
+                "deleted",
+                &format!("Deleted customer {customer_id}."),
+                &format!("No customer {customer_id} was found; nothing was deleted."),
+            )
+            .await
         }
     }
 }

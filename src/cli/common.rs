@@ -389,6 +389,32 @@ pub async fn list(
     }
 }
 
+/// Issue a delete or revoke and confirm it, mapping a 404 to exit 0.
+///
+/// A 404 is the outcome the caller asked for, so a retry after a timed-out
+/// delete is safe. The server answers it alike for "already removed" and
+/// "never existed", so it renders through [`render::absent`] and claims no
+/// removal. `done` and `absent` are the two table lines.
+pub async fn delete(
+    ctx: &crate::Ctx,
+    resource: &Resource,
+    path: crate::api::ApiPath,
+    id: &str,
+    verb: &'static str,
+    done: &str,
+    absent: &str,
+) -> Result<()> {
+    match ctx
+        .api
+        .request(reqwest::Method::DELETE, path, &[], None)
+        .await
+    {
+        Ok(resp) => render::confirmed(ctx, resource, id, verb, done, resp.correlation_id),
+        Err(ApiError::Api { status: 404, .. }) => render::absent(ctx, resource, id, verb, absent),
+        Err(e) => Err(e.into()),
+    }
+}
+
 /// More pages than any collection this API paginates could hold.
 const MAX_PAGES: u32 = 10_000;
 

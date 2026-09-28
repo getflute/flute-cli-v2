@@ -7,7 +7,6 @@
 //! cannot express, and the reason an empty value is spelt the way it is.
 
 use crate::Ctx;
-use crate::api::ApiError;
 use crate::api::ApiPath;
 use crate::cli::common::{self, PaginationArgs};
 use crate::cli::money::{PatchNumber, parse_amount, parse_amount_patch, to_amount_number};
@@ -577,33 +576,16 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
         } => {
             // 204 on success. A 404 is exit 0 but not a deletion: the server
             // answers the same for "already deleted" and "never existed".
-            match ctx
-                .api
-                .request(
-                    Method::DELETE,
-                    ApiPath::from("/v2/payment-links").id(&payment_link_id)?,
-                    &[],
-                    None,
-                )
-                .await
-            {
-                Ok(resp) => render::confirmed(
-                    ctx,
-                    &PAYMENT_LINK,
-                    &payment_link_id,
-                    "deleted",
-                    &format!("Deleted payment link {payment_link_id}."),
-                    resp.correlation_id,
-                ),
-                Err(ApiError::Api { status: 404, .. }) => render::absent(
-                    ctx,
-                    &PAYMENT_LINK,
-                    &payment_link_id,
-                    "deleted",
-                    &format!("No payment link {payment_link_id} was found; nothing was deleted."),
-                ),
-                Err(e) => Err(e.into()),
-            }
+            common::delete(
+                ctx,
+                &PAYMENT_LINK,
+                ApiPath::from("/v2/payment-links").id(&payment_link_id)?,
+                &payment_link_id,
+                "deleted",
+                &format!("Deleted payment link {payment_link_id}."),
+                &format!("No payment link {payment_link_id} was found; nothing was deleted."),
+            )
+            .await
         }
         PaymentLinksCommand::Share(args) => {
             let body = build_share_payment_link_body(&args)?;
