@@ -143,14 +143,9 @@ pub fn build_update_autofill_body(args: &UpdateAutofillArgs) -> Result<Value> {
     }
 
     let mut product = Map::new();
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = common::patch_string(value) {
-            product.insert(key.to_string(), v);
-        }
-    };
-    put("productName", &args.product_name);
-    put("code", &args.code);
-    put("measurementUnit", &args.measurement_unit);
+    common::put_patch(&mut product, "productName", &args.product_name);
+    common::put_patch(&mut product, "code", &args.code);
+    common::put_patch(&mut product, "measurementUnit", &args.measurement_unit);
     for (key, value) in [
         ("unitPrice", args.unit_price),
         ("quantity", args.quantity),

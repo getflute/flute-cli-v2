@@ -110,14 +110,9 @@ pub fn build_list_batches_query(args: &ListBatchesArgs) -> Result<Vec<(&'static 
     if args.asc {
         query.push(("sortOrder", "asc".into()));
     }
-    let mut put = |key: &'static str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            query.push((key, v.clone()));
-        }
-    };
-    put("sortBy", &args.sort_by);
-    put("fromDate", &args.from_date);
-    put("toDate", &args.to_date);
+    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "fromDate", &args.from_date);
+    common::push_str(&mut query, "toDate", &args.to_date);
     for id in args.batch_ids.iter().filter(|s| !s.is_empty()) {
         query.push(("batchIds", id.clone()));
     }
@@ -267,7 +262,7 @@ pub async fn dispatch(ctx: &Ctx, command: SettlementsCommand) -> Result<()> {
                 render::page(
                     ctx,
                     &SETTLEMENT,
-                    &common::items_of(&body)?,
+                    &common::items_of(&body, "items")?,
                     body.get("pageInfo").cloned(),
                     resp.correlation_id,
                 )
@@ -286,7 +281,7 @@ pub async fn dispatch(ctx: &Ctx, command: SettlementsCommand) -> Result<()> {
                 )
                 .await?;
             let body = common::body_of(resp.body)?;
-            let batch = one_batch(&batch_id, common::items_of(&body)?)?;
+            let batch = one_batch(&batch_id, common::items_of(&body, "items")?)?;
             render::one(ctx, &SETTLEMENT, &batch, resp.correlation_id)
         }
         SettlementsCommand::Close {

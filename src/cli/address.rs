@@ -9,6 +9,7 @@
 //! declare `line1` collide at runtime with "argument names must be unique" —
 //! a panic in the built binary that no compile check catches.
 
+use crate::cli::common;
 use serde_json::{Map, Value};
 
 #[derive(clap::Args, Debug, Default, Clone)]
@@ -108,17 +109,12 @@ fn address(
     country: &Option<String>,
 ) -> Option<Value> {
     let mut map = Map::new();
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            map.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("addressLine1", line1);
-    put("addressLine2", line2);
-    put("city", city);
-    put("stateCode", state);
-    put("postalCode", postal_code);
-    put("countryCode", country);
+    common::put_str(&mut map, "addressLine1", line1);
+    common::put_str(&mut map, "addressLine2", line2);
+    common::put_str(&mut map, "city", city);
+    common::put_str(&mut map, "stateCode", state);
+    common::put_str(&mut map, "postalCode", postal_code);
+    common::put_str(&mut map, "countryCode", country);
     if map.is_empty() {
         None
     } else {

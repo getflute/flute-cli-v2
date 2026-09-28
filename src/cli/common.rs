@@ -8,7 +8,7 @@ use crate::api::{ApiClient, ApiError};
 use crate::cli::money::PatchNumber;
 use anyhow::Result;
 use rust_decimal::Decimal;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 #[derive(clap::Args, Debug, Default, Clone)]
 pub struct PaginationArgs {
@@ -129,6 +129,67 @@ impl PaginationArgs {
         }
         out
     }
+}
+
+/// Insert a string field when it is set and not empty.
+pub fn put_str(map: &mut Map<String, Value>, key: &str, value: &Option<String>) {
+    if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
+        map.insert(key.to_string(), Value::String(v.clone()));
+    }
+}
+
+/// Insert a merge-patch string field: set, cleared by an empty value, or left
+/// out when absent. See [`patch_string`].
+pub fn put_patch(map: &mut Map<String, Value>, key: &str, value: &Option<String>) {
+    if let Some(v) = patch_string(value) {
+        map.insert(key.to_string(), v);
+    }
+}
+
+/// Push a query pair when it is set and not empty.
+pub fn push_str(
+    query: &mut Vec<(&'static str, String)>,
+    key: &'static str,
+    value: &Option<String>,
+) {
+    if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
+        query.push((key, v.clone()));
+    }
+}
+
+/// The `paymentMethods` object from the card and ACH `(enabled, processor id)`
+/// pairs, empty when neither method is named.
+///
+/// `enabled` is sent as given, and a method with neither value is left out.
+/// An empty processor id is refused, as on every create.
+pub fn payment_methods(
+    card: (Option<bool>, &Option<String>),
+    ach: (Option<bool>, &Option<String>),
+) -> Result<Map<String, Value>> {
+    let mut methods = Map::new();
+    for (key, flag, (enabled, processor)) in [
+        ("card", "--card-processor-id", card),
+        ("ach", "--ach-processor-id", ach),
+    ] {
+        reject_empty_processor_id(flag, processor.as_deref())?;
+        let mut method = Map::new();
+        if let Some(v) = enabled {
+            method.insert("enabled".into(), Value::Bool(v));
+        }
+        if let Some(id) = processor {
+            method.insert("processorId".into(), Value::String(id.clone()));
+        }
+        if !method.is_empty() {
+            methods.insert(key.to_string(), Value::Object(method));
+        }
+    }
+    Ok(methods)
+}
+
+/// A create's `enabled` for one payment method: a method named by its switch
+/// or by its processor id is offered, and one named by neither is left out.
+pub fn offered(enabled: bool, processor: &Option<String>) -> Option<bool> {
+    (enabled || processor.is_some()).then_some(true)
 }
 
 /// The `sortOrder` pair for an `--asc`/`--desc` flag pair, or none when
@@ -280,25 +341,26 @@ pub(crate) fn json_type(value: &Value) -> &'static str {
     }
 }
 
-/// The declared `items` of one page.
+/// The declared collection array of one page, read from `key`.
 ///
 /// Every page schema declares `items` nullable and optional, so an absent or
 /// null one is an empty page — and so is an empty array. That is what stops a
-/// walk. A body that is not an object, or an `items` that is present and is
-/// neither an array nor null, is a shape this CLI cannot read, and calling it
-/// empty would report "no results" for a response nobody parsed.
-pub fn items_of(page: &Value) -> Result<Vec<Value>, ApiError> {
+/// walk. `api-keys list` declares `apiKeys` the same way. A body that is not an
+/// object, or a collection that is present and is neither an array nor null,
+/// is a shape this CLI cannot read, and calling it empty would report "no
+/// results" for a response nobody parsed.
+pub fn items_of(page: &Value, key: &str) -> Result<Vec<Value>, ApiError> {
     let Some(object) = page.as_object() else {
         return Err(ApiError::Decode(format!(
             "a collection response must be a JSON object, got {}",
             json_type(page)
         )));
     };
-    match object.get("items") {
+    match object.get(key) {
         None | Some(Value::Null) => Ok(Vec::new()),
         Some(Value::Array(items)) => Ok(items.clone()),
         Some(other) => Err(ApiError::Decode(format!(
-            "a collection response's `items` must be an array or null, got {}",
+            "a collection response's `{key}` must be an array or null, got {}",
             json_type(other)
         ))),
     }
@@ -359,7 +421,7 @@ pub async fn fetch_all(
             .await?;
         correlation_id = resp.correlation_id.or(correlation_id);
         let page = body_of(resp.body)?;
-        let items = items_of(&page)?;
+        let items = items_of(&page, "items")?;
         if previous.as_ref() == Some(&items) {
             return Err(ApiError::Decode(format!(
                 "page {index} repeated the previous page's items: the server is \
@@ -507,14 +569,14 @@ mod tests {
     #[test]
     fn items_of_a_page_are_the_declared_items_array() {
         assert_eq!(
-            items_of(&serde_json::json!({"items": [{"a": 1}]}))
+            items_of(&serde_json::json!({"items": [{"a": 1}]}), "items")
                 .unwrap()
                 .len(),
             1
         );
         // An empty array is an empty page, and that is what stops the walk.
         assert!(
-            items_of(&serde_json::json!({"items": [], "pageInfo": {}}))
+            items_of(&serde_json::json!({"items": [], "pageInfo": {}}), "items")
                 .unwrap()
                 .is_empty()
         );
@@ -525,12 +587,12 @@ mod tests {
     #[test]
     fn an_absent_or_null_items_array_is_an_empty_page() {
         assert!(
-            items_of(&serde_json::json!({"pageInfo": {}}))
+            items_of(&serde_json::json!({"pageInfo": {}}), "items")
                 .unwrap()
                 .is_empty()
         );
         assert!(
-            items_of(&serde_json::json!({"items": null, "pageInfo": {}}))
+            items_of(&serde_json::json!({"items": null, "pageInfo": {}}), "items")
                 .unwrap()
                 .is_empty()
         );
@@ -546,7 +608,7 @@ mod tests {
             (serde_json::json!([{"a": 1}]), "array"),
             (serde_json::Value::Null, "null"),
         ] {
-            let Err(ApiError::Decode(message)) = items_of(&body) else {
+            let Err(ApiError::Decode(message)) = items_of(&body, "items") else {
                 panic!("{body} was accepted");
             };
             assert!(message.contains(expected_type), "{message}");

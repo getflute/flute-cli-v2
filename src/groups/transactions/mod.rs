@@ -96,7 +96,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                 render::page(
                     ctx,
                     &TRANSACTION,
-                    &common::items_of(&body)?,
+                    &common::items_of(&body, "items")?,
                     body.get("pageInfo").cloned(),
                     resp.correlation_id,
                 )

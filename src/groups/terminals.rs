@@ -130,14 +130,9 @@ pub fn build_list_terminals_query(args: &ListTerminalsArgs) -> Result<Vec<(&'sta
     if let Some(v) = args.connection_status {
         query.push(("connectionStatus", v.wire().into()));
     }
-    let mut put = |key: &'static str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            query.push((key, v.clone()));
-        }
-    };
-    put("sortBy", &args.sort_by);
-    put("serialNumber", &args.serial_number);
-    put("search", &args.search);
+    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "serialNumber", &args.serial_number);
+    common::push_str(&mut query, "search", &args.search);
     Ok(query)
 }
 
@@ -259,7 +254,7 @@ pub async fn dispatch(ctx: &Ctx, command: TerminalsCommand) -> Result<()> {
                 render::page(
                     ctx,
                     &TERMINAL,
-                    &common::items_of(&body)?,
+                    &common::items_of(&body, "items")?,
                     body.get("pageInfo").cloned(),
                     resp.correlation_id,
                 )

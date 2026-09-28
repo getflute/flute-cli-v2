@@ -14,28 +14,20 @@ pub fn build_list_transactions_query(
     args.pagination.validate()?;
     let mut query = args.pagination.query();
     query.extend(common::sort_order(args.asc, args.desc));
-    // A free function rather than a closure: a `FnMut` capturing `query`
-    // would hold the borrow across the enum and amount pushes below.
-    fn text(key: &'static str, value: &Option<String>) -> Option<(&'static str, String)> {
-        value
-            .as_ref()
-            .filter(|s| !s.is_empty())
-            .map(|v| (key, v.clone()))
-    }
-    query.extend(text("sortBy", &args.sort_by));
-    query.extend(text("fromDate", &args.from_date));
-    query.extend(text("toDate", &args.to_date));
+    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "fromDate", &args.from_date);
+    common::push_str(&mut query, "toDate", &args.to_date);
     if let Some(source) = args.source_type {
         query.push(("sourceType", source.wire().into()));
     }
-    query.extend(text("sourceId", &args.source_id));
-    query.extend(text("batchId", &args.batch_id));
+    common::push_str(&mut query, "sourceId", &args.source_id);
+    common::push_str(&mut query, "batchId", &args.batch_id);
     if let Some(status) = args.transaction_status {
         query.push(("transactionStatus", status.wire().into()));
     }
-    query.extend(text("paymentMethodType", &args.payment_method_type));
-    query.extend(text("customerId", &args.customer_id));
-    query.extend(text("merchantId", &args.merchant_id));
+    common::push_str(&mut query, "paymentMethodType", &args.payment_method_type);
+    common::push_str(&mut query, "customerId", &args.customer_id);
+    common::push_str(&mut query, "merchantId", &args.merchant_id);
     // Amounts reach the query as their exact digits, never through an f64.
     for (key, value) in [
         ("minAmount", args.min_amount),
@@ -45,7 +37,7 @@ pub fn build_list_transactions_query(
             query.push((key, v.to_string()));
         }
     }
-    query.extend(text("referenceId", &args.reference_id));
+    common::push_str(&mut query, "referenceId", &args.reference_id);
     Ok(query)
 }
 

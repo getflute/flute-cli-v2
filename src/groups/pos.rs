@@ -296,14 +296,9 @@ pub fn build_pos_create_body(args: &CreatePosTransactionArgs) -> Result<Value> {
     if let Some(v) = args.pricing_type {
         body.insert("pricingType".into(), Value::String(v.wire().into()));
     }
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            body.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("paymentProcessorId", &args.payment_processor_id);
-    put("customerId", &args.customer_id);
-    put("referenceId", &args.reference_id);
+    common::put_str(&mut body, "paymentProcessorId", &args.payment_processor_id);
+    common::put_str(&mut body, "customerId", &args.customer_id);
+    common::put_str(&mut body, "referenceId", &args.reference_id);
 
     // A bare switch cannot distinguish "not passed" from "passed false", so
     // only the true case is sent and the server's default governs otherwise.
@@ -350,15 +345,10 @@ pub fn build_list_pos_transactions_query(
     if let Some(status) = args.pos_transaction_status {
         query.push(("posTransactionStatus", status.wire().into()));
     }
-    let mut put = |key: &'static str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            query.push((key, v.clone()));
-        }
-    };
-    put("sortBy", &args.sort_by);
-    put("terminalId", &args.terminal_id);
-    put("fromDate", &args.from_date);
-    put("toDate", &args.to_date);
+    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "terminalId", &args.terminal_id);
+    common::push_str(&mut query, "fromDate", &args.from_date);
+    common::push_str(&mut query, "toDate", &args.to_date);
     Ok(query)
 }
 
@@ -609,7 +599,7 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
                 render::page(
                     ctx,
                     &POS_TRANSACTION,
-                    &common::items_of(&body)?,
+                    &common::items_of(&body, "items")?,
                     body.get("pageInfo").cloned(),
                     resp.correlation_id,
                 )

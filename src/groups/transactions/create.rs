@@ -236,15 +236,9 @@ pub fn build_create_transaction_body(args: &CreateTransactionArgs) -> Result<Val
         "transactionDetails".into(),
         instrument_envelope(&args.instrument, chosen, Some(args.capture_method))?,
     );
-
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            body.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("customerId", &args.customer_id);
-    put("referenceId", &args.reference_id);
-    put("currencyCode", &args.currency_code);
+    common::put_str(&mut body, "customerId", &args.customer_id);
+    common::put_str(&mut body, "referenceId", &args.reference_id);
+    common::put_str(&mut body, "currencyCode", &args.currency_code);
 
     // A bare switch cannot distinguish "not passed" from "passed false", so
     // only the true case is sent and the server's default governs otherwise.
@@ -384,16 +378,11 @@ fn extra_amounts(args: &CreateTransactionArgs) -> Result<Option<Value>> {
 
 pub(super) fn contact_info(args: &ContactArgs) -> Option<Value> {
     let mut map = Map::new();
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            map.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("firstName", &args.first_name);
-    put("lastName", &args.last_name);
-    put("companyName", &args.company_name);
-    put("email", &args.email);
-    put("mobilePhoneNumber", &args.mobile_phone_number);
+    common::put_str(&mut map, "firstName", &args.first_name);
+    common::put_str(&mut map, "lastName", &args.last_name);
+    common::put_str(&mut map, "companyName", &args.company_name);
+    common::put_str(&mut map, "email", &args.email);
+    common::put_str(&mut map, "mobilePhoneNumber", &args.mobile_phone_number);
     if args.has_sms_consent {
         map.insert("hasSmsConsent".into(), Value::Bool(true));
     }

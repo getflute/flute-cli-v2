@@ -223,18 +223,17 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
     if args.skip_address_verification {
         body.insert("skipAddressVerification".into(), Value::Bool(true));
     }
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            body.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("customerId", &args.customer_id);
-    put("referenceId", &args.reference_id);
-    put("returnUrl", &args.return_url);
-    put("pageName", &args.page_name);
-    put("paymentNotes", &args.payment_notes);
-    put("afterCompletionMessage", &args.after_completion_message);
-    put("expiresAt", &args.expires_at);
+    common::put_str(&mut body, "customerId", &args.customer_id);
+    common::put_str(&mut body, "referenceId", &args.reference_id);
+    common::put_str(&mut body, "returnUrl", &args.return_url);
+    common::put_str(&mut body, "pageName", &args.page_name);
+    common::put_str(&mut body, "paymentNotes", &args.payment_notes);
+    common::put_str(
+        &mut body,
+        "afterCompletionMessage",
+        &args.after_completion_message,
+    );
+    common::put_str(&mut body, "expiresAt", &args.expires_at);
 
     let mut metadata = Map::new();
     for raw in &args.metadata {
@@ -245,27 +244,16 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
         body.insert("metadata".into(), Value::Object(metadata));
     }
 
-    for (flag, processor) in [
-        ("--card-processor-id", &args.card_processor_id),
-        ("--ach-processor-id", &args.ach_processor_id),
-    ] {
-        common::reject_empty_processor_id(flag, processor.as_deref())?;
-    }
-    let mut methods = Map::new();
-    for (key, enabled, processor) in [
-        ("card", args.card_enabled, &args.card_processor_id),
-        ("ach", args.ach_enabled, &args.ach_processor_id),
-    ] {
-        if !enabled && processor.is_none() {
-            continue;
-        }
-        let mut method = Map::new();
-        method.insert("enabled".into(), Value::Bool(true));
-        if let Some(id) = processor {
-            method.insert("processorId".into(), Value::String(id.clone()));
-        }
-        methods.insert(key.to_string(), Value::Object(method));
-    }
+    let methods = common::payment_methods(
+        (
+            common::offered(args.card_enabled, &args.card_processor_id),
+            &args.card_processor_id,
+        ),
+        (
+            common::offered(args.ach_enabled, &args.ach_processor_id),
+            &args.ach_processor_id,
+        ),
+    )?;
     if !methods.is_empty() {
         body.insert("paymentMethods".into(), Value::Object(methods));
     }

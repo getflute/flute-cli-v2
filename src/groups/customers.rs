@@ -155,18 +155,13 @@ pub fn build_list_customers_query(args: &ListCustomersArgs) -> Result<Vec<(&'sta
     if args.desc {
         query.push(("asc", "false".into()));
     }
-    let mut put = |key: &'static str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            query.push((key, v.clone()));
-        }
-    };
-    put("sortBy", &args.sort_by);
-    put("fullName", &args.full_name);
-    put("email", &args.email);
-    put("companyName", &args.company_name);
-    put("mobilePhoneNumber", &args.mobile_phone_number);
-    put("createdFrom", &args.created_from);
-    put("createdTo", &args.created_to);
+    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "fullName", &args.full_name);
+    common::push_str(&mut query, "email", &args.email);
+    common::push_str(&mut query, "companyName", &args.company_name);
+    common::push_str(&mut query, "mobilePhoneNumber", &args.mobile_phone_number);
+    common::push_str(&mut query, "createdFrom", &args.created_from);
+    common::push_str(&mut query, "createdTo", &args.created_to);
     Ok(query)
 }
 
@@ -184,16 +179,11 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
     }
 
     let mut body = Map::new();
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = common::patch_string(value) {
-            body.insert(key.to_string(), v);
-        }
-    };
-    put("firstName", &args.first_name);
-    put("lastName", &args.last_name);
-    put("companyName", &args.company_name);
-    put("email", &args.email);
-    put("mobilePhoneNumber", &args.mobile_phone_number);
+    common::put_patch(&mut body, "firstName", &args.first_name);
+    common::put_patch(&mut body, "lastName", &args.last_name);
+    common::put_patch(&mut body, "companyName", &args.company_name);
+    common::put_patch(&mut body, "email", &args.email);
+    common::put_patch(&mut body, "mobilePhoneNumber", &args.mobile_phone_number);
     if let Some(v) = args.has_sms_consent {
         body.insert("hasSmsConsent".into(), Value::Bool(v));
     }
@@ -379,15 +369,9 @@ pub fn build_create_customer_body(args: &CreateCustomerArgs) -> Result<Value> {
     let mut body = Map::new();
     body.insert("firstName".into(), Value::String(args.first_name.clone()));
     body.insert("lastName".into(), Value::String(args.last_name.clone()));
-
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            body.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("companyName", &args.company_name);
-    put("email", &args.email);
-    put("mobilePhoneNumber", &args.mobile_phone_number);
+    common::put_str(&mut body, "companyName", &args.company_name);
+    common::put_str(&mut body, "email", &args.email);
+    common::put_str(&mut body, "mobilePhoneNumber", &args.mobile_phone_number);
 
     // A `false` boolean flag is an absent flag: clap cannot distinguish
     // "not passed" from "passed false" on a bare switch, so only the true
@@ -562,7 +546,7 @@ pub async fn dispatch(ctx: &Ctx, command: CustomersCommand) -> Result<()> {
                 render::page(
                     ctx,
                     &CUSTOMER,
-                    &common::items_of(&body)?,
+                    &common::items_of(&body, "items")?,
                     body.get("pageInfo").cloned(),
                     resp.correlation_id,
                 )

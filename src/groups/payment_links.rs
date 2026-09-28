@@ -299,29 +299,16 @@ pub struct SharePaymentLinkArgs {
 /// bare switch sets and a processor id is an extra rather than a
 /// precondition.
 fn payment_methods_for_create(args: &CreatePaymentLinkArgs) -> Result<Value> {
-    for (flag, processor) in [
-        ("--card-processor-id", &args.card_processor_id),
-        ("--ach-processor-id", &args.ach_processor_id),
-    ] {
-        common::reject_empty_processor_id(flag, processor.as_deref())?;
-    }
-    let mut methods = Map::new();
-    if args.card_enabled || args.card_processor_id.is_some() {
-        let mut card = Map::new();
-        card.insert("enabled".into(), Value::Bool(true));
-        if let Some(id) = &args.card_processor_id {
-            card.insert("processorId".into(), Value::String(id.clone()));
-        }
-        methods.insert("card".into(), Value::Object(card));
-    }
-    if args.ach_enabled || args.ach_processor_id.is_some() {
-        let mut ach = Map::new();
-        ach.insert("enabled".into(), Value::Bool(true));
-        if let Some(id) = &args.ach_processor_id {
-            ach.insert("processorId".into(), Value::String(id.clone()));
-        }
-        methods.insert("ach".into(), Value::Object(ach));
-    }
+    let methods = common::payment_methods(
+        (
+            common::offered(args.card_enabled, &args.card_processor_id),
+            &args.card_processor_id,
+        ),
+        (
+            common::offered(args.ach_enabled, &args.ach_processor_id),
+            &args.ach_processor_id,
+        ),
+    )?;
     if methods.is_empty() {
         anyhow::bail!(
             "a payment link has to accept something: pass --card-enabled, \
@@ -368,17 +355,12 @@ pub fn build_create_payment_link_body(args: &CreatePaymentLinkArgs) -> Result<Va
     if let Some(v) = args.link_type {
         body.insert("linkType".into(), Value::String(v.wire().into()));
     }
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            body.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("currencyCode", &args.currency_code);
-    put("customerId", &args.customer_id);
-    put("referenceId", &args.reference_id);
-    put("name", &args.name);
-    put("description", &args.description);
-    put("expiresOn", &args.expires_on);
+    common::put_str(&mut body, "currencyCode", &args.currency_code);
+    common::put_str(&mut body, "customerId", &args.customer_id);
+    common::put_str(&mut body, "referenceId", &args.reference_id);
+    common::put_str(&mut body, "name", &args.name);
+    common::put_str(&mut body, "description", &args.description);
+    common::put_str(&mut body, "expiresOn", &args.expires_on);
     Ok(Value::Object(body))
 }
 
@@ -393,31 +375,12 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
     for (flag, value) in [("name", &args.name), ("currency-code", &args.currency_code)] {
         common::reject_unclearable(flag, value.as_deref())?;
     }
-    for (flag, processor) in [
-        ("--card-processor-id", &args.card_processor_id),
-        ("--ach-processor-id", &args.ach_processor_id),
-    ] {
-        common::reject_empty_processor_id(flag, processor.as_deref())?;
-    }
-
     let mut body = Map::new();
 
-    let mut methods = Map::new();
-    for (key, enabled, processor) in [
-        ("card", args.card_enabled, &args.card_processor_id),
-        ("ach", args.ach_enabled, &args.ach_processor_id),
-    ] {
-        let mut method = Map::new();
-        if let Some(v) = enabled {
-            method.insert("enabled".into(), Value::Bool(v));
-        }
-        if let Some(id) = processor {
-            method.insert("processorId".into(), Value::String(id.clone()));
-        }
-        if !method.is_empty() {
-            methods.insert(key.to_string(), Value::Object(method));
-        }
-    }
+    let methods = common::payment_methods(
+        (args.card_enabled, &args.card_processor_id),
+        (args.ach_enabled, &args.ach_processor_id),
+    )?;
     if !methods.is_empty() {
         body.insert("paymentMethods".into(), Value::Object(methods));
     }
@@ -441,17 +404,12 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
     if let Some(v) = args.payment_link_status {
         body.insert("paymentLinkStatus".into(), Value::String(v.wire().into()));
     }
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = common::patch_string(value) {
-            body.insert(key.to_string(), v);
-        }
-    };
-    put("currencyCode", &args.currency_code);
-    put("customerId", &args.customer_id);
-    put("referenceId", &args.reference_id);
-    put("name", &args.name);
-    put("description", &args.description);
-    put("expiresOn", &args.expires_on);
+    common::put_patch(&mut body, "currencyCode", &args.currency_code);
+    common::put_patch(&mut body, "customerId", &args.customer_id);
+    common::put_patch(&mut body, "referenceId", &args.reference_id);
+    common::put_patch(&mut body, "name", &args.name);
+    common::put_patch(&mut body, "description", &args.description);
+    common::put_patch(&mut body, "expiresOn", &args.expires_on);
 
     for field in &args.clear {
         let key = field.wire();
@@ -507,13 +465,8 @@ pub fn build_list_payment_links_query(
     if let Some(v) = args.payment_link_status {
         query.push(("paymentLinkStatus", v.wire().into()));
     }
-    let mut put = |key: &'static str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            query.push((key, v.clone()));
-        }
-    };
-    put("sortBy", &args.sort_by);
-    put("search", &args.search);
+    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "search", &args.search);
     Ok(query)
 }
 
@@ -642,7 +595,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
                 render::page(
                     ctx,
                     &PAYMENT_LINK,
-                    &common::items_of(&body)?,
+                    &common::items_of(&body, "items")?,
                     body.get("pageInfo").cloned(),
                     resp.correlation_id,
                 )

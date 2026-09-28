@@ -157,24 +157,6 @@ fn created_key_table(data: &Value) -> String {
     )
 }
 
-/// The declared collection: `apiKeys`, not the `items` every paginated read
-/// uses. Nothing shared can read this, because nothing else is shaped this
-/// way.
-///
-/// The field is declared nullable, so absent and null are both an account with
-/// no keys. A present value of any other type is a response this CLI cannot
-/// read, and calling it empty would answer "none" for a body nobody parsed.
-fn api_keys_of(body: &Value) -> Result<Vec<Value>, ApiError> {
-    match body.get("apiKeys") {
-        None | Some(Value::Null) => Ok(Vec::new()),
-        Some(Value::Array(keys)) => Ok(keys.clone()),
-        Some(other) => Err(ApiError::Decode(format!(
-            "`apiKeys` must be an array or null, got {}",
-            common::json_type(other)
-        ))),
-    }
-}
-
 pub async fn dispatch(ctx: &Ctx, command: ApiKeysCommand) -> Result<()> {
     match command {
         ApiKeysCommand::Create {
@@ -212,7 +194,7 @@ pub async fn dispatch(ctx: &Ctx, command: ApiKeysCommand) -> Result<()> {
             render::page(
                 ctx,
                 &API_KEY,
-                &api_keys_of(&body)?,
+                &common::items_of(&body, "apiKeys")?,
                 None,
                 resp.correlation_id,
             )
@@ -277,12 +259,15 @@ mod tests {
     #[test]
     fn the_collection_is_read_from_the_key_this_schema_declares() {
         let body = serde_json::json!({"apiKeys": [{"clientId": "c-1"}]});
-        assert_eq!(api_keys_of(&body).unwrap().len(), 1);
+        assert_eq!(common::items_of(&body, "apiKeys").unwrap().len(), 1);
         // An `items` array is not this response's collection.
         assert!(
-            api_keys_of(&serde_json::json!({"items": [{"clientId": "c-1"}]}))
-                .unwrap()
-                .is_empty()
+            common::items_of(
+                &serde_json::json!({"items": [{"clientId": "c-1"}]}),
+                "apiKeys"
+            )
+            .unwrap()
+            .is_empty()
         );
     }
 
@@ -291,13 +276,18 @@ mod tests {
     /// must not be reported as an account holding no keys.
     #[test]
     fn an_absent_collection_is_empty_and_a_wrong_typed_one_is_a_decode_error() {
-        assert!(api_keys_of(&serde_json::json!({})).unwrap().is_empty());
         assert!(
-            api_keys_of(&serde_json::json!({"apiKeys": null}))
+            common::items_of(&serde_json::json!({}), "apiKeys")
                 .unwrap()
                 .is_empty()
         );
-        let Err(ApiError::Decode(message)) = api_keys_of(&serde_json::json!({"apiKeys": "one"}))
+        assert!(
+            common::items_of(&serde_json::json!({"apiKeys": null}), "apiKeys")
+                .unwrap()
+                .is_empty()
+        );
+        let Err(ApiError::Decode(message)) =
+            common::items_of(&serde_json::json!({"apiKeys": "one"}), "apiKeys")
         else {
             panic!("a string was accepted as the collection");
         };

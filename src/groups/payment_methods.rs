@@ -176,16 +176,11 @@ pub fn build_list_payment_methods_query(
     if args.desc {
         query.push(("asc", "false".into()));
     }
-    let mut put = |key: &'static str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            query.push((key, v.clone()));
-        }
-    };
-    put("sortBy", &args.sort_by);
-    put("search", &args.search);
-    put("customerId", &args.customer_id);
-    put("createdFrom", &args.created_from);
-    put("createdTo", &args.created_to);
+    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "search", &args.search);
+    common::push_str(&mut query, "customerId", &args.customer_id);
+    common::push_str(&mut query, "createdFrom", &args.created_from);
+    common::push_str(&mut query, "createdTo", &args.created_to);
     Ok(query)
 }
 
@@ -203,14 +198,9 @@ pub fn build_add_card_body(args: &AddCardArgs) -> Result<Value> {
     body.insert("cardNumber".into(), Value::String(args.card.clone()));
     body.insert("expirationMonth".into(), Value::from(month));
     body.insert("expirationYear".into(), Value::from(year));
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            body.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("securityCode", &args.cvv);
-    put("customerId", &args.customer_id);
-    put("paymentName", &args.payment_name);
+    common::put_str(&mut body, "securityCode", &args.cvv);
+    common::put_str(&mut body, "customerId", &args.customer_id);
+    common::put_str(&mut body, "paymentName", &args.payment_name);
     Ok(Value::Object(body))
 }
 
@@ -239,15 +229,10 @@ pub fn build_add_ach_body(args: &AddAchArgs) -> Result<Value> {
         "accountType".into(),
         Value::String(args.account_type.wire().into()),
     );
-    let mut put = |key: &str, value: &Option<String>| {
-        if let Some(v) = value.as_ref().filter(|s| !s.is_empty()) {
-            body.insert(key.to_string(), Value::String(v.clone()));
-        }
-    };
-    put("taxId", &args.tax_id);
-    put("customerId", &args.customer_id);
-    put("name", &args.name);
-    put("companyName", &args.company_name);
+    common::put_str(&mut body, "taxId", &args.tax_id);
+    common::put_str(&mut body, "customerId", &args.customer_id);
+    common::put_str(&mut body, "name", &args.name);
+    common::put_str(&mut body, "companyName", &args.company_name);
     Ok(Value::Object(body))
 }
 
@@ -382,7 +367,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
                 render::page(
                     ctx,
                     &PAYMENT_METHOD,
-                    &common::items_of(&body)?,
+                    &common::items_of(&body, "items")?,
                     body.get("pageInfo").cloned(),
                     resp.correlation_id,
                 )
