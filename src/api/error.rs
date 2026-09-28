@@ -13,6 +13,15 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use thiserror::Error;
 
+/// `err` followed by each of its sources, `outer: inner: root`.
+///
+/// `reqwest::Error`'s `Display` stops at its outermost layer, which reads
+/// the same for a refused connection, a DNS failure, a TLS failure and a
+/// timeout; the cause is in the source chain.
+pub fn with_causes(err: impl std::error::Error + Send + Sync + 'static) -> String {
+    format!("{:#}", anyhow::Error::new(err))
+}
+
 #[derive(Debug, Error)]
 pub enum ApiError {
     #[error("transport error: {0}")]

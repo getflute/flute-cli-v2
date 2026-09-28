@@ -141,7 +141,12 @@ impl Fetcher for OAuth2Fetcher {
             ])
             .send()
             .await
-            .map_err(|e| ApiError::Transport(format!("token request failed: {e}")))?;
+            .map_err(|e| {
+                ApiError::Transport(format!(
+                    "token request failed: {}",
+                    crate::api::with_causes(e)
+                ))
+            })?;
 
         let status = resp.status();
         let www = resp
@@ -149,10 +154,12 @@ impl Fetcher for OAuth2Fetcher {
             .get(reqwest::header::WWW_AUTHENTICATE)
             .and_then(|v| v.to_str().ok())
             .map(str::to_string);
-        let text = resp
-            .text()
-            .await
-            .map_err(|e| ApiError::Transport(format!("reading token response: {e}")))?;
+        let text = resp.text().await.map_err(|e| {
+            ApiError::Transport(format!(
+                "reading token response: {}",
+                crate::api::with_causes(e)
+            ))
+        })?;
 
         // `error_for_status` would discard the body, and the body is where the
         // OpenIddict reason lives — without it `invalid_client` surfaces as a

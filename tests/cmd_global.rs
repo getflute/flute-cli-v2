@@ -495,6 +495,68 @@ fn a_token_endpoint_that_refuses_the_connection_is_a_transport_failure() {
             .contains("token request failed"),
         "{v}"
     );
+    // The cause is part of the message: a refused connection reads
+    // differently from a DNS or TLS failure.
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .to_lowercase()
+            .contains("connect"),
+        "{v}"
+    );
+}
+
+/// An API request that never reached the server names its cause the same way.
+#[tokio::test]
+async fn an_api_request_that_is_refused_names_the_connection() {
+    let server = support::mock_with_token().await;
+    let out = support::bin(&server)
+        .env("FLUTE2_API_BASE_URL", "http://127.0.0.1:1")
+        .args(["--output", "json", "ping"])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "transport", "{v}");
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .to_lowercase()
+            .contains("connect"),
+        "{v}"
+    );
+}
+
+/// `update` reaches GitHub over the network, so a network failure there is
+/// a transport failure that names its cause.
+#[test]
+fn an_update_that_cannot_reach_github_is_a_transport_failure() {
+    let out = support::bin_without_credentials()
+        .env("HTTPS_PROXY", "http://127.0.0.1:1")
+        .env("https_proxy", "http://127.0.0.1:1")
+        .env("ALL_PROXY", "http://127.0.0.1:1")
+        .env_remove("NO_PROXY")
+        .env_remove("no_proxy")
+        .args(["--output", "json", "update"])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "transport", "{v}");
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .to_lowercase()
+            .contains("connect"),
+        "{v}"
+    );
 }
 
 /// The token endpoint answering 401 is the other half of the split: the

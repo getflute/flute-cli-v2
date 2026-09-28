@@ -9,7 +9,7 @@
 //! explicit GitHub Releases source and the install itself reports how to
 //! reinstall rather than failing cryptically.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use axoupdater::{AxoUpdater, ReleaseSource, ReleaseSourceType};
 
 /// These three identify **v2**, and getting one wrong is not a wrong result
@@ -71,10 +71,12 @@ pub async fn run() -> Result<()> {
     let (mut updater, has_receipt) = make_updater();
 
     if !has_receipt {
-        let latest = updater
-            .query_new_version()
-            .await
-            .context("failed to query GitHub Releases for the latest version")?;
+        let latest = updater.query_new_version().await.map_err(|e| {
+            crate::api::ApiError::Transport(format!(
+                "failed to query GitHub Releases for the latest version: {}",
+                crate::api::with_causes(e)
+            ))
+        })?;
         match latest {
             Some(v) if v.to_string() != env!("CARGO_PKG_VERSION") => {
                 println!(
@@ -93,7 +95,11 @@ pub async fn run() -> Result<()> {
     }
 
     println!("Checking for updates\u{2026}");
-    match updater.run().await? {
+    let updated = updater
+        .run()
+        .await
+        .map_err(|e| anyhow::anyhow!(crate::api::with_causes(e)))?;
+    match updated {
         Some(result) => println!("Updated to {}.", result.new_version),
         None => println!(
             "Already on the latest version ({}).",

@@ -359,14 +359,14 @@ impl ApiClient {
         let resp = req
             .send()
             .await
-            .map_err(|e| ApiError::Transport(e.to_string()))?;
+            .map_err(|e| ApiError::Transport(crate::api::with_causes(e)))?;
         let status = resp.status().as_u16();
         let correlation_id = header(&resp, "x-correlation-id");
         let www_authenticate = header(&resp, "www-authenticate");
         let text = resp
             .text()
             .await
-            .map_err(|e| ApiError::Transport(e.to_string()))?;
+            .map_err(|e| ApiError::Transport(crate::api::with_causes(e)))?;
         Ok(Raw {
             status,
             text,
