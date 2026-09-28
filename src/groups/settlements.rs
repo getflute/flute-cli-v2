@@ -244,29 +244,14 @@ pub async fn dispatch(ctx: &Ctx, command: SettlementsCommand) -> Result<()> {
     match command {
         SettlementsCommand::List(args) => {
             let query = build_list_batches_query(&args)?;
-            if args.pagination.all {
-                let (items, correlation_id) = common::fetch_all(
-                    &ctx.api,
-                    "/v2/settlements/batches",
-                    &query,
-                    args.pagination.page_size,
-                )
-                .await?;
-                render::page(ctx, &SETTLEMENT, &items, None, correlation_id)
-            } else {
-                let resp = ctx
-                    .api
-                    .request(Method::GET, "/v2/settlements/batches", &query, None)
-                    .await?;
-                let body = common::body_of(resp.body)?;
-                render::page(
-                    ctx,
-                    &SETTLEMENT,
-                    &common::items_of(&body, "items")?,
-                    body.get("pageInfo").cloned(),
-                    resp.correlation_id,
-                )
-            }
+            common::list(
+                ctx,
+                &SETTLEMENT,
+                "/v2/settlements/batches",
+                &query,
+                &args.pagination,
+            )
+            .await
         }
         SettlementsCommand::Get { batch_id } => {
             // There is no single-batch endpoint, only the list's id filter.

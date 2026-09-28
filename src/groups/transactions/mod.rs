@@ -78,29 +78,14 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
         }
         TransactionsCommand::List(args) => {
             let query = build_list_transactions_query(&args)?;
-            if args.pagination.all {
-                let (items, correlation_id) = common::fetch_all(
-                    &ctx.api,
-                    "/v2/transactions",
-                    &query,
-                    args.pagination.page_size,
-                )
-                .await?;
-                render::page(ctx, &TRANSACTION, &items, None, correlation_id)
-            } else {
-                let resp = ctx
-                    .api
-                    .request(Method::GET, "/v2/transactions", &query, None)
-                    .await?;
-                let body = common::body_of(resp.body)?;
-                render::page(
-                    ctx,
-                    &TRANSACTION,
-                    &common::items_of(&body, "items")?,
-                    body.get("pageInfo").cloned(),
-                    resp.correlation_id,
-                )
-            }
+            common::list(
+                ctx,
+                &TRANSACTION,
+                "/v2/transactions",
+                &query,
+                &args.pagination,
+            )
+            .await
         }
         TransactionsCommand::Capture {
             transaction_id,

@@ -349,29 +349,14 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
     match command {
         PaymentMethodsCommand::List(args) => {
             let query = build_list_payment_methods_query(&args)?;
-            if args.pagination.all {
-                let (items, correlation_id) = common::fetch_all(
-                    &ctx.api,
-                    "/v2/payment-methods",
-                    &query,
-                    args.pagination.page_size,
-                )
-                .await?;
-                render::page(ctx, &PAYMENT_METHOD, &items, None, correlation_id)
-            } else {
-                let resp = ctx
-                    .api
-                    .request(Method::GET, "/v2/payment-methods", &query, None)
-                    .await?;
-                let body = common::body_of(resp.body)?;
-                render::page(
-                    ctx,
-                    &PAYMENT_METHOD,
-                    &common::items_of(&body, "items")?,
-                    body.get("pageInfo").cloned(),
-                    resp.correlation_id,
-                )
-            }
+            common::list(
+                ctx,
+                &PAYMENT_METHOD,
+                "/v2/payment-methods",
+                &query,
+                &args.pagination,
+            )
+            .await
         }
         PaymentMethodsCommand::Get { payment_method_id } => {
             let resp = ctx

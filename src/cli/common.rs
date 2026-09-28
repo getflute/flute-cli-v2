@@ -6,6 +6,7 @@
 
 use crate::api::{ApiClient, ApiError};
 use crate::cli::money::PatchNumber;
+use crate::cli::render::{self, Resource};
 use anyhow::Result;
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
@@ -382,6 +383,37 @@ pub fn has_more(page: &Value) -> Result<bool, ApiError> {
             "a collection response's `hasMore` must be a boolean, got {}",
             json_type(other)
         ))),
+    }
+}
+
+/// Read one page of a collection, or every page under `--all`, and render it.
+///
+/// Under `--all` the data spans every page, so no single `pageInfo` describes
+/// it and none is reported.
+pub async fn list(
+    ctx: &crate::Ctx,
+    resource: &Resource,
+    path: &'static str,
+    query: &[(&'static str, String)],
+    pagination: &PaginationArgs,
+) -> Result<()> {
+    if pagination.all {
+        let (items, correlation_id) =
+            fetch_all(&ctx.api, path, query, pagination.page_size).await?;
+        render::page(ctx, resource, &items, None, correlation_id)
+    } else {
+        let resp = ctx
+            .api
+            .request(reqwest::Method::GET, path, query, None)
+            .await?;
+        let body = body_of(resp.body)?;
+        render::page(
+            ctx,
+            resource,
+            &items_of(&body, "items")?,
+            body.get("pageInfo").cloned(),
+            resp.correlation_id,
+        )
     }
 }
 

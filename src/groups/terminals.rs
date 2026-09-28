@@ -240,25 +240,7 @@ pub async fn dispatch(ctx: &Ctx, command: TerminalsCommand) -> Result<()> {
     match command {
         TerminalsCommand::List(args) => {
             let query = build_list_terminals_query(&args)?;
-            if args.pagination.all {
-                let (items, correlation_id) =
-                    common::fetch_all(&ctx.api, "/v2/terminals", &query, args.pagination.page_size)
-                        .await?;
-                render::page(ctx, &TERMINAL, &items, None, correlation_id)
-            } else {
-                let resp = ctx
-                    .api
-                    .request(Method::GET, "/v2/terminals", &query, None)
-                    .await?;
-                let body = common::body_of(resp.body)?;
-                render::page(
-                    ctx,
-                    &TERMINAL,
-                    &common::items_of(&body, "items")?,
-                    body.get("pageInfo").cloned(),
-                    resp.correlation_id,
-                )
-            }
+            common::list(ctx, &TERMINAL, "/v2/terminals", &query, &args.pagination).await
         }
         TerminalsCommand::Status { terminal_id } => {
             let resp = ctx

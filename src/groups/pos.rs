@@ -581,29 +581,14 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
         }
         PosCommand::List(args) => {
             let query = build_list_pos_transactions_query(&args)?;
-            if args.pagination.all {
-                let (items, correlation_id) = common::fetch_all(
-                    &ctx.api,
-                    "/v2/pos/transactions",
-                    &query,
-                    args.pagination.page_size,
-                )
-                .await?;
-                render::page(ctx, &POS_TRANSACTION, &items, None, correlation_id)
-            } else {
-                let resp = ctx
-                    .api
-                    .request(Method::GET, "/v2/pos/transactions", &query, None)
-                    .await?;
-                let body = common::body_of(resp.body)?;
-                render::page(
-                    ctx,
-                    &POS_TRANSACTION,
-                    &common::items_of(&body, "items")?,
-                    body.get("pageInfo").cloned(),
-                    resp.correlation_id,
-                )
-            }
+            common::list(
+                ctx,
+                &POS_TRANSACTION,
+                "/v2/pos/transactions",
+                &query,
+                &args.pagination,
+            )
+            .await
         }
         PosCommand::Cancel {
             pos_transaction_id, ..

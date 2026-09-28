@@ -577,29 +577,14 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
         }
         PaymentLinksCommand::List(args) => {
             let query = build_list_payment_links_query(&args)?;
-            if args.pagination.all {
-                let (items, correlation_id) = common::fetch_all(
-                    &ctx.api,
-                    "/v2/payment-links",
-                    &query,
-                    args.pagination.page_size,
-                )
-                .await?;
-                render::page(ctx, &PAYMENT_LINK, &items, None, correlation_id)
-            } else {
-                let resp = ctx
-                    .api
-                    .request(Method::GET, "/v2/payment-links", &query, None)
-                    .await?;
-                let body = common::body_of(resp.body)?;
-                render::page(
-                    ctx,
-                    &PAYMENT_LINK,
-                    &common::items_of(&body, "items")?,
-                    body.get("pageInfo").cloned(),
-                    resp.correlation_id,
-                )
-            }
+            common::list(
+                ctx,
+                &PAYMENT_LINK,
+                "/v2/payment-links",
+                &query,
+                &args.pagination,
+            )
+            .await
         }
         PaymentLinksCommand::Update(args) => {
             let body = build_update_payment_link_body(&args)?;

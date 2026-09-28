@@ -530,27 +530,7 @@ pub async fn dispatch(ctx: &Ctx, command: CustomersCommand) -> Result<()> {
         }
         CustomersCommand::List(args) => {
             let query = build_list_customers_query(&args)?;
-            if args.pagination.all {
-                let (items, correlation_id) =
-                    common::fetch_all(&ctx.api, "/v2/customers", &query, args.pagination.page_size)
-                        .await?;
-                // The data spans every page, so no single pageInfo describes
-                // it and none is reported.
-                render::page(ctx, &CUSTOMER, &items, None, correlation_id)
-            } else {
-                let resp = ctx
-                    .api
-                    .request(Method::GET, "/v2/customers", &query, None)
-                    .await?;
-                let body = common::body_of(resp.body)?;
-                render::page(
-                    ctx,
-                    &CUSTOMER,
-                    &common::items_of(&body, "items")?,
-                    body.get("pageInfo").cloned(),
-                    resp.correlation_id,
-                )
-            }
+            common::list(ctx, &CUSTOMER, "/v2/customers", &query, &args.pagination).await
         }
         CustomersCommand::Update(args) => {
             let body = build_update_customer_body(&args)?;
