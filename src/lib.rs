@@ -593,12 +593,13 @@ fn emit_completion(shell: clap_complete::Shell) -> anyhow::Result<()> {
 
 fn render_version(profile: &Profile, output: OutputFormat) -> anyhow::Result<()> {
     let version = env!("CARGO_PKG_VERSION");
+    let api_base_url = api::client::resolve_base_url(profile)?;
     match output {
         OutputFormat::Json => {
             let data = serde_json::json!({
                 "version": version,
                 "profile": profile.name,
-                "api_base_url": profile.api_base_url,
+                "api_base_url": api_base_url,
             });
             let env = cli::output::Envelope::new("version", data, &profile.name, None, None);
             println!("{}", serde_json::to_string_pretty(&env)?);
@@ -607,7 +608,7 @@ fn render_version(profile: &Profile, output: OutputFormat) -> anyhow::Result<()>
         OutputFormat::Table => {
             println!("flute2  v{version}");
             println!("Profile:  {}", profile.name);
-            println!("API base: {}", profile.api_base_url);
+            println!("API base: {api_base_url}");
         }
     }
     Ok(())

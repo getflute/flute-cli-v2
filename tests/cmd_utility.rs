@@ -59,6 +59,28 @@ fn version_reports_the_crate_version_in_every_output_mode() {
     }
 }
 
+/// `version` names the host requests go to, which is the override when one
+/// is set, and refuses the override on production as every other command does.
+#[test]
+fn version_reports_the_resolved_api_base() {
+    let out = support::bin_without_credentials()
+        .env("FLUTE2_API_BASE_URL", "http://127.0.0.1:7")
+        .args(["--output", "json", "version"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["data"]["api_base_url"], "http://127.0.0.1:7", "{v}");
+
+    support::bin_without_credentials()
+        .args(["--profile", "production", "version"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("FLUTE2_API_BASE_URL"));
+}
+
 /// Tracing must never contaminate the data stream.
 #[tokio::test]
 async fn debug_traces_go_to_stderr_leaving_stdout_parseable() {

@@ -76,6 +76,7 @@ pub fn validate_switch_target(profile: &str) -> Result<()> {
 /// looking at their account instead of their machine.
 pub async fn status(profile: &Profile, output: OutputFormat) -> Result<()> {
     let creds = keychain::load_with_env_fallback(&profile.name)?;
+    let api_base_url = crate::api::client::resolve_base_url(profile)?;
     let client_id = creds.as_ref().map(|(id, _)| id.clone());
 
     let mut authenticated = false;
@@ -98,7 +99,7 @@ pub async fn status(profile: &Profile, output: OutputFormat) -> Result<()> {
 
     let data = serde_json::json!({
         "profile": profile.name,
-        "api_base_url": profile.api_base_url,
+        "api_base_url": api_base_url,
         "authenticated": authenticated,
         "client_id": client_id,
     });
@@ -111,7 +112,7 @@ pub async fn status(profile: &Profile, output: OutputFormat) -> Result<()> {
         OutputFormat::Quiet => println!("{}", client_id.as_deref().unwrap_or("")),
         OutputFormat::Table => {
             println!("Profile:       {}", profile.name);
-            println!("API base:      {}", profile.api_base_url);
+            println!("API base:      {api_base_url}");
             println!("Authenticated: {authenticated}");
             println!("Client ID:     {}", client_id.as_deref().unwrap_or("—"));
         }

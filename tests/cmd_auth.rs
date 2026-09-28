@@ -35,6 +35,21 @@ async fn status_with_credentials_pings_and_reports_true() {
     assert_eq!(v["data"]["client_id"], "test-id");
 }
 
+/// The host reported is the one the ping went to, override included.
+#[test]
+fn status_reports_the_resolved_api_base() {
+    let out = support::bin_without_credentials()
+        .env("FLUTE2_API_BASE_URL", "http://127.0.0.1:7")
+        .args(["--output", "json", "auth", "status"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["data"]["api_base_url"], "http://127.0.0.1:7", "{v}");
+}
+
 /// Credentials that do not authenticate leave `authenticated` false rather
 /// than failing the command — the user is running it to find that out.
 #[tokio::test]
@@ -110,15 +125,15 @@ fn switch_writes_default_profile_and_the_next_command_honours_it() {
             .env_remove("FLUTE2_PROFILE")
             .args(args)
             .assert()
-            .success()
             .get_output()
-            .stdout
             .clone()
     };
-    run(&["auth", "switch", "production"]);
-    let out = run(&["--output", "json", "version"]);
-    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-    assert_eq!(v["meta"]["environment"], "production");
+    assert!(run(&["auth", "switch", "production"]).status.success());
+    // The harness's base URL override is refused on production, so `version`
+    // fails there; the banner it prints first names the profile it resolved.
+    let out = run(&["version"]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("⚠ Operating on PRODUCTION"), "{stderr}");
 }
 
 /// Same group, opposite category: a token cannot exist without credentials.
