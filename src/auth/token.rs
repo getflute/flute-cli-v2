@@ -90,7 +90,8 @@ impl MissingCredentials {
 impl Fetcher for MissingCredentials {
     async fn fetch(&self) -> anyhow::Result<(String, Duration)> {
         Err(ApiError::Auth(format!(
-            "no credentials for [{}]; run `flute2 auth login`",
+            "no credentials for [{}]; set FLUTE2_CLIENT_ID and FLUTE2_CLIENT_SECRET, \
+             or run `flute2 auth login`",
             self.profile
         ))
         .into())

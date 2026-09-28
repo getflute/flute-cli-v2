@@ -120,7 +120,7 @@ first, then on `status`.
 | `api`, status 404 | not found | no |
 | `api`, status 402/409/429 | new in v2, with no exit code of their own — see the note under the exit-code table | 429 yes, with backoff; others no |
 | `transport` | connection, DNS or TLS failure, or a **request timeout** — on the API request, the token request or `update`'s release lookup, with the cause named in `message`. A timeout can land after the API received the request and carried it out | only a command in the **Safe to retry** column of [Idempotency](#idempotency), with backoff; any other — reconcile with `list` or `get` first |
-| `auth` | no credentials, or the token endpoint refused the ones it was sent | no — an operator must configure credentials |
+| `auth` | no credentials, one of `FLUTE2_CLIENT_ID` and `FLUTE2_CLIENT_SECRET` set without the other, or the token endpoint refused the ones it was sent | no — an operator must configure credentials |
 | `decode` | the API sent something this CLI cannot read: a contract change, or a CLI bug | no — surface it for investigation |
 | `client` | bad arguments, usage error, or client-side validation | no — fix the invocation |
 

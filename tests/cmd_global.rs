@@ -416,7 +416,8 @@ fn a_runtime_failure_is_prefixed_and_names_the_missing_credentials() {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(
         stderr.trim_end(),
-        "Error: auth error: no credentials for [sandbox]; run `flute2 auth login`",
+        "Error: auth error: no credentials for [sandbox]; set FLUTE2_CLIENT_ID and \
+         FLUTE2_CLIENT_SECRET, or run `flute2 auth login`",
         "{stderr}"
     );
 }

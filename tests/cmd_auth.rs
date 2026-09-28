@@ -247,7 +247,8 @@ fn login_is_reachable_and_documents_where_the_secret_goes() {
 
 /// A credential lookup that *fails* is not an unauthenticated answer: half an
 /// environment pair set is a configuration error, and reporting
-/// `authenticated: false` would send the user looking at their account.
+/// `authenticated: false` would send the user looking at their account. It
+/// is an `auth` failure, exit 2, as on every other command.
 #[test]
 fn status_propagates_a_credential_lookup_failure() {
     let out = support::bin_without_credentials()
@@ -255,11 +256,23 @@ fn status_propagates_a_credential_lookup_failure() {
         .env_remove("FLUTE2_CLIENT_SECRET")
         .args(["auth", "status"])
         .assert()
-        .code(3)
+        .code(2)
         .get_output()
         .clone();
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("FLUTE2_CLIENT_SECRET"), "{stderr}");
+
+    let out = support::bin_without_credentials()
+        .env("FLUTE2_CLIENT_ID", "only-the-id")
+        .env_remove("FLUTE2_CLIENT_SECRET")
+        .args(["--output", "json", "auth", "status"])
+        .assert()
+        .code(2)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "auth", "{v}");
 }
 
 /// A client that cannot be built is a configuration fault, not an

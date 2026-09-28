@@ -75,7 +75,8 @@ pub fn validate_switch_target(profile: &str) -> Result<()> {
 /// answer, and reporting `authenticated: false` for one sends the user
 /// looking at their account instead of their machine.
 pub async fn status(profile: &Profile, output: OutputFormat) -> Result<()> {
-    let creds = keychain::load_with_env_fallback(&profile.name)?;
+    let creds = keychain::load_with_env_fallback(&profile.name)
+        .map_err(|e| ApiError::Auth(e.to_string()))?;
     let api_base_url = crate::api::client::resolve_base_url(profile)?;
     let client_id = creds.as_ref().map(|(id, _)| id.clone());
 
