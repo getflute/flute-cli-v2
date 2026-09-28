@@ -7,11 +7,11 @@ List terminals (GET /v2/terminals)
 Usage: flute2 terminals list [OPTIONS]
 
 Options:
-      --page-index <PAGE_INDEX>         Page number to fetch. **Zero-based**
+      --page-index <PAGE_INDEX>         Page number to fetch. Zero-based
       --page-size <PAGE_SIZE>           Maximum results per page (1-100). Omit it to use the server's default
       --all                             Fetch every page until the collection is exhausted
       --sort-by <SORT_BY>               Sort results by this field name
-      --asc                             Sort ascending
+      --asc                             Sort ascending. With neither `--asc` nor `--desc`, the server's default order applies
       --desc                            Sort descending
       --status <TERMINAL_STATUS>        Filter by readiness: `ready`, `busy` or `offline` [possible values: ready, busy, offline]
       --mode <TERMINAL_MODE>            Filter by mode: `standalone` or `semi-integrated` [possible values: standalone, semi-integrated]

@@ -8,7 +8,7 @@ Usage: flute2 transactions list [OPTIONS]
 
 Options:
       --page-index <PAGE_INDEX>
-          Page number to fetch. **Zero-based**
+          Page number to fetch. Zero-based
       --page-size <PAGE_SIZE>
           Maximum results per page (1-100). Omit it to use the server's default
       --all

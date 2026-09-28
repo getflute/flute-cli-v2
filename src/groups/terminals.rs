@@ -87,7 +87,8 @@ pub struct ListTerminalsArgs {
     /// Sort results by this field name.
     #[arg(long, id = "terminal_sort_by", value_name = "SORT_BY")]
     pub sort_by: Option<String>,
-    /// Sort ascending.
+    /// Sort ascending. With neither `--asc` nor `--desc`, the server's default
+    /// order applies.
     #[arg(long, id = "terminal_asc", conflicts_with = "terminal_desc")]
     pub asc: bool,
     /// Sort descending.

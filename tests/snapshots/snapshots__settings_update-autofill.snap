@@ -11,10 +11,10 @@ Options:
           Default level-2 sales tax rate as a percentage, 0 to 22
 
       --l3-shipping-rate <SHIPPING_CHARGE_RATE>
-          Default level-3 shipping charge **rate**, as a percentage
+          Default level-3 shipping charge rate, as a percentage
 
       --l3-duty-rate <DUTY_CHARGE_RATE>
-          Default level-3 duty charge **rate**, as a percentage
+          Default level-3 duty charge rate, as a percentage
 
       --product-name <PRODUCT_NAME>
           Default product name

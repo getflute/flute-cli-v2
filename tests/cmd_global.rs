@@ -123,7 +123,7 @@ fn the_production_banner_never_reaches_stdout() {
 /// **402, 409, 429 and a server 503 exit 1**, and `agents.md` tells a caller
 /// so.
 ///
-/// The three 4xx are new in v2 and deliberately claim no code of their own:
+/// The three 4xx deliberately claim no code of their own:
 /// nothing can already depend on a code the CLI has never emitted, so naming
 /// one later stays backwards compatible. A 5xx reaches the same arm from the
 /// other end of the range. The exit-code map is unit-tested in `cli::output`;

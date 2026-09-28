@@ -4,7 +4,7 @@ expression: help_for(&args)
 ---
 Fetch a single settlement batch by ID.
 
-**Note**: there is no single-batch endpoint. This reads the batch list under its own `batchIds` filter and returns the one match.
+There is no single-batch endpoint. This reads the batch list under its own `batchIds` filter and returns the one match.
 
 Usage: flute2 settlements get [OPTIONS] <BATCH_ID>
 

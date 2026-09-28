@@ -7,7 +7,7 @@ List payment links (GET /v2/payment-links)
 Usage: flute2 payment-links list [OPTIONS]
 
 Options:
-      --page-index <PAGE_INDEX>       Page number to fetch. **Zero-based**
+      --page-index <PAGE_INDEX>       Page number to fetch. Zero-based
       --page-size <PAGE_SIZE>         Maximum results per page (1-100). Omit it to use the server's default
       --all                           Fetch every page until the collection is exhausted
       --search <SEARCH>               Server-side text search

@@ -5,8 +5,7 @@ use keyring::Entry;
 use serde::{Deserialize, Serialize};
 
 /// Deliberately not v1's `flute-cli`. Two binaries must not read each other's
-/// credentials, even where the values would be identical — they authenticate
-/// against different token hosts.
+/// credentials, even where the values would be identical.
 const SERVICE: &str = "flute-cli-v2";
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -4,7 +4,7 @@ expression: help_for(&args)
 ---
 Create a merchant API key (POST /v2/api-keys).
 
-The response contains `clientSecret`, which is shown **only once**. Store it securely immediately after creation.
+The response contains `clientSecret`, which is shown only once. Store it securely immediately after creation.
 
 Usage: flute2 api-keys create [OPTIONS] --merchant-id <MERCHANT_ID> --name <API_KEY_NAME>
 

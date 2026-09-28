@@ -9,7 +9,8 @@
 //! worse message.
 //!
 //! `cancel` is the one destructive verb in the API that is neither a delete
-//! nor a revoke, and it still follows the idempotent-404 rule.
+//! nor a revoke, and it is not idempotent: a repeat is a 400 and an unknown id
+//! is a 404, exit 4.
 
 use crate::Ctx;
 use crate::api::ApiPath;

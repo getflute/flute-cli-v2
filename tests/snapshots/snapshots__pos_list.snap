@@ -8,7 +8,7 @@ Usage: flute2 pos list [OPTIONS]
 
 Options:
       --page-index <PAGE_INDEX>
-          Page number to fetch. **Zero-based**
+          Page number to fetch. Zero-based
       --page-size <PAGE_SIZE>
           Maximum results per page (1-100). Omit it to use the server's default
       --all
@@ -16,7 +16,7 @@ Options:
       --sort-by <SORT_BY>
           Sort results by this field name
       --asc
-          Sort ascending
+          Sort ascending. With neither `--asc` nor `--desc`, the server's default order applies
       --desc
           Sort descending
       --terminal-id <TERMINAL_ID>

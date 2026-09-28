@@ -10,8 +10,8 @@ Driving it from a program rather than a terminal? Read
 
 **`flute2` installs alongside `flute`.** It does not replace it, and the two do
 not conflict: they are separate binaries, with separate config files and
-keychain entries, authenticating against different hosts with separate
-credentials. `devices` and `subscriptions` exist only in v1.
+keychain entries, calling different versions of the API on the same hosts.
+`devices` and `subscriptions` exist only in v1.
 
 ---
 
@@ -44,8 +44,8 @@ Intel macOS among them.
 **From source**
 
 ```sh
-cargo install --path .        # installs `flute2`
-cargo build --release         # or just build: target/release/flute2
+cargo install --locked --path .   # installs `flute2`
+cargo build --release             # or just build: target/release/flute2
 ```
 
 On Linux the keychain is the Secret Service, reached over D-Bus: building needs
@@ -59,8 +59,8 @@ CI runner — set `FLUTE2_CLIENT_ID` and `FLUTE2_CLIENT_SECRET` instead.
 
 **Authenticate.** Interactive: prompts for the client id and secret and stores
 them in the OS keychain, per profile. Client credentials are issued for your
-Flute account, and an existing credential can create more with
-`flute2 api-keys create`.
+Flute account. Creating more with `flute2 api-keys create` needs partner
+credentials: a merchant's own client id and secret are refused with a 403.
 
 ```sh
 flute2 auth login
@@ -77,8 +77,9 @@ export FLUTE2_CLIENT_SECRET=<client-secret>
 Setting exactly one of the two is an error naming the other, rather than a
 silent fall-through to whoever last logged in on that machine.
 
-**Check it works, and find your processor ids** — every transaction endpoint
-requires one, and there is a separate processor per payment method:
+**Check it works, and find your processor ids** — `transactions create`,
+`transactions credit` and `settlements close` require one, and there is a
+separate processor per payment method:
 
 ```sh
 flute2 ping
@@ -216,21 +217,34 @@ coexist.
 `flute2 <group> --help` lists a group's commands; `flute2 <group> <command>
 --help` documents every flag, with its bounds and its reasons.
 
-### Renamed from v1, with no aliases
+### v1 commands and flags, and their v2 equivalents
 
-A v1 command or flag name breaks loudly under `flute2` rather than charging
-something else.
+There are no aliases. A v1 command or flag name breaks loudly under `flute2`
+rather than charging something else. The exceptions are flags that keep their
+names with a changed meaning, the rate flags among them: they read their
+values as percentages.
 
 | v1 | v2 |
 |---|---|
 | `transactions sale`, `transactions auth` | `transactions create` (`--capture-method manual` for an authorization) |
 | `transactions void`, `transactions refund` | `transactions reversal` |
 | `transactions settle` | `settlements close` |
+| `transactions sale` with no processor id | `transactions create --payment-processor-id` — required; `settings payment-config` lists the ids |
+| `--card-data-source` | **dropped** |
 | `ach debit` | `transactions create` with the ACH flags |
 | `ach credit` | `transactions credit` |
-| `ach void`, `ach refund` | `transactions reversal` |
-| `customers add-card`, `add-ach`, `methods`, `remove-method` | the `payment-methods` group |
-| `keys` | `api-keys` |
+| `ach void <id>`, `ach refund <id>` | `transactions reversal --transaction-id <id>` |
+| `--sec-code 1` to `4` (integers, `4` = Telephone) | `--sec-code web`, `ppd` or `ccd` — there is no Telephone value |
+| `--l3-product "Description,SKU,UnitPrice,UnitOfMeasure,Quantity"` | `--l3-product` as comma-separated `key=value` pairs; `--help` lists the keys |
+| `customers add-card <customer-id>`, `customers add-ach <customer-id>` | `payment-methods add-card`, `payment-methods add-ach` with `--customer-id <customer-id>` — optional, so pass it to attach the method to a customer |
+| `customers methods <customer-id>` | `payment-methods list --customer-id <customer-id>` |
+| `customers remove-method <customer-id> <method-id>` | `payment-methods delete <method-id> --yes` |
+| `customers add-ach` with `--account-holder-type` optional | `payment-methods add-ach --account-holder-type` — required |
+| `customers create` with optional names | `customers create --first-name --last-name` — both required |
+| `customers list --search` | `--full-name`, `--email`, `--company-name` or `--mobile` |
+| `pos create --reading-method 1` or `2` | `--reading-method keyed-entry` or `regular` |
+| `pos create` with `--reference-id` required, `--amount` optional | `--amount` and `--currency-code` required, `--reference-id` optional |
+| `keys`, `tokens` | `api-keys` |
 | `devices`, `subscriptions` | **not in v2** — keep `flute` installed for these |
 | `transactions list --unsettled` | **no equivalent** — `transactionStatus` filters by equality and the API declares no parameter for the negation |
 | `--tip-rate`, `--l2-tax-rate` and the other rate flags as decimal fractions (`0.18` for 18%) | the same flags as percentages (`18.5` for 18.5%), with a value between 0 and 1 noted on stderr |
@@ -242,22 +256,33 @@ something else.
 | `keys revoke --merchant-id` | **dropped** — the client id alone identifies the key |
 | `ach credit --reference-id` optional | `--reference-id` required — v2 declares it on the credit request |
 
-### JSON fields renamed from v1
+### v1 JSON paths, and their v2 equivalents
 
-The envelope is unchanged — same `object` names, same `data`, same `meta` — so
-`jq` parses a v2 response without complaint and a v1 path inside `data` returns
-`null` instead of failing. A gate such as
-`[ "$(… | jq -r '.data.status')" = "Approved" ]` takes the failure branch on a
-transaction that was approved. The transaction paths that moved:
+The envelope keeps its `object` names and its `data` and `meta` keys. Two
+things differ. A collection's `data` is the array itself, where v1 wrapped it
+in an object with `items` and `total`, so a v1 path such as `.data.items[]`
+fails with `Cannot index array`. And each resource names its own fields, so a
+v1 path inside a single object's `data` returns `null` rather than failing. A
+gate such as `[ "$(… | jq -r '.data.status')" = "Approved" ]` takes the failure
+branch on a transaction that was approved.
 
 | v1 | v2 |
 |---|---|
-| `.data.status` | `.data.transactionStatus` |
-| `.data[].id` | `.data[].transactionId` |
-| `.data[].status`, `.data[].type`, `.data[].date` | `.data[].transactionStatus`, `.transactionType`, `.transactionDateTime` |
+| `.data.items[]`, `.data.total` on a list | `.data[]`, `.meta.page_info.totalItems` |
+| `.data.id` on a customer, terminal, POS transaction or settlement batch | `.data.customerId`, `.data.terminalId`, `.data.posTransactionId`, `.data.batchId` |
+| `.data.status` on a transaction | `.data.transactionStatus` |
+| `.data.status` on a settlement batch | `.data.batchStatus` |
+| `.data.items[].id` on a transaction list | `.data[].transactionId` |
+| `.data.items[].status`, `.type`, `.date` | `.data[].transactionStatus`, `.transactionType`, `.transactionDateTime` |
 | `.data.amount.totalAmount`, `.data.totalAmount` | `.data.processedAmount`, `.data.amountBreakdown.*` |
 | `.data.authCode` | `.data.processorDetails.authCode` |
 | `.data.responseDescription`, `.data.responseCode` | `.data.declineDetails.message`, `.data.declineDetails.code` |
+| `.data.avsResponse` | `.data.addressVerificationServiceResponse` |
+| `.data.availableOperations` | not declared on a `transactions get` response |
+| `.data.merchant_id` from `auth status` | not reported |
+
+A delete or revoke under `--output json` prints a confirmation envelope,
+where v1 printed nothing.
 
 ### Destructive commands need `--yes`
 
@@ -355,7 +380,7 @@ Under `--output json` a failure is a JSON envelope on stdout —
 `{"kind": …, "message": …, "status": …, "correlation_id": …}` — so a program
 never has to guess at an empty stream. `kind` is one of `api`, `transport`,
 `auth`, `decode` or `client`. [`agents.md`](agents.md) has the retry table and
-the four exits that carry no envelope.
+the five exits that carry no error envelope.
 
 ---
 
@@ -450,8 +475,9 @@ RUST_LOG=flute_cli2=debug,reqwest=debug,hyper=debug flute2 ping
 | Diagnose TLS / DNS / connection problems | `RUST_LOG=flute_cli2=debug,reqwest=debug,hyper=debug flute2 ping` |
 | Confirm which environment and URL is being hit | `flute2 --debug ping` (the request URL is in the trace) |
 
-Command errors are always printed to stderr — and to stdout as JSON under
-`--output json` — regardless of the log level.
+Under `--output json` a command error is a JSON envelope on stdout, and
+nothing on stderr. In the other modes it is printed to stderr. Either way it
+appears whatever the log level.
 
 For a support conversation, `meta.correlation_id` from `--output json` is worth
 more than a trace: it is what identifies the request server-side.
@@ -469,6 +495,7 @@ more than a trace: it is what identifies the request server-side.
 | `FLUTE2_NO_UPDATE_CHECK` | Any value suppresses the update notice; `CI` does too. |
 | `FLUTE2_API_BASE_URL`, `FLUTE2_OAUTH_URL` | Point at another host. **Refused on production.** |
 | `FLUTE2_GITHUB_TOKEN` | A token for `update`'s release lookup. |
+| `FLUTE2_INSTALLER_GITHUB_BASE_URL`, `FLUTE2_INSTALLER_GHE_BASE_URL` | Point `update`'s release lookup at another GitHub host, or at a GitHub Enterprise server. Setting both is an error. |
 
 No bare `FLUTE_` name is ever read: v1's variables, keychain entry and config
 file are separate. One that is set while its `FLUTE2_` counterpart is not gets a

@@ -29,7 +29,7 @@ use serde_json::{Map, Value};
 pub enum ApiKeysCommand {
     /// Create a merchant API key (POST /v2/api-keys).
     ///
-    /// The response contains `clientSecret`, which is shown **only once**.
+    /// The response contains `clientSecret`, which is shown only once.
     /// Store it securely immediately after creation.
     Create {
         /// Merchant UUID (required).

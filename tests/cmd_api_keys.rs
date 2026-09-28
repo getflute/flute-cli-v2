@@ -308,8 +308,8 @@ async fn create_table_warns_that_the_secret_is_shown_once() {
     assert_eq!(table.lines().count(), 4, "{table}");
 }
 
-/// v1's envelope names are kept: `api_token` for one and `api_token_list` for
-/// the collection, even though the group is now called `api-keys`. Renaming
+/// The envelope names are `api_token` for one and `api_token_list` for the
+/// collection, shared with `flute`, though the group is `api-keys`. Renaming
 /// them would be a change to the output contract the design does not
 /// enumerate, and an agent branching on `object` would see it.
 #[tokio::test]

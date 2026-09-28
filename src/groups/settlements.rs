@@ -44,7 +44,7 @@ pub enum SettlementsCommand {
     List(ListBatchesArgs),
     /// Fetch a single settlement batch by ID.
     ///
-    /// **Note**: there is no single-batch endpoint. This reads the batch list
+    /// There is no single-batch endpoint. This reads the batch list
     /// under its own `batchIds` filter and returns the one match.
     Get {
         /// Settlement batch ID (positional).
@@ -53,7 +53,7 @@ pub enum SettlementsCommand {
     /// Settle the open batch for a payment processor
     /// (POST /v2/settlements/batches/close).
     ///
-    /// IMPORTANT: this is a **batch-level** operation, not a per-transaction
+    /// This is a batch-level operation, not a per-transaction
     /// one. It closes and settles the processor's entire open batch. Use
     /// `--payment-processor-id` to identify the processor.
     Close {

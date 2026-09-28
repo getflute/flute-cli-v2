@@ -104,9 +104,9 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &[],
         parity: Parity::Replaced(
             "auth switch",
-            "same command, but the value it writes is now read back; in v1 nothing \
-             consulted default_profile, so the command reported success and \
-             changed nothing",
+            "same command, and profile resolution reads the value it writes; in v1 \
+             nothing consulted default_profile, so the command reported success \
+             and changed nothing",
         ),
         test: Some("switch_writes_default_profile_and_the_next_command_honours_it"),
     },
@@ -540,7 +540,7 @@ pub static CAPABILITIES: &[Capability] = &[
         parity: Parity::Replaced(
             "transactions create --same-day",
             "v1's flag named a speed; v2's field is isSameDayProcessing, and the flag \
-             now names the thing it sets",
+             names the thing it sets",
         ),
         test: Some("an_ach_charge_can_request_same_day_processing"),
     },
@@ -602,7 +602,7 @@ pub static CAPABILITIES: &[Capability] = &[
         parity: Parity::Replaced(
             "payment-methods add-card --card/--cvv/--exp/--name",
             "same flags, moved out of `customers` for the same reason as add-ach; \
-             --name now reaches `paymentName`, which is what v2 calls the label on \
+             --name reaches `paymentName`, which is what v2 calls the label on \
              the card route",
         ),
         test: Some("payment_method_add_card_full_exchange_matches_the_contract"),
@@ -779,7 +779,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &[],
         parity: Parity::Replaced(
             "pos cancel <pos-transaction-id> --yes",
-            "same command, now behind the confirmation gate: v2 extends --yes to \
+            "same command, behind the confirmation gate: v2 extends --yes to \
              every destructive verb it owns, and v1 cancelled without asking",
         ),
         test: Some("pos_cancel_without_yes_issues_no_request"),
@@ -818,7 +818,7 @@ pub static CAPABILITIES: &[Capability] = &[
         parity: Parity::Replaced(
             "pos create --reading-method keyed-entry|regular",
             "the same choice under the declared enum rather than v1's integer id, \
-             so a caller no longer has to know that 2 meant keyed entry",
+             so a caller need not know that 2 meant keyed entry",
         ),
         test: Some("pos_create_full_exchange_matches_the_contract"),
     },
@@ -827,7 +827,7 @@ pub static CAPABILITIES: &[Capability] = &[
         v1_flags: &["--reference-id"],
         parity: Parity::Replaced(
             "pos create --reference-id",
-            "the same flag, no longer forced: v1 marked it required because the v1 \
+            "the same flag, not required in v2: v1 marked it required because the v1 \
              API rejected creates without it, and CreatePosTransactionRequestDto \
              does not declare it required",
         ),
@@ -1003,7 +1003,7 @@ pub static CAPABILITIES: &[Capability] = &[
         parity: Parity::Replaced(
             "transactions inspect",
             "same command and the same absence of an endpoint, but the pair has \
-             swapped roles: v2's `get` prints the whole response, so `inspect` is now \
+             swapped roles: v2's `get` prints the whole response, so `inspect` is \
              the curated view rather than the more detailed one",
         ),
         test: Some("inspect_reads_through_the_get_endpoint_and_curates_the_table"),

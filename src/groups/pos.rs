@@ -198,7 +198,8 @@ pub struct ListPosTransactionsArgs {
     /// Sort results by this field name.
     #[arg(long)]
     pub sort_by: Option<String>,
-    /// Sort ascending.
+    /// Sort ascending. With neither `--asc` nor `--desc`, the server's default
+    /// order applies.
     #[arg(long, id = "pos_asc", conflicts_with = "pos_desc")]
     pub asc: bool,
     /// Sort descending.

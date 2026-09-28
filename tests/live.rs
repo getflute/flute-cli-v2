@@ -183,16 +183,13 @@ pub fn share_recipient() -> String {
 
 /// The billing address the sandbox's address-verification fixture **approves**.
 ///
-/// Every card scenario needs it, and until it was used they all passed on a
-/// *declined* transaction: AVS is enabled on this account, an address it does
-/// not recognise answers `N` — "Neither the Street Address or ZIP Code match
-/// the information on file" — and the charge is refused. A scenario asserting
-/// only success cannot tell that from an approval, so a dozen of them were
-/// green while exercising the decline path.
+/// Every card scenario needs it. AVS is enabled on this account: an address
+/// it does not recognise answers `N` — "Neither the Street Address or ZIP Code
+/// match the information on file" — and the charge is refused, which a
+/// scenario asserting only success cannot tell from an approval.
 ///
-/// The postcode is checked before the street, and two other postcodes mean
-/// "unavailable" and "incompatible" rather than a match, so both halves of
-/// this pair matter.
+/// This street and postcode together are the address that verifies on the
+/// sandbox, so send both.
 /// The country is not optional once any address is present:
 /// `POST /v2/transactions/credit` answers
 /// `countryId: Country Id must not be null when address is provided`, though

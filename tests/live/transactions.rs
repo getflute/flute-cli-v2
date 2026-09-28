@@ -606,8 +606,8 @@ fn live_transaction_inspect_reads_the_same_transaction() {
 
 // ── credit ───────────────────────────────────────────────────────────────────
 
-/// v1's `ach credit`, moved onto the v2 endpoint. `referenceId` is
-/// **required** here where it is optional on `create`.
+/// The credit endpoint. `referenceId` is **required** here where it is
+/// optional on `create`.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_ach_credit() {
@@ -656,7 +656,7 @@ fn live_ach_credit() {
     assert!(v["data"].get("items").is_none(), "{v}");
 }
 
-/// A credit to a card is new in v2: v1 had `ach credit` and nothing else.
+/// A credit to a card.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_credit() {

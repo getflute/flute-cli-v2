@@ -86,10 +86,10 @@ pub struct UpdateAutofillArgs {
     /// Default level-2 sales tax rate as a percentage, 0 to 22.
     #[arg(long = "l2-tax-rate", value_parser = parse_rate_patch, value_name = "TAX_RATE", allow_negative_numbers = true)]
     pub tax_rate: Option<PatchNumber>,
-    /// Default level-3 shipping charge **rate**, as a percentage.
+    /// Default level-3 shipping charge rate, as a percentage.
     #[arg(long = "l3-shipping-rate", value_parser = parse_rate_patch, value_name = "SHIPPING_CHARGE_RATE", allow_negative_numbers = true)]
     pub shipping_charge_rate: Option<PatchNumber>,
-    /// Default level-3 duty charge **rate**, as a percentage.
+    /// Default level-3 duty charge rate, as a percentage.
     #[arg(long = "l3-duty-rate", value_parser = parse_rate_patch, value_name = "DUTY_CHARGE_RATE", allow_negative_numbers = true)]
     pub duty_charge_rate: Option<PatchNumber>,
     /// Default product name.

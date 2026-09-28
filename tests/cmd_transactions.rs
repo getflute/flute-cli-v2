@@ -1102,8 +1102,7 @@ async fn a_payment_method_id_without_an_instrument_is_refused() {
     );
 }
 
-/// v1 called this `--faster`; v2's field is `isSameDayProcessing`, and the
-/// flag now names the thing it sets.
+/// v2's field is `isSameDayProcessing`, and the flag names the thing it sets.
 #[tokio::test]
 async fn an_ach_charge_can_request_same_day_processing() {
     let server = support::mock_with_token().await;

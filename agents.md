@@ -22,7 +22,7 @@ Three rules that shape every parser you write against this CLI:
    `--debug` too. Parse one stream, never both.
 2. **A failure under `--output json` is a JSON envelope on stdout**, so a
    machine consumer never sees an empty stdout it has to guess about — with
-   three named exceptions, below.
+   five named exceptions, below.
 3. **A declined payment is a success.** Exit 0, HTTP 200, and the decline is in
    the body. Read `data.transactionStatus`, never the exit code, to find out
    whether money moved.
@@ -67,7 +67,7 @@ CI log stays quiet.
 - `data` is what the resource reports, and its object keys are emitted in
   **sorted order** at every depth rather than the order the API sent them.
   **On a collection read `data` is the array itself**, not a `{items, total}`
-  wrapper: the count moved to `meta.page_info.totalItems`.
+  wrapper: the count is `meta.page_info.totalItems`.
 - `meta.correlation_id` is present when the API returned one. It is what
   support asks for. Observed present on a 4xx and absent on ordinary reads, so
   treat it as optional.
@@ -118,7 +118,7 @@ first, then on `status`.
 | `api`, status 401/403 | authorisation | no — refresh credentials, then retry once |
 | `api`, status 400/422 | permanent for this request | no — surface `message` and `correlation_id` |
 | `api`, status 404 | not found | no |
-| `api`, status 402/409/429 | new in v2, with no exit code of their own — see the note under the exit-code table | 429 yes, with backoff; others no |
+| `api`, status 402/409/429 | no exit code of their own — see the note under the exit-code table | 429 yes, with backoff; others no |
 | `transport` | connection, DNS or TLS failure, or a **request timeout** — on the API request, the token request or `update`'s release lookup, with the cause named in `message`. A timeout can land after the API received the request and carried it out | only a command in the **Safe to retry** column of [Idempotency](#idempotency), with backoff; any other — reconcile with `list` or `get` first |
 | `auth` | no credentials, one of `FLUTE2_CLIENT_ID` and `FLUTE2_CLIENT_SECRET` set without the other, or the token endpoint refused the ones it was sent | no — an operator must configure credentials |
 | `decode` | the API sent something this CLI cannot read: a contract change, or a CLI bug | no — surface it for investigation |
@@ -160,9 +160,9 @@ so the command runs to its own end and exits with the code it earned; the
 diagnostics written after the close are dropped. Read the exit code, not the
 presence of a message.
 
-**402, 409 and 429 exit 1**, through the general arm. They are new in v2, and
-nothing can already depend on a code the CLI has never emitted — so claiming
-one for them later stays backwards compatible, while guessing now does not.
+**402, 409 and 429 exit 1**, through the general arm. They have no dedicated
+exit code, and one may be assigned later: nothing can depend on a code the CLI
+has never emitted, so adding one stays backwards compatible.
 
 ### A declined payment is exit 0
 
@@ -342,10 +342,11 @@ refusal runs first. The base-URL overrides below are refused on production.
 | `FLUTE2_NO_UPDATE_CHECK` | Any value suppresses the update notice. `CI` does the same. |
 | `FLUTE2_API_BASE_URL`, `FLUTE2_OAUTH_URL` | Point the CLI at another host. **Refused on the production profile**, so a test override cannot silently redirect a real charge. |
 | `FLUTE2_GITHUB_TOKEN` | A token for `update`'s release lookup, for a rate-limited network. |
+| `FLUTE2_INSTALLER_GITHUB_BASE_URL`, `FLUTE2_INSTALLER_GHE_BASE_URL` | Point `update`'s release lookup at another GitHub host, or at a GitHub Enterprise server. Setting both is an error. |
 
 Nothing reads a bare `FLUTE_` name: v1's variables, keychain entry and config
-file are all separate, and the two binaries authenticate against different
-hosts. A `FLUTE_` name that is set while its `FLUTE2_` counterpart is not gets
+file are all separate, and the two binaries call different versions of the API
+on the same hosts. A `FLUTE_` name that is set while its `FLUTE2_` counterpart is not gets
 one **stderr** line at startup naming the variable read instead, because an
 inert variable is otherwise indistinguishable from a configured one.
 

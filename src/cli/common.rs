@@ -12,7 +12,7 @@ use serde_json::Value;
 
 #[derive(clap::Args, Debug, Default, Clone)]
 pub struct PaginationArgs {
-    /// Page number to fetch. **Zero-based**.
+    /// Page number to fetch. Zero-based.
     #[arg(long, id = "page_index", value_name = "PAGE_INDEX")]
     pub page_index: Option<u32>,
     /// Maximum results per page (1-100). Omit it to use the server's default.
