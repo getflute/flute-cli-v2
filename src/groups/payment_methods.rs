@@ -494,6 +494,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
             payment_method_id,
             customer_id,
         } => {
+            common::reject_empty_id("--customer-id", &customer_id)?;
             let resp = ctx
                 .api
                 .request(

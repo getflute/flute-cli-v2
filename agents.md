@@ -378,7 +378,10 @@ one that carries `/`, `\`, `?`, `#`, `%` or whitespace are each a `client`
 envelope and exit 3 with nothing sent — those characters end a path segment, a
 dot segment is resolved away, and `%` spells any of them as an escape the URL
 parser decodes, so such an identifier would address an operation other than the
-one named.
+one named. An identifier sent in a query parameter or a body is held to the
+empty rule alone — `settlements get`'s batch id, `settlements close
+--payment-processor-id`, `pos print-receipt --terminal-id` and `payment-methods
+set-default --customer-id` — so an empty filter cannot return the unfiltered list.
 
 An identifier that passes those checks but is not the shape the server expects
 — `not-a-real-id` where a UUID goes — is a **400, exit 3**, not a 404: the

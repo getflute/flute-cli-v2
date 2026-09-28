@@ -1090,3 +1090,51 @@ async fn every_request_carries_the_cli_user_agent() {
 
     support::bin(&server).args(["ping"]).assert().success();
 }
+
+/// An identifier sent in a query parameter or a body is held to the same
+/// empty rule as one in a path: empty after trimming is a `client` refusal,
+/// exit 3, and nothing is sent. An empty `batchIds` would otherwise filter
+/// nothing and report the unfiltered list as the batch asked for.
+#[tokio::test]
+async fn an_empty_query_or_body_identifier_is_refused_before_the_wire() {
+    let server = support::mock_with_token().await;
+    for (flag, args) in [
+        ("<BATCH_ID>", vec!["settlements", "get", ""]),
+        ("<BATCH_ID>", vec!["settlements", "get", "  "]),
+        (
+            "--payment-processor-id",
+            vec!["settlements", "close", "--payment-processor-id", "  "],
+        ),
+        (
+            "--terminal-id",
+            vec!["pos", "print-receipt", "--terminal-id", "  ", "ptx-1"],
+        ),
+        (
+            "--customer-id",
+            vec![
+                "payment-methods",
+                "set-default",
+                "--customer-id",
+                "",
+                "pm-1",
+            ],
+        ),
+    ] {
+        let out = support::bin(&server)
+            .args(["--output", "json"])
+            .args(&args)
+            .assert()
+            .code(3)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "client", "{args:?}: {v}");
+        let message = v["message"].as_str().unwrap();
+        assert!(message.contains(flag), "{args:?}: {message}");
+    }
+    assert!(
+        server.received_requests().await.unwrap().is_empty(),
+        "a refused identifier still reached the network"
+    );
+}

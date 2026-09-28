@@ -64,15 +64,26 @@ pub fn reject_unclearable(flag: &str, value: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// Refuse a processor id passed empty. It is a value that went missing, such
+/// Refuse a processor id that is empty after trimming. It is a value that went missing, such
 /// as an unset shell variable, and a request sent without it runs through the
 /// account's default processor instead of the one named.
 pub fn reject_empty_processor_id(flag: &str, value: Option<&str>) -> Result<()> {
-    if value.is_some_and(str::is_empty) {
+    if value.is_some_and(|v| v.trim().is_empty()) {
         anyhow::bail!(
             "{flag} needs a value. `flute2 settings payment-config` lists the \
              processors configured for this account."
         );
+    }
+    Ok(())
+}
+
+/// Refuse an identifier sent in a query parameter or a body when it is empty
+/// after trimming. `ApiPath::id` holds a path identifier to the same rule. An
+/// empty query filter filters nothing, and an empty body field names no
+/// resource, so either request would act on something the caller did not name.
+pub fn reject_empty_id(name: &str, value: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        anyhow::bail!("{name} needs a value; this one is empty");
     }
     Ok(())
 }

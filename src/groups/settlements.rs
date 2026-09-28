@@ -132,12 +132,7 @@ pub fn build_list_batches_query(args: &ListBatchesArgs) -> Result<Vec<(&'static 
 
 /// The `SettleTransactionsRequestDto` body: one required field.
 pub fn build_close_batch_body(payment_processor_id: &str) -> Result<Value> {
-    if payment_processor_id.is_empty() {
-        anyhow::bail!(
-            "--payment-processor-id is required. `flute2 settings payment-config` \
-             lists the processors configured for this account."
-        );
-    }
+    common::reject_empty_processor_id("--payment-processor-id", Some(payment_processor_id))?;
     Ok(Value::Object(Map::from_iter([(
         "paymentProcessorId".to_string(),
         Value::String(payment_processor_id.to_string()),
@@ -280,6 +275,7 @@ pub async fn dispatch(ctx: &Ctx, command: SettlementsCommand) -> Result<()> {
         }
         SettlementsCommand::Get { batch_id } => {
             // There is no single-batch endpoint, only the list's id filter.
+            common::reject_empty_id("<BATCH_ID>", &batch_id)?;
             let resp = ctx
                 .api
                 .request(

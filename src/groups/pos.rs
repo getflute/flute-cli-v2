@@ -333,9 +333,7 @@ fn extra_amounts(args: &CreatePosTransactionArgs) -> Result<Option<Value>> {
 
 /// The `PrintTransactionReceiptRequestDto` body: one required field.
 pub fn build_print_receipt_body(terminal_id: &str) -> Result<Value> {
-    if terminal_id.is_empty() {
-        anyhow::bail!("--terminal-id is required to print a receipt");
-    }
+    common::reject_empty_id("--terminal-id", terminal_id)?;
     Ok(Value::Object(Map::from_iter([(
         "terminalId".to_string(),
         Value::String(terminal_id.to_string()),
