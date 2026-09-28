@@ -27,7 +27,7 @@ pub struct Cli {
     /// Output format: table (default), json, or quiet (id only).
     /// When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the
     /// `output` key in ~/.flute2/config.toml, then to `table`.
-    #[arg(long, env = "FLUTE2_OUTPUT", global = true, value_enum,
+    #[arg(long, env = "FLUTE2_OUTPUT", global = true, value_enum, ignore_case = true,
           help_heading = GLOBAL_HEADING)]
     pub output: Option<OutputFormat>,
 

@@ -32,7 +32,7 @@ Three rules that shape every parser you write against this CLI:
 | Flag | Meaning |
 |---|---|
 | `--profile <name>` | `sandbox` (default), or `production`/`prod`. Env: `FLUTE2_PROFILE`; then `~/.flute2/config.toml`'s `default_profile`; then `sandbox`. |
-| `--output <fmt>` | `json` (use this), `table` (human, the default), `quiet` (identifier only). Env: `FLUTE2_OUTPUT`; then the config file's `output`; then `table`. |
+| `--output <fmt>` | `json` (use this), `table` (human, the default), `quiet` (identifier only), in any case: `JSON` is `json`. Env: `FLUTE2_OUTPUT`; then the config file's `output`; then `table`. |
 | `--debug` | HTTP request and response traces to **stderr**. Card numbers, bank account numbers, security codes, bearer tokens and client secrets are masked. Prefer `--output json` plus `meta.correlation_id`; reach for `--debug` only when an operator is investigating. |
 
 There are no short flags beyond `-h` and `-V`. Spell it `--output quiet`.

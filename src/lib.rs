@@ -153,24 +153,24 @@ pub(crate) fn resolve_profile(flag: Option<String>, config_value: &str) -> Strin
 /// A usage error is raised before clap has produced a `Cli`, so this one
 /// decision walks the same precedence by hand: argv, the environment, then the
 /// config file. Both spellings of the flag are accepted because clap accepts
-/// both. The flag and the environment variable match `json` exactly, as clap
-/// does, so a value clap rejects renders no envelope; the config file matches
-/// case-insensitively, as `OutputFormat::from_config_str` does.
+/// both. Every layer matches `json` case-insensitively, as clap and
+/// `OutputFormat::from_config_str` do, so a value the parser rejects renders
+/// no envelope.
 pub(crate) fn wants_json_output(args: &[OsString]) -> bool {
     let mut iter = args.iter().map(|a| a.to_string_lossy());
     while let Some(arg) = iter.next() {
         if let Some(value) = arg.strip_prefix("--output=") {
-            return value == "json";
+            return value.eq_ignore_ascii_case("json");
         }
         if arg == "--output" {
-            return iter.next().is_some_and(|v| v == "json");
+            return iter.next().is_some_and(|v| v.eq_ignore_ascii_case("json"));
         }
     }
     match std::env::var("FLUTE2_OUTPUT")
         .ok()
         .filter(|v| !v.is_empty())
     {
-        Some(value) => value == "json",
+        Some(value) => value.eq_ignore_ascii_case("json"),
         None => config::load_or_default()
             .output
             .eq_ignore_ascii_case("json"),

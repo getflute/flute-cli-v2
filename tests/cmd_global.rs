@@ -673,27 +673,75 @@ fn an_unparseable_output_value_leaves_stdout_empty() {
     )
     .unwrap();
 
-    for value in ["nosuchmode", "JSON"] {
-        support::bin_without_credentials_in(home.path())
-            .args(["--output", value, "ping"])
-            .assert()
-            .code(3)
-            .stdout(predicate::str::is_empty())
-            .stderr(predicate::str::contains("invalid value"));
-        support::bin_without_credentials_in(home.path())
-            .args([format!("--output={value}").as_str(), "ping"])
-            .assert()
-            .code(3)
-            .stdout(predicate::str::is_empty())
-            .stderr(predicate::str::contains("invalid value"));
-    }
     support::bin_without_credentials_in(home.path())
-        .env("FLUTE2_OUTPUT", "JSON")
+        .args(["--output", "nosuchmode", "ping"])
+        .assert()
+        .code(3)
+        .stdout(predicate::str::is_empty())
+        .stderr(predicate::str::contains("invalid value"));
+    support::bin_without_credentials_in(home.path())
+        .args(["--output=nosuchmode", "ping"])
+        .assert()
+        .code(3)
+        .stdout(predicate::str::is_empty())
+        .stderr(predicate::str::contains("invalid value"));
+    support::bin_without_credentials_in(home.path())
+        .env("FLUTE2_OUTPUT", "nosuchmode")
         .args(["ping"])
         .assert()
         .code(3)
         .stdout(predicate::str::is_empty())
         .stderr(predicate::str::contains("invalid value"));
+}
+
+/// **The output mode is case-insensitive** from the flag, from
+/// `FLUTE2_OUTPUT` and from the config file, and a usage error renders in the
+/// mode the parser would have chosen.
+#[tokio::test]
+async fn the_output_mode_is_case_insensitive() {
+    let server = support::mock_with_token().await;
+    wiremock::Mock::given(wiremock::matchers::method("GET"))
+        .and(wiremock::matchers::path("/v2/ping"))
+        .respond_with(wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({})))
+        .mount(&server)
+        .await;
+
+    let spellings: [(&[&str], Option<&str>); 3] = [
+        (&["--output", "JSON"], None),
+        (&["--output=Json"], None),
+        (&[], Some("JSON")),
+    ];
+    for (flag, env) in spellings {
+        let mut cmd = support::bin(&server);
+        if let Some(value) = env {
+            cmd.env("FLUTE2_OUTPUT", value);
+        }
+        let out = cmd
+            .args(flag)
+            .arg("ping")
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["object"], "ping", "{flag:?} {env:?}: {v}");
+
+        let mut cmd = support::bin_without_credentials();
+        if let Some(value) = env {
+            cmd.env("FLUTE2_OUTPUT", value);
+        }
+        let out = cmd
+            .args(flag)
+            .args(["customers", "nosuchverb"])
+            .assert()
+            .code(3)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "client", "{flag:?} {env:?}: {v}");
+    }
 }
 
 /// A group invoked with no subcommand is a usage error, and the envelope has
