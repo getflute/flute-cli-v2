@@ -70,49 +70,36 @@ fn is_plain_decimal(s: &str) -> bool {
 /// leading `+` are rejected here rather than left to whatever `Decimal`'s
 /// parser happens to accept — the policy belongs in code where it is visible.
 pub fn parse_amount(raw: &str) -> Result<Decimal> {
-    let s = raw.trim();
-    if s.contains('e') || s.contains('E') {
-        bail!("amount must be a plain decimal, not scientific notation: {raw}");
-    }
-    if s.starts_with('+') {
-        bail!("amount must be a plain decimal without a leading '+': {raw}");
-    }
-    if !is_plain_decimal(s) {
-        bail!("amount must be a plain decimal of digits and one '.': {raw}");
-    }
-    let d = Decimal::from_str(s).map_err(|_| anyhow::anyhow!("invalid amount: {raw}"))?;
-    // The sign is read from the text: `Decimal` drops it on a zero mantissa,
-    // so `-0.00` parses as a plain zero.
-    if s.starts_with('-') {
-        bail!("amount must not be negative: {raw}");
-    }
-    if d.scale() > 2 {
-        bail!("amount must have at most 2 decimal places: {raw}");
-    }
-    Ok(d)
+    parse_decimal(raw, "amount", 2)
 }
 
 /// Parse a rate. Rates are not money: `0.1850` is a legitimate value, so four
 /// decimal places are allowed where amounts allow two.
 pub fn parse_rate(raw: &str) -> Result<Decimal> {
+    parse_decimal(raw, "rate", 4)
+}
+
+/// A non-negative plain decimal with at most `max_scale` places, refused in
+/// messages that name it `noun`.
+fn parse_decimal(raw: &str, noun: &str, max_scale: u32) -> Result<Decimal> {
     let s = raw.trim();
     if s.contains('e') || s.contains('E') {
-        bail!("rate must be a plain decimal, not scientific notation: {raw}");
+        bail!("{noun} must be a plain decimal, not scientific notation: {raw}");
     }
     if s.starts_with('+') {
-        bail!("rate must be a plain decimal without a leading '+': {raw}");
+        bail!("{noun} must be a plain decimal without a leading '+': {raw}");
     }
     if !is_plain_decimal(s) {
-        bail!("rate must be a plain decimal of digits and one '.': {raw}");
+        bail!("{noun} must be a plain decimal of digits and one '.': {raw}");
     }
-    let d = Decimal::from_str(s).map_err(|_| anyhow::anyhow!("invalid rate: {raw}"))?;
+    let d = Decimal::from_str(s).map_err(|_| anyhow::anyhow!("invalid {noun}: {raw}"))?;
     // The sign is read from the text: `Decimal` drops it on a zero mantissa,
     // so `-0.00` parses as a plain zero.
     if s.starts_with('-') {
-        bail!("rate must not be negative: {raw}");
+        bail!("{noun} must not be negative: {raw}");
     }
-    if d.scale() > 4 {
-        bail!("rate must have at most 4 decimal places: {raw}");
+    if d.scale() > max_scale {
+        bail!("{noun} must have at most {max_scale} decimal places: {raw}");
     }
     Ok(d)
 }
