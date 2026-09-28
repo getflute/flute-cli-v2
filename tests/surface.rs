@@ -10,19 +10,19 @@ use support::surface::SURFACE;
 /// coverage cannot see this.
 #[test]
 fn every_request_field_is_exposed_fixed_or_excluded() {
-    checks::every_request_field_is_accounted_for(SURFACE);
+    checks::every_request_field_is_accounted_for(&SURFACE);
 }
 
 /// The reverse: a row naming a field the spec does not have is stale.
 #[test]
 fn no_surface_row_names_a_field_that_does_not_exist() {
-    checks::no_surface_row_is_stale(SURFACE);
+    checks::no_surface_row_is_stale(&SURFACE);
 }
 
 /// Every flag named here must appear in that command's `--help`.
 #[test]
 fn every_exposed_flag_appears_in_help() {
-    checks::exposed_flags_appear_in_help(SURFACE);
+    checks::exposed_flags_appear_in_help(&SURFACE);
 }
 
 /// One client-side `wire()` map, and the field whose bundle enum it must

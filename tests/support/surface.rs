@@ -6,6 +6,9 @@
 //! `createdFrom`, `createdTo`, `sortBy` and `asc` are all unreachable. The
 //! endpoint is covered and most of its capability is not.
 
+use Exposure::{Excluded, Flag};
+use std::sync::LazyLock;
+
 #[derive(Clone)]
 pub enum Exposure {
     /// Reachable from the CLI through this flag. Several spellings for one
@@ -31,1724 +34,447 @@ pub struct Field {
     pub exposure: Exposure,
 }
 
-pub static SURFACE: &[Field] = &[
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/paymentProcessorId",
-        exposure: Exposure::Flag("--payment-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/baseAmount",
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/referenceId",
-        // Required here, unlike on `create`.
-        exposure: Exposure::Flag("--reference-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/currencyCode",
-        exposure: Exposure::Flag("--currency-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/billingAddress/addressLine1",
-        exposure: Exposure::Flag("--billing-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/billingAddress/addressLine2",
-        exposure: Exposure::Flag("--billing-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/billingAddress/city",
-        exposure: Exposure::Flag("--billing-city"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/billingAddress/countryCode",
-        exposure: Exposure::Flag("--billing-country"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/billingAddress/postalCode",
-        exposure: Exposure::Flag("--billing-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/billingAddress/stateCode",
-        exposure: Exposure::Flag("--billing-state"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/shippingAddress/addressLine1",
-        exposure: Exposure::Flag("--shipping-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/shippingAddress/addressLine2",
-        exposure: Exposure::Flag("--shipping-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/shippingAddress/city",
-        exposure: Exposure::Flag("--shipping-city"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/shippingAddress/countryCode",
-        exposure: Exposure::Flag("--shipping-country"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/shippingAddress/postalCode",
-        exposure: Exposure::Flag("--shipping-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/shippingAddress/stateCode",
-        exposure: Exposure::Flag("--shipping-state"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/contactInfo/firstName",
-        exposure: Exposure::Flag("--contact-first-name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/contactInfo/lastName",
-        exposure: Exposure::Flag("--contact-last-name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/contactInfo/companyName",
-        exposure: Exposure::Flag("--contact-company"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/contactInfo/email",
-        exposure: Exposure::Flag("--contact-email"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/contactInfo/mobilePhoneNumber",
-        exposure: Exposure::Flag("--contact-phone"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/contactInfo/hasSmsConsent",
-        exposure: Exposure::Flag("--contact-sms-consent"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/cardData/paymentMethodId",
-        exposure: Exposure::Flag("--payment-method-id/--instrument"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/cardData/paymentMethodDetails/cardNumber",
-        exposure: Exposure::Flag("--card"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/cardData/paymentMethodDetails/securityCode",
-        exposure: Exposure::Flag("--cvv"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/cardData/paymentMethodDetails/expirationMonth",
-        exposure: Exposure::Flag("--exp"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/cardData/paymentMethodDetails/expirationYear",
-        exposure: Exposure::Flag("--exp"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/paymentMethodId",
-        exposure: Exposure::Flag("--payment-method-id/--instrument"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/paymentMethodDetails/accountNumber",
-        exposure: Exposure::Flag("--ach-account-number"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/paymentMethodDetails/routingNumber",
-        exposure: Exposure::Flag("--ach-routing-number"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/paymentMethodDetails/accountType",
-        exposure: Exposure::Flag("--ach-account-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/paymentMethodDetails/accountHolderType",
-        exposure: Exposure::Flag("--ach-account-holder-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/paymentMethodDetails/taxId",
-        exposure: Exposure::Flag("--ach-tax-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/secCode",
-        exposure: Exposure::Flag("--sec-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/requesterIpAddress",
-        exposure: Exposure::Flag("--requester-ip"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-credit",
-        field: "/creditDetails/achData/isSameDayProcessing",
-        exposure: Exposure::Flag("--same-day"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?pageIndex",
-        exposure: Exposure::Flag("--page-index"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?pageSize",
-        exposure: Exposure::Flag("--page-size"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?sortBy",
-        exposure: Exposure::Flag("--sort-by"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?sortOrder",
-        exposure: Exposure::Flag("--asc/--desc"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?fromDate",
-        exposure: Exposure::Flag("--from"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?toDate",
-        exposure: Exposure::Flag("--to"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?sourceType",
-        exposure: Exposure::Flag("--source-type"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?sourceId",
-        exposure: Exposure::Flag("--source-id"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?batchId",
-        exposure: Exposure::Flag("--batch-id"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?transactionStatus",
-        exposure: Exposure::Flag("--status"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?paymentMethodType",
-        exposure: Exposure::Flag("--payment-method-type"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?merchantId",
-        exposure: Exposure::Flag("--merchant-id"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?minAmount",
-        exposure: Exposure::Flag("--min-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?maxAmount",
-        exposure: Exposure::Flag("--max-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-get-transactions",
-        field: "?referenceId",
-        exposure: Exposure::Flag("--reference-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-transactionId-capture",
-        field: "/captureAmount",
-        // The schema declares `captureAmount` and the operation's own
-        // request example sends `amount`. The schema is normative, so this is
-        // what the flag reaches.
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-transactionId-reversal",
-        field: "/reversalAmount",
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-transactionId-tip-adjustment",
-        field: "/tipAmount",
-        exposure: Exposure::Flag("--tip-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-transactionId-tip-adjustment",
-        field: "/tipRate",
-        exposure: Exposure::Flag("--tip-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-transactionId-share-receipt",
-        field: "/shareBy",
-        exposure: Exposure::Flag("--share-by"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-transactionId-share-receipt",
-        field: "/recipient",
-        exposure: Exposure::Flag("--recipient"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-transactionId-share-receipt",
-        field: "/hasCustomerConsent",
-        exposure: Exposure::Flag("--consent"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/baseAmount",
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/currencyCode",
-        exposure: Exposure::Flag("--currency-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/pricingType",
-        exposure: Exposure::Flag("--pricing-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/tipAmount",
-        exposure: Exposure::Flag("--tip-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/tipRate",
-        exposure: Exposure::Flag("--tip-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/discountAmount",
-        exposure: Exposure::Flag("--discount-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/discountRate",
-        exposure: Exposure::Flag("--discount-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions-calculate-amount",
-        field: "/surchargeRate",
-        exposure: Exposure::Flag("--surcharge-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?pageIndex",
-        exposure: Exposure::Flag("--page-index"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?pageSize",
-        exposure: Exposure::Flag("--page-size"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?asc",
-        // As on `customers list`: the API defaults `asc` to true, so the
-        // flag names the non-default direction.
-        exposure: Exposure::Flag("--desc"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?sortBy",
-        exposure: Exposure::Flag("--sort-by"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?search",
-        exposure: Exposure::Flag("--search"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?createdFrom",
-        exposure: Exposure::Flag("--created-from"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?createdTo",
-        exposure: Exposure::Flag("--created-to"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-methods",
-        field: "?customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-cards",
-        field: "/cardNumber",
-        exposure: Exposure::Flag("--card"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-cards",
-        field: "/securityCode",
-        exposure: Exposure::Flag("--cvv"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-cards",
-        field: "/expirationMonth",
-        // One MM/YY flag fills both halves, as on `transactions create`.
-        exposure: Exposure::Flag("--exp"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-cards",
-        field: "/expirationYear",
-        exposure: Exposure::Flag("--exp"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-cards",
-        field: "/customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-cards",
-        field: "/paymentName",
-        // The label is `paymentName` here and `name` on the ACH route. One
-        // flag covers both, so an inconsistency in the API does not become
-        // one in the CLI.
-        exposure: Exposure::Flag("--name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/accountNumber",
-        exposure: Exposure::Flag("--account"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/routingNumber",
-        exposure: Exposure::Flag("--routing"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/accountType",
-        exposure: Exposure::Flag("--account-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/accountHolderType",
-        exposure: Exposure::Flag("--account-holder-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/taxId",
-        exposure: Exposure::Flag("--tax-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/name",
-        exposure: Exposure::Flag("--name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-ach",
-        field: "/companyName",
-        exposure: Exposure::Flag("--company-name"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-methods-paymentMethodId",
-        field: "/paymentName",
-        exposure: Exposure::Flag("--name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-methods-paymentMethodId-set-default",
-        field: "?customerId",
-        // Required by the API, so clap requires it too.
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?pageIndex",
-        exposure: Exposure::Flag("--page-index"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?pageSize",
-        exposure: Exposure::Flag("--page-size"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?asc",
-        // The API defaults `asc` to true and a bare clap switch cannot
-        // express false, so the flag names the non-default direction and the
-        // parameter is sent only when it is asked for.
-        exposure: Exposure::Flag("--desc"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?sortBy",
-        exposure: Exposure::Flag("--sort-by"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?fullName",
-        exposure: Exposure::Flag("--full-name"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?email",
-        exposure: Exposure::Flag("--email"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?companyName",
-        exposure: Exposure::Flag("--company-name"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?mobilePhoneNumber",
-        exposure: Exposure::Flag("--mobile"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?createdFrom",
-        exposure: Exposure::Flag("--created-from"),
-    },
-    Field {
-        operation_id: "flute-v2-get-customers",
-        field: "?createdTo",
-        exposure: Exposure::Flag("--created-to"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/billingAddress/addressLine1",
-        exposure: Exposure::Flag("--billing-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/billingAddress/addressLine2",
-        exposure: Exposure::Flag("--billing-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/billingAddress/city",
-        exposure: Exposure::Flag("--billing-city"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/billingAddress/countryCode",
-        exposure: Exposure::Flag("--billing-country"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/billingAddress/postalCode",
-        exposure: Exposure::Flag("--billing-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/billingAddress/stateCode",
-        exposure: Exposure::Flag("--billing-state"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/companyName",
-        exposure: Exposure::Flag("--company"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/email",
-        exposure: Exposure::Flag("--email"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/firstName",
-        exposure: Exposure::Flag("--first-name"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/hasSmsConsent",
-        exposure: Exposure::Flag("--sms-consent"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/lastName",
-        exposure: Exposure::Flag("--last-name"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/mobilePhoneNumber",
-        exposure: Exposure::Flag("--mobile"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/shippingAddress/addressLine1",
-        exposure: Exposure::Flag("--shipping-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/shippingAddress/addressLine2",
-        exposure: Exposure::Flag("--shipping-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/shippingAddress/city",
-        exposure: Exposure::Flag("--shipping-city"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/shippingAddress/countryCode",
-        exposure: Exposure::Flag("--shipping-country"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/shippingAddress/postalCode",
-        exposure: Exposure::Flag("--shipping-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/shippingAddress/stateCode",
-        exposure: Exposure::Flag("--shipping-state"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-customers-customerId",
-        field: "/shouldUseBillingAsShippingAddress",
-        exposure: Exposure::Flag("--use-billing-as-shipping"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/billingAddress/addressLine1",
-        exposure: Exposure::Flag("--billing-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/billingAddress/addressLine2",
-        exposure: Exposure::Flag("--billing-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/billingAddress/city",
-        exposure: Exposure::Flag("--billing-city"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/billingAddress/countryCode",
-        exposure: Exposure::Flag("--billing-country"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/billingAddress/postalCode",
-        exposure: Exposure::Flag("--billing-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/billingAddress/stateCode",
-        exposure: Exposure::Flag("--billing-state"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/shippingAddress/addressLine1",
-        exposure: Exposure::Flag("--shipping-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/shippingAddress/addressLine2",
-        exposure: Exposure::Flag("--shipping-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/shippingAddress/city",
-        exposure: Exposure::Flag("--shipping-city"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/shippingAddress/countryCode",
-        exposure: Exposure::Flag("--shipping-country"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/shippingAddress/postalCode",
-        exposure: Exposure::Flag("--shipping-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/shippingAddress/stateCode",
-        exposure: Exposure::Flag("--shipping-state"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/firstName",
-        exposure: Exposure::Flag("--first-name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/lastName",
-        exposure: Exposure::Flag("--last-name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/companyName",
-        exposure: Exposure::Flag("--company"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/email",
-        exposure: Exposure::Flag("--email"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/mobilePhoneNumber",
-        exposure: Exposure::Flag("--mobile"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/hasSmsConsent",
-        exposure: Exposure::Flag("--sms-consent"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/shouldUseBillingAsShippingAddress",
-        exposure: Exposure::Flag("--use-billing-as-shipping"),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsAchAccounts/[]/accountHolderType",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsAchAccounts/[]/accountNumber",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsAchAccounts/[]/accountType",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsAchAccounts/[]/paymentName",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsAchAccounts/[]/routingNumber",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsAchAccounts/[]/taxId",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsCards/[]/cardNumber",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsCards/[]/expirationMonth",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsCards/[]/expirationYear",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsCards/[]/paymentName",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-customers",
-        field: "/paymentMethodsCards/[]/securityCode",
-        exposure: Exposure::Excluded(
-            "an instrument is added with `payment-methods add-card` / `add-ach`; \
-             inlining the whole instrument surface onto a customer command would \
-             duplicate it, and v1 keeps them separate too",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/paymentProcessorId",
-        exposure: Exposure::Flag("--payment-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/baseAmount",
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/referenceId",
-        exposure: Exposure::Flag("--reference-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/currencyCode",
-        exposure: Exposure::Flag("--currency-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/cardData/paymentMethodDetails/cardNumber",
-        exposure: Exposure::Flag("--card"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/cardData/paymentMethodDetails/securityCode",
-        exposure: Exposure::Flag("--cvv"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/cardData/paymentMethodDetails/expirationMonth",
-        exposure: Exposure::Flag("--exp"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/cardData/paymentMethodDetails/expirationYear",
-        exposure: Exposure::Flag("--exp"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/billingAddress/addressLine1",
-        exposure: Exposure::Flag("--billing-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/billingAddress/addressLine2",
-        exposure: Exposure::Flag("--billing-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/billingAddress/city",
-        exposure: Exposure::Flag("--billing-city"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/billingAddress/countryCode",
-        exposure: Exposure::Flag("--billing-country"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/billingAddress/postalCode",
-        exposure: Exposure::Flag("--billing-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/billingAddress/stateCode",
-        exposure: Exposure::Flag("--billing-state"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/shippingAddress/addressLine1",
-        exposure: Exposure::Flag("--shipping-line1"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/shippingAddress/addressLine2",
-        exposure: Exposure::Flag("--shipping-line2"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/shippingAddress/city",
-        exposure: Exposure::Flag("--shipping-city"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/shippingAddress/countryCode",
-        exposure: Exposure::Flag("--shipping-country"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/shippingAddress/postalCode",
-        exposure: Exposure::Flag("--shipping-postal-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/shippingAddress/stateCode",
-        exposure: Exposure::Flag("--shipping-state"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/appVersion",
-        exposure: Exposure::Excluded("SDK telemetry; meaningless from a CLI"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/sdkVersion",
-        exposure: Exposure::Excluded("SDK telemetry; meaningless from a CLI"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/platform",
-        exposure: Exposure::Excluded(
-            "SDK telemetry. Not fixed to a value either: the enum is not documented, \
-             so any constant would be a guess sent on every charge",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/deviceId",
-        exposure: Exposure::Excluded(
-            "identifies a POS terminal; `pos create` is the command that owns a device",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/cardData/paymentMethodId",
-        exposure: Exposure::Flag("--payment-method-id/--instrument"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/isSameDayProcessing",
-        exposure: Exposure::Flag("--same-day"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/paymentMethodDetails/accountHolderType",
-        exposure: Exposure::Flag("--ach-account-holder-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/paymentMethodDetails/accountNumber",
-        exposure: Exposure::Flag("--ach-account-number"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/paymentMethodDetails/accountType",
-        exposure: Exposure::Flag("--ach-account-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/paymentMethodDetails/routingNumber",
-        exposure: Exposure::Flag("--ach-routing-number"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/paymentMethodDetails/taxId",
-        exposure: Exposure::Flag("--ach-tax-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/paymentMethodId",
-        exposure: Exposure::Flag("--payment-method-id/--instrument"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/requesterIpAddress",
-        exposure: Exposure::Flag("--requester-ip"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionDetails/achData/secCode",
-        exposure: Exposure::Flag("--sec-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/contactInfo/companyName",
-        exposure: Exposure::Flag("--contact-company"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/contactInfo/email",
-        exposure: Exposure::Flag("--contact-email"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/contactInfo/firstName",
-        exposure: Exposure::Flag("--contact-first-name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/contactInfo/hasSmsConsent",
-        exposure: Exposure::Flag("--contact-sms-consent"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/contactInfo/lastName",
-        exposure: Exposure::Flag("--contact-last-name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/contactInfo/mobilePhoneNumber",
-        exposure: Exposure::Flag("--contact-phone"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/extraAmounts/discountAmount",
-        exposure: Exposure::Flag("--discount-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/extraAmounts/discountRate",
-        exposure: Exposure::Flag("--discount-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/extraAmounts/surchargeRate",
-        exposure: Exposure::Flag("--surcharge-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/extraAmounts/tipAmount",
-        exposure: Exposure::Flag("--tip-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/extraAmounts/tipRate",
-        exposure: Exposure::Flag("--tip-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/isCustomerInitiatedTransaction",
-        exposure: Exposure::Flag("--customer-initiated"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/pricingType",
-        exposure: Exposure::Flag("--pricing-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/dutyCharges",
-        // The server has no member for it. A charge carrying the field is
-        // rejected outright — not ignored — so a flag here could only ever
-        // break the request it was added to. The declaration is doubly
-        // suspect: it also puts `maxLength` on a `number`. Restore the flag
-        // when a live charge carrying `dutyCharges` succeeds.
-        exposure: Exposure::Excluded(
-            "the API rejects it: no member of TransactionEnhancedDataDto maps to              dutyCharges, though the schema declares it",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/invoiceNumber",
-        exposure: Exposure::Flag("--l3-invoice"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/discountRate",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/measurementUnit",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/productCode",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/productDescription",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/productName",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/quantity",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/taxAmount",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/products/[]/unitPrice",
-        exposure: Exposure::Flag("--l3-product"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/purchaseOrder",
-        exposure: Exposure::Flag("--l3-po"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/salesTaxRate",
-        exposure: Exposure::Flag("--l2-tax-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-transactions",
-        field: "/transactionEnhancedData/shippingCharges",
-        exposure: Exposure::Flag("--l3-shipping"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/terminalId",
-        exposure: Exposure::Flag("--terminal-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/posDeviceId",
-        exposure: Exposure::Flag("--pos-device-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/baseAmount",
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/currencyCode",
-        exposure: Exposure::Flag("--currency-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/waitForAcceptanceByTerminal",
-        // One of the two controls --wait drives. Always sent, because `false` is
-        // what "answer immediately" has to say.
-        exposure: Exposure::Flag("--wait"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/captureMethod",
-        exposure: Exposure::Flag("--capture-method"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/initiationChannel",
-        exposure: Exposure::Flag("--initiation-channel"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/readingMethod",
-        exposure: Exposure::Flag("--reading-method"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/pricingType",
-        exposure: Exposure::Flag("--pricing-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/paymentProcessorId",
-        // Optional here, unlike on a card transaction: the POS schema does not
-        // declare it required and the account's default processor governs.
-        exposure: Exposure::Flag("--payment-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/referenceId",
-        exposure: Exposure::Flag("--reference-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/requestPaymentMethodStorageConsent",
-        exposure: Exposure::Flag("--request-storage-consent"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/extraAmounts/tipAmount",
-        exposure: Exposure::Flag("--tip-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions",
-        field: "/extraAmounts/tipRate",
-        exposure: Exposure::Flag("--tip-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-post-pos-transactions-posTransactionId-print-receipt",
-        field: "/terminalId",
-        exposure: Exposure::Flag("--terminal-id"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?pageIndex",
-        exposure: Exposure::Flag("--page-index"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?pageSize",
-        exposure: Exposure::Flag("--page-size"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?sortBy",
-        exposure: Exposure::Flag("--sort-by"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?sortOrder",
-        exposure: Exposure::Flag("--asc/--desc"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?terminalId",
-        exposure: Exposure::Flag("--terminal-id"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?fromDate",
-        exposure: Exposure::Flag("--from"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?toDate",
-        exposure: Exposure::Flag("--to"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions",
-        field: "?posTransactionStatus",
-        exposure: Exposure::Flag("--status"),
-    },
-    Field {
-        operation_id: "flute-v2-get-pos-transactions-posTransactionId",
-        field: "?waitForTransactionProcessing",
-        // The other control --wait drives, and a flag of `pos get` in its own
-        // right. Omitted when absent, so the declared default governs.
-        exposure: Exposure::Flag("--wait"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?pageIndex",
-        exposure: Exposure::Flag("--page-index"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?pageSize",
-        exposure: Exposure::Flag("--page-size"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?sortBy",
-        exposure: Exposure::Flag("--sort-by"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?sortOrder",
-        exposure: Exposure::Flag("--asc/--desc"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?terminalStatus",
-        // The **query** enum: `Ready`, `Busy`, `Offline`. The response field of
-        // the same name declares `Active` instead of `Ready`.
-        exposure: Exposure::Flag("--status"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?terminalMode",
-        exposure: Exposure::Flag("--mode"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?connectionStatus",
-        exposure: Exposure::Flag("--connection"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?serialNumber",
-        exposure: Exposure::Flag("--serial-number"),
-    },
-    Field {
-        operation_id: "flute-v2-get-terminals",
-        field: "?search",
-        exposure: Exposure::Flag("--search"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?pageIndex",
-        exposure: Exposure::Flag("--page-index"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?pageSize",
-        exposure: Exposure::Flag("--page-size"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?sortBy",
-        exposure: Exposure::Flag("--sort-by"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?sortOrder",
-        // `desc` is the declared default **here**, unlike every other list, so
-        // the flag names ascending rather than descending.
-        exposure: Exposure::Flag("--asc"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?fromDate",
-        exposure: Exposure::Flag("--from"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?toDate",
-        exposure: Exposure::Flag("--to"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?batchIds",
-        // Array-typed and repeatable. `settlements get` sends the same filter
-        // with one value, which is why it needs no endpoint of its own.
-        exposure: Exposure::Flag("--batch-ids"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?paymentProcessorIds",
-        exposure: Exposure::Flag("--processor-ids"),
-    },
-    Field {
-        operation_id: "flute-v2-get-settlements-batches",
-        field: "?batchStatus",
-        exposure: Exposure::Flag("--status"),
-    },
-    Field {
-        operation_id: "flute-v2-post-settlements-batches-close",
-        field: "/paymentProcessorId",
-        exposure: Exposure::Flag("--payment-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level2Settings/taxRate",
-        // Declared 0 to 22. `transactions create` carries the same idea as
-        // `salesTaxRate` with a declared 0.01 to 100, and each is taken from
-        // its own schema rather than harmonised.
-        exposure: Exposure::Flag("--l2-tax-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/shippingChargeRate",
-        // A **rate** here, where `transactions create` sends an amount under
-        // `shippingCharges` — hence the suffix rather than a bare --l3-shipping.
-        exposure: Exposure::Flag("--l3-shipping-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/dutyChargeRate",
-        exposure: Exposure::Flag("--l3-duty-rate"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/product/productName",
-        exposure: Exposure::Flag("--product-name"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/product/code",
-        // `code`, not the transaction product's `productCode`.
-        exposure: Exposure::Flag("--product-code"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/product/description",
-        // The server has no member for it. A patch carrying the field is
-        // rejected outright — not ignored — so a flag here could only ever
-        // break the request it was added to, and the read carries no
-        // description either. Restore the flag when a live patch setting one
-        // succeeds.
-        exposure: Exposure::Excluded(
-            "the API rejects it: no member of the autofill product patch maps \
-             to description, though the schema declares it",
-        ),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/product/measurementUnit",
-        exposure: Exposure::Flag("--product-unit"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/product/unitPrice",
-        exposure: Exposure::Flag("--product-unit-price"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/product/quantity",
-        exposure: Exposure::Flag("--product-quantity"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-settings-transaction-autofill",
-        field: "/level3Settings/product/discountPercentage",
-        // `discountPercentage`, not the transaction product's `discountRate`.
-        exposure: Exposure::Flag("--product-discount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/paymentMethods/card/enabled",
-        exposure: Exposure::Flag("--card-enabled"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/paymentMethods/card/processorId",
-        exposure: Exposure::Flag("--card-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/paymentMethods/ach/enabled",
-        exposure: Exposure::Flag("--ach-enabled"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/paymentMethods/ach/processorId",
-        exposure: Exposure::Flag("--ach-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/baseAmount",
-        // Omitted entirely for a flexible-amount link the payer fills in, which
-        // is what the schema documents an absent amount as meaning.
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/currencyCode",
-        exposure: Exposure::Flag("--currency-code"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/linkType",
-        exposure: Exposure::Flag("--link-type"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/referenceId",
-        exposure: Exposure::Flag("--reference-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/name",
-        exposure: Exposure::Flag("--name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/description",
-        exposure: Exposure::Flag("--description"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links",
-        field: "/expiresOn",
-        exposure: Exposure::Flag("--expires-on"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/paymentMethods/card/enabled",
-        // Valued here, where `create`'s is a bare switch: a PATCH has to be
-        // able to turn a method off.
-        exposure: Exposure::Flag("--card-enabled"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/paymentMethods/card/processorId",
-        exposure: Exposure::Flag("--card-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/paymentMethods/ach/enabled",
-        exposure: Exposure::Flag("--ach-enabled"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/paymentMethods/ach/processorId",
-        exposure: Exposure::Flag("--ach-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/baseAmount",
-        // Both directions: a value sets it, and either clearing spelling sends
-        // the explicit null the merge patch reads as "make this flexible".
-        exposure: Exposure::Flag("--amount/--clear"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/currencyCode",
-        // Neither clearing spelling is offered: the schema says it cannot be
-        // cleared.
-        exposure: Exposure::Flag("--currency-code"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/linkType",
-        exposure: Exposure::Flag("--link-type"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/paymentLinkStatus",
-        exposure: Exposure::Flag("--status"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/customerId",
-        exposure: Exposure::Flag("--customer-id/--clear"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/referenceId",
-        exposure: Exposure::Flag("--reference-id/--clear"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/name",
-        // Likewise unclearable by declaration.
-        exposure: Exposure::Flag("--name"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/description",
-        exposure: Exposure::Flag("--description/--clear"),
-    },
-    Field {
-        operation_id: "flute-v2-patch-payment-links-paymentLinkId",
-        field: "/expiresOn",
-        exposure: Exposure::Flag("--expires-on/--clear"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links-paymentLinkId-share",
-        field: "/shareBy",
-        // Two values here — `Email` and `Sms`. The transaction receipt's field
-        // of the same name declares a third, so the enums are not shared.
-        exposure: Exposure::Flag("--share-by"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links-paymentLinkId-share",
-        field: "/recipient",
-        exposure: Exposure::Flag("--recipient"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-links-paymentLinkId-share",
-        field: "/hasCustomerConsent",
-        // Required, so it is always sent — `false` included, which is what lets
-        // the API refuse an unconsented share.
-        exposure: Exposure::Flag("--consent"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-links",
-        field: "?pageIndex",
-        exposure: Exposure::Flag("--page-index"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-links",
-        field: "?pageSize",
-        exposure: Exposure::Flag("--page-size"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-links",
-        field: "?search",
-        exposure: Exposure::Flag("--search"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-links",
-        field: "?linkType",
-        exposure: Exposure::Flag("--link-type"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-links",
-        field: "?paymentLinkStatus",
-        exposure: Exposure::Flag("--status"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-links",
-        field: "?sortBy",
-        exposure: Exposure::Flag("--sort-by"),
-    },
-    Field {
-        operation_id: "flute-v2-get-payment-links",
-        field: "?sortOrder",
-        exposure: Exposure::Flag("--asc/--desc"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/mode",
-        exposure: Exposure::Flag("--mode"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/amount",
-        // Three documented meanings, none of them expressible in the schema:
-        // greater than zero for a paying session, exactly zero for a vault-only
-        // one, and absent for a flexible amount set at checkout.
-        exposure: Exposure::Flag("--amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/tipAmount",
-        exposure: Exposure::Flag("--tip-amount"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/customerId",
-        exposure: Exposure::Flag("--customer-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/customerHandling",
-        exposure: Exposure::Flag("--customer-handling"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/referenceId",
-        exposure: Exposure::Flag("--reference-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/returnUrl",
-        exposure: Exposure::Flag("--return-url"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/skipAddressVerification",
-        exposure: Exposure::Flag("--skip-address-verification"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/pageName",
-        exposure: Exposure::Flag("--page-name"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/paymentNotes",
-        exposure: Exposure::Flag("--payment-notes"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/afterCompletionMessage",
-        exposure: Exposure::Flag("--after-completion-message"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/expiresAt",
-        exposure: Exposure::Flag("--expires-at"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/metadata",
-        // A free-form string map, so one repeatable `key=value` flag rather than
-        // a flag per key. Its leaf is the container, because the schema names
-        // no properties inside it.
-        exposure: Exposure::Flag("--metadata"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/paymentMethods/card/enabled",
-        exposure: Exposure::Flag("--card-enabled"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/paymentMethods/card/processorId",
-        exposure: Exposure::Flag("--card-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/paymentMethods/ach/enabled",
-        exposure: Exposure::Flag("--ach-enabled"),
-    },
-    Field {
-        operation_id: "flute-v2-post-payment-sessions",
-        field: "/paymentMethods/ach/processorId",
-        exposure: Exposure::Flag("--ach-processor-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-api-keys",
-        field: "/merchantId",
-        exposure: Exposure::Flag("--merchant-id"),
-    },
-    Field {
-        operation_id: "flute-v2-post-api-keys",
-        field: "/apiKeyName",
-        exposure: Exposure::Flag("--name"),
-    },
-    Field {
-        operation_id: "flute-v2-get-api-keys",
-        field: "?merchantId",
-        // The only query parameter this group has. `GetApiKeysResponseDto`
-        // declares no `pageInfo`, so there is no pagination to expose here and
-        // the shared flags are rejected as unknown.
-        exposure: Exposure::Flag("--merchant-id"),
-    },
+/// One row: the operation, the field, and how the CLI reaches it.
+type Row = (&'static str, &'static str, Exposure);
+
+/// Every row: [`ROWS`], plus the billing and shipping address leaves of each
+/// operation in [`ADDRESSED`].
+pub static SURFACE: LazyLock<Vec<Field>> = LazyLock::new(|| {
+    let addresses = ADDRESSED.iter().flat_map(|op| address_rows(op));
+    ROWS.iter()
+        .cloned()
+        .chain(addresses)
+        .map(|(operation_id, field, exposure)| Field {
+            operation_id,
+            field,
+            exposure,
+        })
+        .collect()
+});
+
+/// The operations that take a billing and a shipping address, each through
+/// the same six `--billing-*` and `--shipping-*` flags.
+const ADDRESSED: &[&str] = &[
+    "flute-v2-post-transactions-credit",
+    "flute-v2-patch-customers-customerId",
+    "flute-v2-post-customers",
+    "flute-v2-post-transactions",
+];
+
+/// The twelve address leaves of one operation in [`ADDRESSED`].
+fn address_rows(op: &'static str) -> Vec<Row> {
+    let mut rows = Vec::new();
+    for (object, prefix) in [
+        ("billingAddress", "--billing"),
+        ("shippingAddress", "--shipping"),
+    ] {
+        for (leaf, suffix) in [
+            ("addressLine1", "line1"),
+            ("addressLine2", "line2"),
+            ("city", "city"),
+            ("countryCode", "country"),
+            ("postalCode", "postal-code"),
+            ("stateCode", "state"),
+        ] {
+            let field: &'static str = format!("/{object}/{leaf}").leak();
+            let flag: &'static str = format!("{prefix}-{suffix}").leak();
+            rows.push((op, field, Flag(flag)));
+        }
+    }
+    rows
+}
+
+#[rustfmt::skip]
+const ROWS: &[Row] = &[
+    ("flute-v2-post-transactions-credit", "/paymentProcessorId", Flag("--payment-processor-id")),
+    ("flute-v2-post-transactions-credit", "/baseAmount", Flag("--amount")),
+    // Required here, unlike on `create`.
+    ("flute-v2-post-transactions-credit", "/referenceId", Flag("--reference-id")),
+    ("flute-v2-post-transactions-credit", "/currencyCode", Flag("--currency-code")),
+    ("flute-v2-post-transactions-credit", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-transactions-credit", "/contactInfo/firstName", Flag("--contact-first-name")),
+    ("flute-v2-post-transactions-credit", "/contactInfo/lastName", Flag("--contact-last-name")),
+    ("flute-v2-post-transactions-credit", "/contactInfo/companyName", Flag("--contact-company")),
+    ("flute-v2-post-transactions-credit", "/contactInfo/email", Flag("--contact-email")),
+    ("flute-v2-post-transactions-credit", "/contactInfo/mobilePhoneNumber", Flag("--contact-phone")),
+    ("flute-v2-post-transactions-credit", "/contactInfo/hasSmsConsent", Flag("--contact-sms-consent")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodId", Flag("--payment-method-id/--instrument")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/cardNumber", Flag("--card")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/securityCode", Flag("--cvv")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/expirationMonth", Flag("--exp")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/expirationYear", Flag("--exp")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/paymentMethodId", Flag("--payment-method-id/--instrument")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/paymentMethodDetails/accountNumber", Flag("--ach-account-number")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/paymentMethodDetails/routingNumber", Flag("--ach-routing-number")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/paymentMethodDetails/accountType", Flag("--ach-account-type")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/paymentMethodDetails/accountHolderType", Flag("--ach-account-holder-type")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/paymentMethodDetails/taxId", Flag("--ach-tax-id")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/secCode", Flag("--sec-code")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/requesterIpAddress", Flag("--requester-ip")),
+    ("flute-v2-post-transactions-credit", "/creditDetails/achData/isSameDayProcessing", Flag("--same-day")),
+    ("flute-v2-get-transactions", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-transactions", "?pageSize", Flag("--page-size")),
+    ("flute-v2-get-transactions", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-transactions", "?sortOrder", Flag("--asc/--desc")),
+    ("flute-v2-get-transactions", "?fromDate", Flag("--from")),
+    ("flute-v2-get-transactions", "?toDate", Flag("--to")),
+    ("flute-v2-get-transactions", "?sourceType", Flag("--source-type")),
+    ("flute-v2-get-transactions", "?sourceId", Flag("--source-id")),
+    ("flute-v2-get-transactions", "?batchId", Flag("--batch-id")),
+    ("flute-v2-get-transactions", "?transactionStatus", Flag("--status")),
+    ("flute-v2-get-transactions", "?paymentMethodType", Flag("--payment-method-type")),
+    ("flute-v2-get-transactions", "?customerId", Flag("--customer-id")),
+    ("flute-v2-get-transactions", "?merchantId", Flag("--merchant-id")),
+    ("flute-v2-get-transactions", "?minAmount", Flag("--min-amount")),
+    ("flute-v2-get-transactions", "?maxAmount", Flag("--max-amount")),
+    ("flute-v2-get-transactions", "?referenceId", Flag("--reference-id")),
+    // The schema declares `captureAmount` and the operation's own
+    // request example sends `amount`. The schema is normative, so this is
+    // what the flag reaches.
+    ("flute-v2-post-transactions-transactionId-capture", "/captureAmount", Flag("--amount")),
+    ("flute-v2-post-transactions-transactionId-reversal", "/reversalAmount", Flag("--amount")),
+    ("flute-v2-post-transactions-transactionId-tip-adjustment", "/tipAmount", Flag("--tip-amount")),
+    ("flute-v2-post-transactions-transactionId-tip-adjustment", "/tipRate", Flag("--tip-rate")),
+    ("flute-v2-post-transactions-transactionId-share-receipt", "/shareBy", Flag("--share-by")),
+    ("flute-v2-post-transactions-transactionId-share-receipt", "/recipient", Flag("--recipient")),
+    ("flute-v2-post-transactions-transactionId-share-receipt", "/hasCustomerConsent", Flag("--consent")),
+    ("flute-v2-post-transactions-calculate-amount", "/baseAmount", Flag("--amount")),
+    ("flute-v2-post-transactions-calculate-amount", "/currencyCode", Flag("--currency-code")),
+    ("flute-v2-post-transactions-calculate-amount", "/pricingType", Flag("--pricing-type")),
+    ("flute-v2-post-transactions-calculate-amount", "/tipAmount", Flag("--tip-amount")),
+    ("flute-v2-post-transactions-calculate-amount", "/tipRate", Flag("--tip-rate")),
+    ("flute-v2-post-transactions-calculate-amount", "/discountAmount", Flag("--discount-amount")),
+    ("flute-v2-post-transactions-calculate-amount", "/discountRate", Flag("--discount-rate")),
+    ("flute-v2-post-transactions-calculate-amount", "/surchargeRate", Flag("--surcharge-rate")),
+    ("flute-v2-get-payment-methods", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-payment-methods", "?pageSize", Flag("--page-size")),
+    // As on `customers list`: the API defaults `asc` to true, so the
+    // flag names the non-default direction.
+    ("flute-v2-get-payment-methods", "?asc", Flag("--desc")),
+    ("flute-v2-get-payment-methods", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-payment-methods", "?search", Flag("--search")),
+    ("flute-v2-get-payment-methods", "?createdFrom", Flag("--created-from")),
+    ("flute-v2-get-payment-methods", "?createdTo", Flag("--created-to")),
+    ("flute-v2-get-payment-methods", "?customerId", Flag("--customer-id")),
+    ("flute-v2-post-payment-methods-cards", "/cardNumber", Flag("--card")),
+    ("flute-v2-post-payment-methods-cards", "/securityCode", Flag("--cvv")),
+    // One MM/YY flag fills both halves, as on `transactions create`.
+    ("flute-v2-post-payment-methods-cards", "/expirationMonth", Flag("--exp")),
+    ("flute-v2-post-payment-methods-cards", "/expirationYear", Flag("--exp")),
+    ("flute-v2-post-payment-methods-cards", "/customerId", Flag("--customer-id")),
+    // The label is `paymentName` here and `name` on the ACH route. One
+    // flag covers both, so an inconsistency in the API does not become
+    // one in the CLI.
+    ("flute-v2-post-payment-methods-cards", "/paymentName", Flag("--name")),
+    ("flute-v2-post-payment-methods-ach", "/accountNumber", Flag("--account")),
+    ("flute-v2-post-payment-methods-ach", "/routingNumber", Flag("--routing")),
+    ("flute-v2-post-payment-methods-ach", "/accountType", Flag("--account-type")),
+    ("flute-v2-post-payment-methods-ach", "/accountHolderType", Flag("--account-holder-type")),
+    ("flute-v2-post-payment-methods-ach", "/taxId", Flag("--tax-id")),
+    ("flute-v2-post-payment-methods-ach", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-payment-methods-ach", "/name", Flag("--name")),
+    ("flute-v2-post-payment-methods-ach", "/companyName", Flag("--company-name")),
+    ("flute-v2-patch-payment-methods-paymentMethodId", "/paymentName", Flag("--name")),
+    // Required by the API, so clap requires it too.
+    ("flute-v2-post-payment-methods-paymentMethodId-set-default", "?customerId", Flag("--customer-id")),
+    ("flute-v2-get-customers", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-customers", "?pageSize", Flag("--page-size")),
+    // The API defaults `asc` to true and a bare clap switch cannot
+    // express false, so the flag names the non-default direction and the
+    // parameter is sent only when it is asked for.
+    ("flute-v2-get-customers", "?asc", Flag("--desc")),
+    ("flute-v2-get-customers", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-customers", "?fullName", Flag("--full-name")),
+    ("flute-v2-get-customers", "?email", Flag("--email")),
+    ("flute-v2-get-customers", "?companyName", Flag("--company-name")),
+    ("flute-v2-get-customers", "?mobilePhoneNumber", Flag("--mobile")),
+    ("flute-v2-get-customers", "?createdFrom", Flag("--created-from")),
+    ("flute-v2-get-customers", "?createdTo", Flag("--created-to")),
+    ("flute-v2-patch-customers-customerId", "/companyName", Flag("--company")),
+    ("flute-v2-patch-customers-customerId", "/email", Flag("--email")),
+    ("flute-v2-patch-customers-customerId", "/firstName", Flag("--first-name")),
+    ("flute-v2-patch-customers-customerId", "/hasSmsConsent", Flag("--sms-consent")),
+    ("flute-v2-patch-customers-customerId", "/lastName", Flag("--last-name")),
+    ("flute-v2-patch-customers-customerId", "/mobilePhoneNumber", Flag("--mobile")),
+    ("flute-v2-patch-customers-customerId", "/shouldUseBillingAsShippingAddress", Flag("--use-billing-as-shipping")),
+    ("flute-v2-post-customers", "/firstName", Flag("--first-name")),
+    ("flute-v2-post-customers", "/lastName", Flag("--last-name")),
+    ("flute-v2-post-customers", "/companyName", Flag("--company")),
+    ("flute-v2-post-customers", "/email", Flag("--email")),
+    ("flute-v2-post-customers", "/mobilePhoneNumber", Flag("--mobile")),
+    ("flute-v2-post-customers", "/hasSmsConsent", Flag("--sms-consent")),
+    ("flute-v2-post-customers", "/shouldUseBillingAsShippingAddress", Flag("--use-billing-as-shipping")),
+    ("flute-v2-post-customers", "/paymentMethodsAchAccounts/[]/accountHolderType", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsAchAccounts/[]/accountNumber", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsAchAccounts/[]/accountType", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsAchAccounts/[]/paymentName", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsAchAccounts/[]/routingNumber", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsAchAccounts/[]/taxId", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsCards/[]/cardNumber", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsCards/[]/expirationMonth", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsCards/[]/expirationYear", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsCards/[]/paymentName", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-customers", "/paymentMethodsCards/[]/securityCode", Excluded(
+        "an instrument is added with `payment-methods add-card` / `add-ach`; \
+        inlining the whole instrument surface onto a customer command would \
+        duplicate it, and v1 keeps them separate too",
+        )),
+    ("flute-v2-post-transactions", "/paymentProcessorId", Flag("--payment-processor-id")),
+    ("flute-v2-post-transactions", "/baseAmount", Flag("--amount")),
+    ("flute-v2-post-transactions", "/referenceId", Flag("--reference-id")),
+    ("flute-v2-post-transactions", "/currencyCode", Flag("--currency-code")),
+    ("flute-v2-post-transactions", "/transactionDetails/cardData/paymentMethodDetails/cardNumber", Flag("--card")),
+    ("flute-v2-post-transactions", "/transactionDetails/cardData/paymentMethodDetails/securityCode", Flag("--cvv")),
+    ("flute-v2-post-transactions", "/transactionDetails/cardData/paymentMethodDetails/expirationMonth", Flag("--exp")),
+    ("flute-v2-post-transactions", "/transactionDetails/cardData/paymentMethodDetails/expirationYear", Flag("--exp")),
+    ("flute-v2-post-transactions", "/appVersion", Excluded("SDK telemetry; meaningless from a CLI")),
+    ("flute-v2-post-transactions", "/sdkVersion", Excluded("SDK telemetry; meaningless from a CLI")),
+    ("flute-v2-post-transactions", "/platform", Excluded(
+        "SDK telemetry. Not fixed to a value either: the enum is not documented, \
+        so any constant would be a guess sent on every charge",
+        )),
+    ("flute-v2-post-transactions", "/deviceId", Excluded(
+        "identifies a POS terminal; `pos create` is the command that owns a device",
+        )),
+    ("flute-v2-post-transactions", "/transactionDetails/cardData/paymentMethodId", Flag("--payment-method-id/--instrument")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/isSameDayProcessing", Flag("--same-day")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/paymentMethodDetails/accountHolderType", Flag("--ach-account-holder-type")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/paymentMethodDetails/accountNumber", Flag("--ach-account-number")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/paymentMethodDetails/accountType", Flag("--ach-account-type")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/paymentMethodDetails/routingNumber", Flag("--ach-routing-number")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/paymentMethodDetails/taxId", Flag("--ach-tax-id")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/paymentMethodId", Flag("--payment-method-id/--instrument")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/requesterIpAddress", Flag("--requester-ip")),
+    ("flute-v2-post-transactions", "/transactionDetails/achData/secCode", Flag("--sec-code")),
+    ("flute-v2-post-transactions", "/contactInfo/companyName", Flag("--contact-company")),
+    ("flute-v2-post-transactions", "/contactInfo/email", Flag("--contact-email")),
+    ("flute-v2-post-transactions", "/contactInfo/firstName", Flag("--contact-first-name")),
+    ("flute-v2-post-transactions", "/contactInfo/hasSmsConsent", Flag("--contact-sms-consent")),
+    ("flute-v2-post-transactions", "/contactInfo/lastName", Flag("--contact-last-name")),
+    ("flute-v2-post-transactions", "/contactInfo/mobilePhoneNumber", Flag("--contact-phone")),
+    ("flute-v2-post-transactions", "/extraAmounts/discountAmount", Flag("--discount-amount")),
+    ("flute-v2-post-transactions", "/extraAmounts/discountRate", Flag("--discount-rate")),
+    ("flute-v2-post-transactions", "/extraAmounts/surchargeRate", Flag("--surcharge-rate")),
+    ("flute-v2-post-transactions", "/extraAmounts/tipAmount", Flag("--tip-amount")),
+    ("flute-v2-post-transactions", "/extraAmounts/tipRate", Flag("--tip-rate")),
+    ("flute-v2-post-transactions", "/isCustomerInitiatedTransaction", Flag("--customer-initiated")),
+    ("flute-v2-post-transactions", "/pricingType", Flag("--pricing-type")),
+    // The server has no member for it. A charge carrying the field is
+    // rejected outright — not ignored — so a flag here could only ever
+    // break the request it was added to. The declaration is doubly
+    // suspect: it also puts `maxLength` on a `number`. Restore the flag
+    // when a live charge carrying `dutyCharges` succeeds.
+    ("flute-v2-post-transactions", "/transactionEnhancedData/dutyCharges", Excluded(
+        "the API rejects it: no member of TransactionEnhancedDataDto maps to              dutyCharges, though the schema declares it",
+        )),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/invoiceNumber", Flag("--l3-invoice")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/discountRate", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/measurementUnit", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/productCode", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/productDescription", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/productName", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/quantity", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/taxAmount", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/unitPrice", Flag("--l3-product")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/purchaseOrder", Flag("--l3-po")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/salesTaxRate", Flag("--l2-tax-rate")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/shippingCharges", Flag("--l3-shipping")),
+    ("flute-v2-post-pos-transactions", "/terminalId", Flag("--terminal-id")),
+    ("flute-v2-post-pos-transactions", "/posDeviceId", Flag("--pos-device-id")),
+    ("flute-v2-post-pos-transactions", "/baseAmount", Flag("--amount")),
+    ("flute-v2-post-pos-transactions", "/currencyCode", Flag("--currency-code")),
+    // One of the two controls --wait drives. Always sent, because `false` is
+    // what "answer immediately" has to say.
+    ("flute-v2-post-pos-transactions", "/waitForAcceptanceByTerminal", Flag("--wait")),
+    ("flute-v2-post-pos-transactions", "/captureMethod", Flag("--capture-method")),
+    ("flute-v2-post-pos-transactions", "/initiationChannel", Flag("--initiation-channel")),
+    ("flute-v2-post-pos-transactions", "/readingMethod", Flag("--reading-method")),
+    ("flute-v2-post-pos-transactions", "/pricingType", Flag("--pricing-type")),
+    // Optional here, unlike on a card transaction: the POS schema does not
+    // declare it required and the account's default processor governs.
+    ("flute-v2-post-pos-transactions", "/paymentProcessorId", Flag("--payment-processor-id")),
+    ("flute-v2-post-pos-transactions", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-pos-transactions", "/referenceId", Flag("--reference-id")),
+    ("flute-v2-post-pos-transactions", "/requestPaymentMethodStorageConsent", Flag("--request-storage-consent")),
+    ("flute-v2-post-pos-transactions", "/extraAmounts/tipAmount", Flag("--tip-amount")),
+    ("flute-v2-post-pos-transactions", "/extraAmounts/tipRate", Flag("--tip-rate")),
+    ("flute-v2-post-pos-transactions-posTransactionId-print-receipt", "/terminalId", Flag("--terminal-id")),
+    ("flute-v2-get-pos-transactions", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-pos-transactions", "?pageSize", Flag("--page-size")),
+    ("flute-v2-get-pos-transactions", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-pos-transactions", "?sortOrder", Flag("--asc/--desc")),
+    ("flute-v2-get-pos-transactions", "?terminalId", Flag("--terminal-id")),
+    ("flute-v2-get-pos-transactions", "?fromDate", Flag("--from")),
+    ("flute-v2-get-pos-transactions", "?toDate", Flag("--to")),
+    ("flute-v2-get-pos-transactions", "?posTransactionStatus", Flag("--status")),
+    // The other control --wait drives, and a flag of `pos get` in its own
+    // right. Omitted when absent, so the declared default governs.
+    ("flute-v2-get-pos-transactions-posTransactionId", "?waitForTransactionProcessing", Flag("--wait")),
+    ("flute-v2-get-terminals", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-terminals", "?pageSize", Flag("--page-size")),
+    ("flute-v2-get-terminals", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-terminals", "?sortOrder", Flag("--asc/--desc")),
+    // The **query** enum: `Ready`, `Busy`, `Offline`. The response field of
+    // the same name declares `Active` instead of `Ready`.
+    ("flute-v2-get-terminals", "?terminalStatus", Flag("--status")),
+    ("flute-v2-get-terminals", "?terminalMode", Flag("--mode")),
+    ("flute-v2-get-terminals", "?connectionStatus", Flag("--connection")),
+    ("flute-v2-get-terminals", "?serialNumber", Flag("--serial-number")),
+    ("flute-v2-get-terminals", "?search", Flag("--search")),
+    ("flute-v2-get-settlements-batches", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-settlements-batches", "?pageSize", Flag("--page-size")),
+    ("flute-v2-get-settlements-batches", "?sortBy", Flag("--sort-by")),
+    // `desc` is the declared default **here**, unlike every other list, so
+    // the flag names ascending rather than descending.
+    ("flute-v2-get-settlements-batches", "?sortOrder", Flag("--asc")),
+    ("flute-v2-get-settlements-batches", "?fromDate", Flag("--from")),
+    ("flute-v2-get-settlements-batches", "?toDate", Flag("--to")),
+    // Array-typed and repeatable. `settlements get` sends the same filter
+    // with one value, which is why it needs no endpoint of its own.
+    ("flute-v2-get-settlements-batches", "?batchIds", Flag("--batch-ids")),
+    ("flute-v2-get-settlements-batches", "?paymentProcessorIds", Flag("--processor-ids")),
+    ("flute-v2-get-settlements-batches", "?batchStatus", Flag("--status")),
+    ("flute-v2-post-settlements-batches-close", "/paymentProcessorId", Flag("--payment-processor-id")),
+    // Declared 0 to 22. `transactions create` carries the same idea as
+    // `salesTaxRate` with a declared 0.01 to 100, and each is taken from
+    // its own schema rather than harmonised.
+    ("flute-v2-patch-settings-transaction-autofill", "/level2Settings/taxRate", Flag("--l2-tax-rate")),
+    // A **rate** here, where `transactions create` sends an amount under
+    // `shippingCharges` — hence the suffix rather than a bare --l3-shipping.
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/shippingChargeRate", Flag("--l3-shipping-rate")),
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/dutyChargeRate", Flag("--l3-duty-rate")),
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/product/productName", Flag("--product-name")),
+    // `code`, not the transaction product's `productCode`.
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/product/code", Flag("--product-code")),
+    // The server has no member for it. A patch carrying the field is
+    // rejected outright — not ignored — so a flag here could only ever
+    // break the request it was added to, and the read carries no
+    // description either. Restore the flag when a live patch setting one
+    // succeeds.
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/product/description", Excluded(
+        "the API rejects it: no member of the autofill product patch maps \
+        to description, though the schema declares it",
+        )),
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/product/measurementUnit", Flag("--product-unit")),
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/product/unitPrice", Flag("--product-unit-price")),
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/product/quantity", Flag("--product-quantity")),
+    // `discountPercentage`, not the transaction product's `discountRate`.
+    ("flute-v2-patch-settings-transaction-autofill", "/level3Settings/product/discountPercentage", Flag("--product-discount")),
+    ("flute-v2-post-payment-links", "/paymentMethods/card/enabled", Flag("--card-enabled")),
+    ("flute-v2-post-payment-links", "/paymentMethods/card/processorId", Flag("--card-processor-id")),
+    ("flute-v2-post-payment-links", "/paymentMethods/ach/enabled", Flag("--ach-enabled")),
+    ("flute-v2-post-payment-links", "/paymentMethods/ach/processorId", Flag("--ach-processor-id")),
+    // Omitted entirely for a flexible-amount link the payer fills in, which
+    // is what the schema documents an absent amount as meaning.
+    ("flute-v2-post-payment-links", "/baseAmount", Flag("--amount")),
+    ("flute-v2-post-payment-links", "/currencyCode", Flag("--currency-code")),
+    ("flute-v2-post-payment-links", "/linkType", Flag("--link-type")),
+    ("flute-v2-post-payment-links", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-payment-links", "/referenceId", Flag("--reference-id")),
+    ("flute-v2-post-payment-links", "/name", Flag("--name")),
+    ("flute-v2-post-payment-links", "/description", Flag("--description")),
+    ("flute-v2-post-payment-links", "/expiresOn", Flag("--expires-on")),
+    // Valued here, where `create`'s is a bare switch: a PATCH has to be
+    // able to turn a method off.
+    ("flute-v2-patch-payment-links-paymentLinkId", "/paymentMethods/card/enabled", Flag("--card-enabled")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/paymentMethods/card/processorId", Flag("--card-processor-id")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/paymentMethods/ach/enabled", Flag("--ach-enabled")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/paymentMethods/ach/processorId", Flag("--ach-processor-id")),
+    // Both directions: a value sets it, and either clearing spelling sends
+    // the explicit null the merge patch reads as "make this flexible".
+    ("flute-v2-patch-payment-links-paymentLinkId", "/baseAmount", Flag("--amount/--clear")),
+    // Neither clearing spelling is offered: the schema says it cannot be
+    // cleared.
+    ("flute-v2-patch-payment-links-paymentLinkId", "/currencyCode", Flag("--currency-code")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/linkType", Flag("--link-type")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/paymentLinkStatus", Flag("--status")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/customerId", Flag("--customer-id/--clear")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/referenceId", Flag("--reference-id/--clear")),
+    // Likewise unclearable by declaration.
+    ("flute-v2-patch-payment-links-paymentLinkId", "/name", Flag("--name")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/description", Flag("--description/--clear")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/expiresOn", Flag("--expires-on/--clear")),
+    // Two values here — `Email` and `Sms`. The transaction receipt's field
+    // of the same name declares a third, so the enums are not shared.
+    ("flute-v2-post-payment-links-paymentLinkId-share", "/shareBy", Flag("--share-by")),
+    ("flute-v2-post-payment-links-paymentLinkId-share", "/recipient", Flag("--recipient")),
+    // Required, so it is always sent — `false` included, which is what lets
+    // the API refuse an unconsented share.
+    ("flute-v2-post-payment-links-paymentLinkId-share", "/hasCustomerConsent", Flag("--consent")),
+    ("flute-v2-get-payment-links", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-payment-links", "?pageSize", Flag("--page-size")),
+    ("flute-v2-get-payment-links", "?search", Flag("--search")),
+    ("flute-v2-get-payment-links", "?linkType", Flag("--link-type")),
+    ("flute-v2-get-payment-links", "?paymentLinkStatus", Flag("--status")),
+    ("flute-v2-get-payment-links", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-payment-links", "?sortOrder", Flag("--asc/--desc")),
+    ("flute-v2-post-payment-sessions", "/mode", Flag("--mode")),
+    // Three documented meanings, none of them expressible in the schema:
+    // greater than zero for a paying session, exactly zero for a vault-only
+    // one, and absent for a flexible amount set at checkout.
+    ("flute-v2-post-payment-sessions", "/amount", Flag("--amount")),
+    ("flute-v2-post-payment-sessions", "/tipAmount", Flag("--tip-amount")),
+    ("flute-v2-post-payment-sessions", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-payment-sessions", "/customerHandling", Flag("--customer-handling")),
+    ("flute-v2-post-payment-sessions", "/referenceId", Flag("--reference-id")),
+    ("flute-v2-post-payment-sessions", "/returnUrl", Flag("--return-url")),
+    ("flute-v2-post-payment-sessions", "/skipAddressVerification", Flag("--skip-address-verification")),
+    ("flute-v2-post-payment-sessions", "/pageName", Flag("--page-name")),
+    ("flute-v2-post-payment-sessions", "/paymentNotes", Flag("--payment-notes")),
+    ("flute-v2-post-payment-sessions", "/afterCompletionMessage", Flag("--after-completion-message")),
+    ("flute-v2-post-payment-sessions", "/expiresAt", Flag("--expires-at")),
+    // A free-form string map, so one repeatable `key=value` flag rather than
+    // a flag per key. Its leaf is the container, because the schema names
+    // no properties inside it.
+    ("flute-v2-post-payment-sessions", "/metadata", Flag("--metadata")),
+    ("flute-v2-post-payment-sessions", "/paymentMethods/card/enabled", Flag("--card-enabled")),
+    ("flute-v2-post-payment-sessions", "/paymentMethods/card/processorId", Flag("--card-processor-id")),
+    ("flute-v2-post-payment-sessions", "/paymentMethods/ach/enabled", Flag("--ach-enabled")),
+    ("flute-v2-post-payment-sessions", "/paymentMethods/ach/processorId", Flag("--ach-processor-id")),
+    ("flute-v2-post-api-keys", "/merchantId", Flag("--merchant-id")),
+    ("flute-v2-post-api-keys", "/apiKeyName", Flag("--name")),
+    // The only query parameter this group has. `GetApiKeysResponseDto`
+    // declares no `pageInfo`, so there is no pagination to expose here and
+    // the shared flags are rejected as unknown.
+    ("flute-v2-get-api-keys", "?merchantId", Flag("--merchant-id")),
 ];
