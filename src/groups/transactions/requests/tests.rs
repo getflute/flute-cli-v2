@@ -190,25 +190,21 @@ fn a_tip_adjustment_takes_exactly_one_of_amount_and_rate() {
     assert!(build_tip_adjustment_body(None, None).is_err());
 }
 
-/// The pair is refused only when both halves are non-zero, as on
-/// `transactions create`. A zero half is still no tip, so the floor refuses
-/// it by name rather than as half of a pair.
+/// The API checks presence, so a zero half beside the other is still both.
 #[test]
-fn a_tip_adjustment_with_a_zero_half_meets_the_floor_not_the_pair_rule() {
-    let err = build_tip_adjustment_body(Some(Decimal::ONE), Some(Decimal::ZERO))
-        .unwrap_err()
-        .to_string();
-    assert!(
-        err.contains("--tip-rate must be greater than zero"),
-        "{err}"
-    );
-    let err = build_tip_adjustment_body(Some(Decimal::ZERO), Some(Decimal::ONE))
-        .unwrap_err()
-        .to_string();
-    assert!(
-        err.contains("--tip-amount must be greater than zero"),
-        "{err}"
-    );
+fn a_tip_adjustment_with_a_zero_half_is_refused_as_a_pair() {
+    for (amount, rate) in [
+        (Some(Decimal::ONE), Some(Decimal::ZERO)),
+        (Some(Decimal::ZERO), Some(Decimal::ONE)),
+    ] {
+        let err = build_tip_adjustment_body(amount, rate)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("--tip-amount or --tip-rate, not both"),
+            "{err}"
+        );
+    }
 }
 
 /// All three fields are required by schema, so all three are always sent
@@ -286,7 +282,7 @@ fn calculate_amount_carries_every_option_under_its_wire_name() {
 
 /// The amount-or-rate exclusions and the declared minimums are `create`'s.
 #[test]
-fn calculate_amount_refuses_a_non_zero_amount_and_rate_pair() {
+fn calculate_amount_refuses_an_amount_and_rate_pair() {
     let base = || CalculateAmountArgs {
         base_amount: "100.00".parse().unwrap(),
         ..Default::default()
@@ -308,11 +304,14 @@ fn calculate_amount_refuses_a_non_zero_amount_and_rate_pair() {
         "{err}"
     );
 
-    // A zero rate beside an amount is not a non-zero pair.
+    // A zero rate beside an amount is still both.
     let mut zero_rate = base();
     zero_rate.tip_amount = Some("5.00".parse().unwrap());
     zero_rate.tip_rate = Some(Decimal::ZERO);
-    assert!(build_calculate_amount_body(&zero_rate).is_ok());
+    let err = build_calculate_amount_body(&zero_rate)
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("--tip-amount or --tip-rate"), "{err}");
 }
 
 #[test]

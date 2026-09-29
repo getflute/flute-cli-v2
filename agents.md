@@ -442,11 +442,10 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   not by naming nothing. `tip-adjust`'s `--tip-amount` and `--tip-rate` carry
   the same floor — zero moves no tip, so either is refused before the wire.
 - **A tip or a discount is an amount or a rate, not both.** `transactions
-  create` and `calculate-amount` refuse a non-zero `--tip-amount` with a
-  non-zero `--tip-rate`, and likewise for `--discount-amount` and
-  `--discount-rate`; `pos create` and `tip-adjust` apply the same rule to
-  the tip pair. A zero half sets nothing, so it is not half of a pair. The
-  API rejects a charge that carries both.
+  create` and `calculate-amount` refuse `--tip-amount` with `--tip-rate`, and
+  `--discount-amount` with `--discount-rate`; `pos create` and `tip-adjust`
+  refuse the tip pair. Both flags given is refused whatever their values: the
+  API rejects a request that carries both fields, zero included.
 - **The ACH actions answer with a `referenceId` the API assigned.** `ach-hold`,
   `ach-release` and a `reversal` of an ACH transaction each replace the
   merchant reference the transaction was created with, so

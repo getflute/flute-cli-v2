@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::cli::common::parse_exp;
-use crate::cli::money::{refuse_non_zero_pair, to_amount_number};
+use crate::cli::money::{refuse_pair, to_amount_number};
 use anyhow::Result;
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
@@ -113,13 +113,13 @@ fn single_amount_body(key: &str, amount: Option<Decimal>) -> Result<Option<Value
 
 /// Build the `TipAdjustmentRequestDto` body.
 ///
-/// An amount or a rate, under the non-zero pair rule `transactions create`
-/// applies. Each one given must be greater than zero: zero moves no tip.
+/// An amount or a rate, not both, as on `transactions create`. The one given
+/// must be greater than zero: zero moves no tip.
 pub fn build_tip_adjustment_body(
     tip_amount: Option<Decimal>,
     tip_rate: Option<Decimal>,
 ) -> Result<Value> {
-    refuse_non_zero_pair(("--tip-amount", tip_amount), ("--tip-rate", tip_rate))?;
+    refuse_pair(("--tip-amount", tip_amount), ("--tip-rate", tip_rate))?;
     let mut map = Map::new();
     for (flag, key, value) in [
         ("--tip-amount", "tipAmount", tip_amount),

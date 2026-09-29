@@ -480,6 +480,32 @@ fn a_tip_or_discount_given_as_both_an_amount_and_a_rate_is_refused() {
     );
 }
 
+/// The API checks presence, so a zero half beside the other is still both.
+#[test]
+fn a_zero_half_beside_the_other_is_still_a_pair() {
+    let mut args = valid_args();
+    args.tip_amount = Some("5.00".parse().unwrap());
+    args.tip_rate = Some(Decimal::ZERO);
+    let err = build_create_transaction_body(&args)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("--tip-amount or --tip-rate, not both"),
+        "{err}"
+    );
+
+    let mut args = valid_args();
+    args.discount_amount = Some("0.50".parse().unwrap());
+    args.discount_rate = Some(Decimal::ZERO);
+    let err = build_create_transaction_body(&args)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("--discount-amount or --discount-rate, not both"),
+        "{err}"
+    );
+}
+
 #[test]
 fn contact_info_reaches_the_wire_and_is_omitted_when_absent() {
     assert!(

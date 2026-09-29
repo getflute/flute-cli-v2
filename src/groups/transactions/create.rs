@@ -7,7 +7,7 @@
 use super::*;
 use crate::cli::address::BillingArgs;
 use crate::cli::common::{CaptureMethod, parse_exp};
-use crate::cli::money::{parse_amount, parse_rate, refuse_non_zero_pair, to_amount_number};
+use crate::cli::money::{parse_amount, parse_rate, refuse_pair, to_amount_number};
 use anyhow::Result;
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
@@ -131,8 +131,8 @@ pub(super) fn validate_extra_amounts(
     discount_amount: Option<Decimal>,
     discount_rate: Option<Decimal>,
 ) -> Result<()> {
-    refuse_non_zero_pair(("--tip-amount", tip_amount), ("--tip-rate", tip_rate))?;
-    refuse_non_zero_pair(
+    refuse_pair(("--tip-amount", tip_amount), ("--tip-rate", tip_rate))?;
+    refuse_pair(
         ("--discount-amount", discount_amount),
         ("--discount-rate", discount_rate),
     )?;
