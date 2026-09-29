@@ -57,8 +57,13 @@ pub enum SettlementsCommand {
 pub struct ListBatchesArgs {
     #[command(flatten)]
     pub pagination: PaginationArgs,
-    /// Sort results by this field name.
-    #[arg(long, id = "batch_sort_by", value_name = "SORT_BY")]
+    /// Sort results by this field.
+    #[arg(
+        long,
+        id = "batch_sort_by",
+        value_name = "SORT_BY",
+        value_parser = ["createdOn", "totalNetAmount", "transactionCount", "batchStatus"]
+    )]
     pub sort_by: Option<String>,
     // The one list whose server-side default is `desc`, so the flag here
     // names the opposite direction from every other group's.

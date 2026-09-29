@@ -595,3 +595,23 @@ async fn an_expiry_that_is_not_a_utc_date_time_is_refused_before_the_wire() {
             .all(|r| r.url.path() == "/oauth2/token"),
     );
 }
+
+/// `--sort-by` offers the fields the API sorts on, so any other is a usage
+/// error that lists them rather than a 400 after a round trip.
+#[tokio::test]
+async fn sort_by_offers_only_the_fields_the_api_sorts_on() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["payment-links", "list", "--sort-by", "bogus"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("paymentLinkStatus"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}

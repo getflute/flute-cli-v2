@@ -272,3 +272,23 @@ async fn settlement_get_carries_the_singular_envelope_name() {
     // One resource, so there is no page to describe.
     assert!(v["meta"].get("page_info").is_none(), "{v}");
 }
+
+/// `--sort-by` offers the fields the API sorts on, so any other is a usage
+/// error that lists them rather than a 400 after a round trip.
+#[tokio::test]
+async fn sort_by_offers_only_the_fields_the_api_sorts_on() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["settlements", "list", "--sort-by", "bogus"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("totalNetAmount"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}

@@ -13,7 +13,7 @@ Options:
       --search <SEARCH>               Server-side text search
       --link-type <LINK_TYPE>         Filter by link type [possible values: multi-use, single-use]
       --status <PAYMENT_LINK_STATUS>  Filter results by status [possible values: active, completed, expired, inactive]
-      --sort-by <SORT_BY>             Sort results by this field name
+      --sort-by <SORT_BY>             Sort results by this field [possible values: createdOn, baseAmount, name, paymentLinkStatus]
       --asc                           Sort ascending. With neither `--asc` nor `--desc`, results come back newest first
       --desc                          Sort descending
   -h, --help                          Print help

@@ -281,8 +281,13 @@ pub struct ListPaymentLinksArgs {
         value_name = "PAYMENT_LINK_STATUS"
     )]
     pub payment_link_status: Option<PaymentLinkStatus>,
-    /// Sort results by this field name.
-    #[arg(long, id = "link_sort_by", value_name = "SORT_BY")]
+    /// Sort results by this field.
+    #[arg(
+        long,
+        id = "link_sort_by",
+        value_name = "SORT_BY",
+        value_parser = ["createdOn", "baseAmount", "name", "paymentLinkStatus"]
+    )]
     pub sort_by: Option<String>,
     /// Sort ascending. With neither `--asc` nor `--desc`, results come back
     /// newest first.
