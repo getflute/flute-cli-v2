@@ -160,9 +160,10 @@ pub enum TransactionsCommand {
     /// Show rich details for a single transaction
     /// (GET /v2/transactions/{transactionId}).
     ///
-    /// Displays all key fields including the amount breakdown, the decline
-    /// details and the processor response. `transactions get` prints the whole
-    /// response instead.
+    /// Displays the transaction and payment method types, the decline details,
+    /// the instrument — a card with its authorization code and address check,
+    /// or a bank account — and the amount breakdown. `transactions get` prints
+    /// the whole response instead.
     Inspect {
         /// Transaction UUID to inspect (positional).
         transaction_id: String,

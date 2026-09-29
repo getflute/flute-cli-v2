@@ -223,24 +223,41 @@ pub fn render_transaction(
     }
 }
 
-/// The rows of `inspect`'s header: what decided the payment.
+/// The rows of `inspect`'s header: what the transaction is and, when it was
+/// refused, why.
 ///
-/// Both outcomes are asked about, because only one of them is ever there: the
-/// authorization code is the evidence a charge worked, and `declineDetails`
-/// is the one code-and-message pair `GetTransactionResponseDtoFull` declares
-/// for one that did not.
+/// `declineDetails` is the one code-and-message pair
+/// `GetTransactionResponseDtoFull` declares for a payment that did not go
+/// through.
 const INSPECT_HEADER: &[(&str, &str)] = &[
     ("transactionId", "/transactionId"),
     ("transactionStatus", "/transactionStatus"),
+    ("transactionType", "/transactionType"),
+    ("paymentMethodType", "/paymentMethodType"),
     ("currencyCode", "/currencyCode"),
-    ("processorDetails.authCode", "/processorDetails/authCode"),
     ("declineDetails.code", "/declineDetails/code"),
     ("declineDetails.message", "/declineDetails/message"),
+];
+
+/// A card's rows, followed by the address-verification line: the
+/// authorization code is the evidence a card charge worked.
+const INSPECT_CARD: &[(&str, &str)] = &[
+    ("processorDetails.authCode", "/processorDetails/authCode"),
     ("cardDetails.cardDataSource", "/cardDetails/cardDataSource"),
     (
         "cardDetails.maskedCardNumber",
         "/cardDetails/maskedCardNumber",
     ),
+];
+
+/// A bank account's rows. An ACH response carries no authorization code or
+/// address-verification answer.
+const INSPECT_ACH: &[(&str, &str)] = &[
+    (
+        "achDetails.maskedAccountNumber",
+        "/achDetails/maskedAccountNumber",
+    ),
+    ("achDetails.secCode", "/achDetails/secCode"),
 ];
 
 /// The rows of `inspect`'s amount section, ending with the total charged.
@@ -258,8 +275,10 @@ const INSPECT_BREAKDOWN: &[(&str, &str)] = &[
 /// `inspect`'s table: the fields that decide whether a payment worked, then
 /// the amounts that make up the total.
 ///
-/// A fixed shape, so a field the response omits holds its row with a dash —
-/// the view answers the same questions about every transaction. It ends with
+/// A fixed shape per instrument, chosen by `paymentMethodType`, so a field the
+/// response omits holds its row with a dash — the view answers the same
+/// questions about every transaction paid the same way. A type that is
+/// neither `Card` nor `ACH` gets both instruments' rows. It ends with
 /// the amounts: `GetTransactionResponseDtoFull` declares no list of the
 /// operations still open on a transaction, so there is none to name.
 pub fn inspect_table(data: &Value) -> String {
@@ -269,11 +288,18 @@ pub fn inspect_table(data: &Value) -> String {
             render::value_at(&TRANSACTION, data, pointer),
         )
     };
+    let instrument = data.get("paymentMethodType").and_then(Value::as_str);
     let mut rows: Vec<(String, String)> = INSPECT_HEADER.iter().map(row).collect();
-    rows.push((
-        "addressVerificationServiceResponse".to_string(),
-        avs_line(data.pointer("/addressVerificationServiceResponse")),
-    ));
+    if instrument != Some("ACH") {
+        rows.extend(INSPECT_CARD.iter().map(row));
+        rows.push((
+            "addressVerificationServiceResponse".to_string(),
+            avs_line(data.pointer("/addressVerificationServiceResponse")),
+        ));
+    }
+    if instrument != Some("Card") {
+        rows.extend(INSPECT_ACH.iter().map(row));
+    }
     let header_rows = rows.len();
     rows.extend(INSPECT_BREAKDOWN.iter().map(row));
 

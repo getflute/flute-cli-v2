@@ -2877,3 +2877,67 @@ async fn an_ach_transaction_envelope_is_the_response() {
         serde_json::from_str::<serde_json::Value>(ACH_SALE).unwrap()
     );
 }
+
+async fn inspect_of(body: &str) -> String {
+    let server = support::mock_with_token().await;
+    let id = serde_json::from_str::<serde_json::Value>(body).unwrap()["transactionId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/transactions/{id}")))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(body.to_string(), "application/json"))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "transactions", "inspect", &id])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    String::from_utf8(out.stdout).unwrap()
+}
+
+fn row_ends_with(table: &str, label: &str, value: &str) -> bool {
+    table
+        .lines()
+        .any(|l| l.starts_with(&format!("{label}:")) && l.ends_with(value))
+}
+
+/// `inspect` names what was paid and how, and an ACH transaction's view asks
+/// about the bank account rather than a card, an authorization code or an
+/// address check.
+#[tokio::test]
+async fn inspect_of_an_ach_transaction_shows_the_bank_account() {
+    let table = inspect_of(ACH_SALE).await;
+    assert!(row_ends_with(&table, "transactionType", "Sale"), "{table}");
+    assert!(row_ends_with(&table, "paymentMethodType", "ACH"), "{table}");
+    assert!(
+        row_ends_with(&table, "achDetails.maskedAccountNumber", "****6789"),
+        "{table}"
+    );
+    for absent in [
+        "cardDetails",
+        "processorDetails",
+        "addressVerificationServiceResponse",
+    ] {
+        assert!(!table.contains(absent), "{absent}\n{table}");
+    }
+}
+
+#[tokio::test]
+async fn inspect_of_a_card_transaction_shows_the_card_and_its_authorization() {
+    let table = inspect_of(CARD_SALE).await;
+    assert!(
+        row_ends_with(&table, "paymentMethodType", "Card"),
+        "{table}"
+    );
+    assert!(
+        row_ends_with(&table, "processorDetails.authCode", "873813"),
+        "{table}"
+    );
+    assert!(
+        row_ends_with(&table, "cardDetails.maskedCardNumber", "411111******1111"),
+        "{table}"
+    );
+    assert!(!table.contains("achDetails"), "{table}");
+}
