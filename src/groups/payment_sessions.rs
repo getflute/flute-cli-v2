@@ -252,13 +252,13 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
 /// **The identifier is on `create` only.**
 /// `CreatePaymentSessionResponseDto` declares `id` and
 /// `GetPaymentSessionResponseDto` declares no identifier at all, so a read
-/// has nothing for `quiet` to print.
+/// has nothing for `quiet` to print and no identifier row. The `id` pointer
+/// still names the key `cancel`'s confirmation carries.
 pub static PAYMENT_SESSION: Resource = Resource {
     object: "payment_session",
     object_list: "payment_session_list",
     id: "/id",
     detail: &[
-        "/id",
         "/status",
         "/mode",
         // The amount a session charges is reported on the transaction it
