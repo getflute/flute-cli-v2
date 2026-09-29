@@ -115,17 +115,18 @@ impl ErrorEnvelope {
     ///
     /// This is where the actionable detail lives — the generic `Title` says
     /// only that validation failed. The empty-string key holds form-level
-    /// messages, which carry no prefix.
-    fn flatten_errors(&self) -> Option<String> {
+    /// messages, which carry no prefix, and one that repeats a part in `said`
+    /// is dropped rather than said twice.
+    fn flatten_errors(&self, said: &[&str]) -> Option<String> {
         let map = self.errors.as_ref()?;
         let parts: Vec<String> = map
             .iter()
             .flat_map(|(field, msgs)| {
-                msgs.iter().map(move |m| {
+                msgs.iter().filter_map(move |m| {
                     if field.is_empty() {
-                        m.clone()
+                        (!said.contains(&m.as_str())).then(|| m.clone())
                     } else {
-                        format!("{field}: {m}")
+                        Some(format!("{field}: {m}"))
                     }
                 })
             })
@@ -244,7 +245,6 @@ pub fn parse_error_envelope(
             let cause = e.cause.as_deref().filter(|s| !s.is_empty());
             let exception = e.exception_type.as_deref().filter(|s| !s.is_empty());
             let error_code = e.error_code.as_deref().filter(|s| !s.is_empty());
-            let fields = e.flatten_errors();
 
             // `Title` is often generic, so `Cause` has to survive alongside it,
             // and `Details` alongside both — it is the one field that varies
@@ -257,6 +257,7 @@ pub fn parse_error_envelope(
                     parts.push(part);
                 }
             }
+            let fields = e.flatten_errors(&parts);
             let core = match parts.is_empty() {
                 true if fields.is_none() => safe_text.clone(),
                 true => String::new(),
@@ -350,6 +351,32 @@ mod tests {
             panic!("expected an Api error")
         };
         assert!(!message.contains("123456789"), "{message}");
+    }
+
+    /// A form-level field error that repeats `Details` is said once.
+    #[test]
+    fn a_form_level_error_repeating_the_details_is_said_once() {
+        let body = r#"{"Title":"Bad Request",
+                       "Details":"Only active payment links can be shared.",
+                       "Errors":{"":["Only active payment links can be shared."]}}"#;
+        let ApiError::Api { message, .. } = parse_error_body(400, body, None) else {
+            panic!("expected an Api error")
+        };
+        assert_eq!(
+            message,
+            "Bad Request: Only active payment links can be shared."
+        );
+    }
+
+    /// A form-level field error that says something new is kept.
+    #[test]
+    fn a_form_level_error_with_its_own_text_is_kept() {
+        let body = r#"{"Details":"Validation failed.","Errors":{"":["Link has expired."]}}"#;
+        let ApiError::Api { message, .. } = parse_error_body(400, body, None) else {
+            panic!("expected an Api error")
+        };
+        assert!(message.contains("Validation failed."), "{message}");
+        assert!(message.contains("Link has expired."), "{message}");
     }
 
     /// A rule the API states under an account field keeps its digit count.
