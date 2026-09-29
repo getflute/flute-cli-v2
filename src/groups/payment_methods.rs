@@ -430,10 +430,10 @@ fn detail_view(data: &Value) -> String {
     let mut shown = data.clone();
     // A populated other container is data the view does not name, and still
     // prints after the declared rows.
-    if let Some(map) = shown.as_object_mut()
-        && map.get(other).is_some_and(Value::is_null)
-    {
-        map.remove(other);
+    if let Some(map) = shown.as_object_mut() {
+        if map.get(other).is_some_and(Value::is_null) {
+            map.remove(other);
+        }
     }
     if let (Some(exp), Some(card)) = (
         expiry(data),
