@@ -241,7 +241,7 @@ fn every_destructive_command_is_refused_without_yes() {
         ),
         (
             vec!["flute2", "payment-methods", "delete", "pm_1"],
-            "removal requires --yes to confirm (e.g. `payment-methods delete pm_1 --yes`)",
+            "deletion requires --yes to confirm (e.g. `payment-methods delete pm_1 --yes`)",
         ),
         (
             vec!["flute2", "payment-links", "delete", "pl_1"],

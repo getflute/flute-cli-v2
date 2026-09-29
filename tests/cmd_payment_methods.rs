@@ -299,7 +299,7 @@ async fn payment_method_delete_without_yes_issues_no_request() {
     assert_eq!(
         String::from_utf8_lossy(&out.stderr).trim_end(),
         format!(
-            "Error: removal requires --yes to confirm \
+            "Error: deletion requires --yes to confirm \
              (e.g. `payment-methods delete {PM} --yes`)"
         )
     );

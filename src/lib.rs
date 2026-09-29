@@ -372,7 +372,7 @@ fn unconfirmed_destructive_command(command: &Command) -> Option<String> {
                     yes: false,
                 },
         } => (
-            "removal",
+            "deletion",
             format!("payment-methods delete {payment_method_id}"),
         ),
         Command::PaymentLinks {
