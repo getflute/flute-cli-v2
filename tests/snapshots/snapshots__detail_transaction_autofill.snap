@@ -7,7 +7,6 @@ level3Settings.shippingChargeRate:         5
 level3Settings.dutyChargeRate:             2.5
 level3Settings.product.productName:        Office Supplies
 level3Settings.product.code:               OFF001
-level3Settings.product.description:        Standard office supplies
 level3Settings.product.measurementUnit:    pcs
 level3Settings.product.unitPrice:          25.00
 level3Settings.product.quantity:           10

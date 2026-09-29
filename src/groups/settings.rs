@@ -292,8 +292,9 @@ pub static CONTACT_INFO: Resource = Resource {
     yes_no: &[],
 };
 
-/// A settings document with no identifier of any kind, which is why a
-/// bodyless write against it confirms without one.
+/// A settings document with no identifier of any kind, as `autofill` reads it
+/// and `update-autofill` answers with it. The product template carries no
+/// description.
 pub static TRANSACTION_AUTOFILL: Resource = Resource {
     object: "transaction_autofill",
     object_list: "transaction_autofills",
@@ -304,7 +305,6 @@ pub static TRANSACTION_AUTOFILL: Resource = Resource {
         "/level3Settings/dutyChargeRate",
         "/level3Settings/product/productName",
         "/level3Settings/product/code",
-        "/level3Settings/product/description",
         "/level3Settings/product/measurementUnit",
         "/level3Settings/product/unitPrice",
         "/level3Settings/product/quantity",
@@ -395,15 +395,22 @@ pub async fn dispatch(ctx: &Ctx, command: SettingsCommand) -> Result<()> {
                     Some(body),
                 )
                 .await?;
-            // 200 with no body, and a singleton has no id to confirm from.
-            render::confirmed(
-                ctx,
-                &TRANSACTION_AUTOFILL,
-                "",
-                "updated",
-                "Updated transaction autofill settings.",
-                resp.correlation_id,
-            )
+            // The API answers with the settings it stored, though the
+            // published operation declares no body. A singleton has no id to
+            // confirm from, so a bodyless 200 confirms with the verb alone.
+            match resp.body {
+                Some(stored) => {
+                    render::one(ctx, &TRANSACTION_AUTOFILL, &stored, resp.correlation_id)
+                }
+                None => render::confirmed(
+                    ctx,
+                    &TRANSACTION_AUTOFILL,
+                    "",
+                    "updated",
+                    "Updated transaction autofill settings.",
+                    resp.correlation_id,
+                ),
+            }
         }
     }
 }

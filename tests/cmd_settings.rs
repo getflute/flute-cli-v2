@@ -435,3 +435,46 @@ async fn payment_config_quiet_prints_every_processor_id() {
              8db2ff47-b143-4adb-ab58-a11111111111\n",
         );
 }
+
+/// `update-autofill` answers with the settings the API stored, and the CLI
+/// reports them in the same envelope as `autofill`. The body is the one
+/// sandbox answered a `--product-code W1` update with.
+#[tokio::test]
+async fn update_autofill_reports_the_settings_the_api_stored() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("PATCH"))
+        .and(path("/v2/settings/transaction-autofill"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "level2Settings": {"taxRate": 0},
+            "level3Settings": {
+                "dutyChargeRate": null,
+                "product": {
+                    "code": "W1",
+                    "discountPercentage": null,
+                    "measurementUnit": null,
+                    "productName": null,
+                    "quantity": null,
+                    "unitPrice": null},
+                "shippingChargeRate": null}})))
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "settings",
+            "update-autofill",
+            "--product-code",
+            "W1",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["object"], "transaction_autofill");
+    assert_eq!(v["data"]["level3Settings"]["product"]["code"], "W1", "{v}");
+    assert!(v["data"].get("updated").is_none(), "{v}");
+}

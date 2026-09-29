@@ -211,7 +211,7 @@ Every other 404 is exit 4, on a write as much as on a read: a `capture`, an
 
 ### Writes that answer with a confirmation
 
-Twelve commands answer every success with a confirmation built from the
+Eleven commands answer every success with a confirmation built from the
 identifier in the *request* rather than from the response, so no caller has to
 read exit 0 plus an empty stdout as success:
 
@@ -237,7 +237,6 @@ returned is not readable from the write — issue a `get` to read one back.
 | `payment-sessions cancel` | `id`, `cancelled: true` — spelled `id`, not `paymentSessionId` |
 | `pos print-receipt` | `posTransactionId`, `sent: true` — the API accepted the request; it does not report whether paper came out |
 | `transactions share-receipt` | `transactionId`, `shared: true` |
-| `settings update-autofill` | `updated: true`, and no identifier |
 | `api-keys revoke` | `clientId`, `revoked: true` |
 
 Every other operation declares a body, and a success carrying none is
@@ -255,9 +254,10 @@ shape rather than a choice:
 - **`settings autofill`** — the read of a singleton. The response carries the
   level 2 and level 3 rates and a product template, and nothing that names the
   resource, so `quiet` prints nothing.
-- **`settings update-autofill`** — a bodyless write on a singleton. There is no
-  identifier in the request either, so the envelope carries the verb alone,
-  `quiet` prints nothing, and the table line names the resource.
+- **`settings update-autofill`** — the write on that singleton answers with
+  the settings it stored, in the same envelope as `autofill`, so it has no
+  identifier either and `quiet` prints nothing. A 200 with no body answers
+  with `updated: true` instead.
 - **`transactions calculate-amount`** — totals calculated from an amount the
   caller supplied. Nothing is created, so the response names no resource and
   `quiet` prints nothing. The currency code it echoes is not an identifier:
