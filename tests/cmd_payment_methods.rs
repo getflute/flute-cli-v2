@@ -598,6 +598,27 @@ async fn a_card_s_table_shows_no_bank_account_rows() {
     assert!(!out.contains("ach"), "{out}");
 }
 
+/// One expiry row in the EXP column's spelling, rather than a month row and
+/// a year row.
+#[tokio::test]
+async fn a_card_s_table_shows_the_expiry_on_one_row() {
+    let out = get_table("Card").await;
+    assert_eq!(
+        out,
+        format!(
+            "paymentMethodId:    {PM}\n\
+             type:               Card\n\
+             name:               qa-doc\n\
+             isDefault:          no\n\
+             customerId:         {CUS}\n\
+             createdOn:          2026-09-16T18:57:50.022644Z\n\
+             card.cardMask:      411111******1111\n\
+             card.expiry:        12/30\n\
+             card.cardTokenType: Local\n"
+        )
+    );
+}
+
 /// An ACH read carries a null `card`, and the table reports none of it.
 #[tokio::test]
 async fn a_bank_account_s_table_shows_no_card_rows() {

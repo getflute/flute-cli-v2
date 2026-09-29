@@ -361,7 +361,8 @@ pub static PAYMENT_METHOD_CREATED: Resource = Resource {
 };
 
 /// `get`'s table for a card: the rows [`PAYMENT_METHOD`] declares, less the
-/// bank account's.
+/// bank account's, with the expiry on one row. `/card/expiry` is not a field
+/// the API sends: [`detail_view`] puts it in the table's copy of the response.
 static CARD_VIEW: Resource = Resource {
     object: "payment_method",
     object_list: "payment_methods",
@@ -374,8 +375,7 @@ static CARD_VIEW: Resource = Resource {
         "/customerId",
         "/createdOn",
         "/card/cardMask",
-        "/card/expirationMonth",
-        "/card/expirationYear",
+        "/card/expiry",
         "/card/cardTokenType",
     ],
     columns: &[],
@@ -411,7 +411,8 @@ static ACH_VIEW: Resource = Resource {
 /// `get`'s table: the rows of the instrument the method is, and none of the
 /// other's. The response carries both containers and nulls the one that does
 /// not apply, so a card would otherwise report six bank-account fields as
-/// missing. Any other `type` keeps both.
+/// missing. Any other `type` keeps both. A card's month and year become one
+/// `card.expiry` row, spelt as `list`'s EXP column spells it.
 fn detail_view(data: &Value) -> String {
     let (view, other) = match data.get("type").and_then(Value::as_str) {
         Some("Card") => (&CARD_VIEW, "ach"),
@@ -425,6 +426,14 @@ fn detail_view(data: &Value) -> String {
         && map.get(other).is_some_and(Value::is_null)
     {
         map.remove(other);
+    }
+    if let (Some(exp), Some(card)) = (
+        expiry(data),
+        shown.pointer_mut("/card").and_then(Value::as_object_mut),
+    ) {
+        card.remove("expirationMonth");
+        card.remove("expirationYear");
+        card.insert("expiry".into(), Value::String(exp));
     }
     render::detail_table(view, &shown)
 }
