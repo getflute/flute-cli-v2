@@ -164,8 +164,10 @@ const TRANSACTION_AMOUNTS: &[&str] = &[
     "/amountBreakdown/tipAmount",
     "/amountBreakdown/discountAmount",
     "/amountBreakdown/surchargeAmount",
+    "/amountBreakdown/taxAmount",
     "/refundDetails/refundedAmount",
     "/refundDetails/availableRefundAmount",
+    "/transactionEvents/[]/amount",
 ];
 
 /// The descriptor for one transaction's instrument, and the response with the

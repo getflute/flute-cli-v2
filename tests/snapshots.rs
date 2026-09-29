@@ -469,7 +469,11 @@ fn renderable_fields(group: &str) -> std::collections::BTreeSet<String> {
             Some(schema) => support::spec::schema_leaves(schema),
             None => support::spec::response_leaves(contract.operation_id),
         };
-        for leaf in declared {
+        let undeclared = support::spec::undeclared_response_fields(contract.operation_id);
+        for leaf in declared
+            .into_iter()
+            .chain(undeclared.into_iter().map(str::to_string))
+        {
             // A page or an envelope is rendered one element at a time, so the
             // element's own fields are what a descriptor names.
             let segments: Vec<&str> = leaf.split('/').collect();

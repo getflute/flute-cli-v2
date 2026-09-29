@@ -539,7 +539,27 @@ pub enum Rule {
         operations: &'static [&'static str],
         schema: &'static str,
     },
+
+    /// The **response** carries this JSON pointer, which its declared schema
+    /// omits, so a descriptor may name it. Only the named pointer is added;
+    /// every other rendered pointer still has to be declared.
+    ResponseField {
+        operations: &'static [&'static str],
+        pointer: &'static str,
+    },
 }
+
+/// The operations whose responses are one transaction in the read's shape.
+const SINGLE_TRANSACTION_RESPONSES: &[&str] = &[
+    "flute-v2-get-transactions-transactionId",
+    "flute-v2-post-transactions",
+    "flute-v2-post-transactions-transactionId-capture",
+    "flute-v2-post-transactions-transactionId-reversal",
+    "flute-v2-post-transactions-credit",
+    "flute-v2-post-transactions-transactionId-tip-adjustment",
+    "flute-v2-post-transactions-transactionId-ach-hold",
+    "flute-v2-post-transactions-transactionId-ach-release",
+];
 
 pub static DIVERGENCES: &[Divergence] = &[
     Divergence {
@@ -620,7 +640,40 @@ pub static DIVERGENCES: &[Divergence] = &[
         evidence: "live_card_sale_auto_capture",
         removal: "the seven writes declare GetTransactionResponseDtoFull as their response schema",
     },
+    Divergence {
+        name: "taxAmount in a single transaction's amountBreakdown",
+        rule: Rule::ResponseField {
+            operations: SINGLE_TRANSACTION_RESPONSES,
+            pointer: "/amountBreakdown/taxAmount",
+        },
+        evidence: "live_card_sale_auto_capture",
+        removal: "AmountBreakdownDto declares taxAmount",
+    },
+    Divergence {
+        name: "amount on a single transaction's events",
+        rule: Rule::ResponseField {
+            operations: SINGLE_TRANSACTION_RESPONSES,
+            pointer: "/transactionEvents/[]/amount",
+        },
+        evidence: "live_card_sale_auto_capture",
+        removal: "the transactionEvents items declare amount",
+    },
 ];
+
+/// The pointers a `ResponseField` divergence adds to this operation's
+/// declared response fields.
+pub fn undeclared_response_fields(operation_id: &str) -> Vec<&'static str> {
+    DIVERGENCES
+        .iter()
+        .filter_map(|d| match &d.rule {
+            Rule::ResponseField {
+                operations,
+                pointer,
+            } if operations.contains(&operation_id) => Some(*pointer),
+            _ => None,
+        })
+        .collect()
+}
 
 /// The component schema a `ResponseShape` divergence validates this
 /// operation's response against, if one does.
@@ -629,7 +682,9 @@ pub fn response_shape_divergence(operation_id: &str) -> Option<&'static str> {
         Rule::ResponseShape { operations, schema } => {
             operations.contains(&operation_id).then_some(*schema)
         }
-        Rule::RequestField { .. } | Rule::RequestFieldConstraint { .. } => None,
+        Rule::RequestField { .. }
+        | Rule::RequestFieldConstraint { .. }
+        | Rule::ResponseField { .. } => None,
     })
 }
 

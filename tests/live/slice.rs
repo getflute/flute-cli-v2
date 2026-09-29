@@ -101,6 +101,15 @@ fn live_card_sale_auto_capture() {
             "the create answered without the read shape's {present}: {v}"
         );
     }
+    // Two fields the schema omits and the table formats as money.
+    assert!(
+        v["data"]["amountBreakdown"].get("taxAmount").is_some(),
+        "no amountBreakdown.taxAmount: {v}"
+    );
+    assert!(
+        v["data"]["transactionEvents"][0].get("amount").is_some(),
+        "no transactionEvents[0].amount: {v}"
+    );
 
     // And the transaction is readable back by id.
     let id = v["data"]["transactionId"].as_str().unwrap();

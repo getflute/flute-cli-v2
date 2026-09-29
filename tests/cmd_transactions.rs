@@ -2818,6 +2818,28 @@ async fn a_card_table_shows_only_the_card_rows() {
     }
 }
 
+/// The tax amount and each event's amount are money, and read to two places
+/// like every other amount in the table.
+#[tokio::test]
+async fn a_transaction_table_formats_the_tax_and_event_amounts() {
+    let table = table_of(CARD_SALE).await;
+    let row = |key: &str| {
+        table
+            .lines()
+            .find(|l| l.starts_with(&format!("{key}:")))
+            .unwrap_or_else(|| panic!("no {key} row\n{table}"))
+            .to_string()
+    };
+    assert!(
+        row("amountBreakdown.taxAmount").ends_with("0.00"),
+        "{table}"
+    );
+    assert!(
+        row("transactionEvents[0].amount").ends_with("7.50"),
+        "{table}"
+    );
+}
+
 /// An ACH transaction's table carries no card, authorization or
 /// address-verification rows: the response sends those containers empty.
 #[tokio::test]
