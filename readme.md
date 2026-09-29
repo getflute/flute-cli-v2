@@ -402,6 +402,16 @@ See [`agents.md`](agents.md) for the machine-readable contract: the success and 
 ## Development
 
 ```sh
+# Everything CI runs, in the order it runs it: format, lint, tests, the live
+# suite's build and the generated facts on stable, then the tests on the
+# rust-version toolchain (install it with
+# `rustup toolchain install "$(scripts/ci.sh msrv-toolchain)"`)
+scripts/ci.sh
+
+# One CI job at a time
+scripts/ci.sh check
+scripts/ci.sh msrv
+
 # Run all tests (hermetic and offline)
 cargo test
 

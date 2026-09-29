@@ -37,37 +37,10 @@ jobs:
       - name: Install libdbus-1-dev and pkg-config
         run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
 
-      - name: cargo fmt --check
-        run: cargo fmt --all --check
-
-      - name: cargo clippy
-        run: cargo clippy --locked --all-targets -- -D warnings
-
-      # **The suite must be hermetic, and this is what proves the job is not
-      # quietly supplying credentials.** `cargo test` never reaches the
-      # network and never reads the keychain; a job that had a client id in
-      # its environment could hide a test that depended on one.
-      - name: Refuse to run the suite with credentials in the environment
-        run: |
-          leaked=$(env | grep -E '^FLUTE2_' | cut -d= -f1 || true)
-          if [ -n "$leaked" ]; then
-            echo "::error::the suite is hermetic and this job sets: $leaked"
-            exit 1
-          fi
-
-      - name: cargo test
-        run: cargo test --locked
-
-      # The live suite needs a sandbox account, so it is compiled here and
-      # never run: a scenario that does not build fails this job.
-      - name: Build the live suite without running it
-        run: cargo test --locked --features live --test live --no-run
-
-      # The vendored bundle's hash is asserted by the suite, which can only
-      # see a local edit. Drift in the *published* bundle is spec-drift.yml's
-      # job, because detecting it needs a fetch.
-      - name: Generated API facts are current
-        run: python3 docs/reference/group-facts.py --check
+      # The checks themselves live in scripts/ci.sh, which a local run
+      # calls the same way.
+      - name: scripts/ci.sh check
+        run: scripts/ci.sh check
 
   msrv:
     name: MSRV
@@ -75,16 +48,15 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
+      # The version is Cargo.toml's rust-version, read by the script.
       - name: Install the MSRV toolchain
         run: |
-          rustup toolchain install 1.85 --profile minimal
-          rustc +1.85 --version
+          toolchain=$(scripts/ci.sh msrv-toolchain)
+          rustup toolchain install "$toolchain" --profile minimal
+          rustc "+$toolchain" --version
 
       - name: Install libdbus-1-dev and pkg-config
         run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
 
-      # **`--locked` is load-bearing.** Without it the job resolves a
-      # different dependency tree from the one under review, and the MSRV
-      # claim in Cargo.toml stops applying to what ships.
-      - name: cargo +1.85 test --locked
-        run: cargo +1.85 test --locked
+      - name: scripts/ci.sh msrv
+        run: scripts/ci.sh msrv
