@@ -183,10 +183,9 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
     }
 }
 
-/// The five lifecycle verbs share a request: one POST under the transaction,
-/// and a response that is a single transaction rather than the declared page.
-/// They do not share a response shape, so each names the descriptor its own
-/// declared example fits.
+/// The five lifecycle verbs share a request and a response: one POST under
+/// the transaction, answered with that transaction in the read's shape
+/// rather than the declared page, rendered like `get`.
 async fn action(
     ctx: &Ctx,
     transaction_id: &str,

@@ -111,7 +111,10 @@ Envelope object names, by group:
 ```
 
 `status` and `correlation_id` appear only for `kind: "api"`. Branch on `kind`
-first, then on `status`.
+first, then on `status`. A failure's `correlation_id` is the body's own
+`CorrelationId`, else the response header's, else a ProblemDetails `traceId`
+— the last is the server's activity id, a different value from the header's,
+and appears only when no header arrived.
 
 | `kind` | Meaning | Retry? |
 |---|---|---|
@@ -246,6 +249,9 @@ returned is not readable from the write — issue a `get` to read one back.
 Every other operation declares a body, and a success carrying none is
 `kind: "decode"`, exit 1 — never an envelope with `"data": null`. `pos cancel`
 is one of those, which is why its success reports the transaction instead.
+`settings update-autofill` is the one exception: it reports the settings the
+API stored, and a 200 with no body confirms with `updated: true` rather than
+failing.
 
 ### Commands with no identifier
 
@@ -538,13 +544,13 @@ flute2 payment-methods set-default [OPTIONS] --customer-id <CUSTOMER_ID> <PAYMEN
 ```
 
 - `update` changes the label and nothing else — that is all the endpoint takes.
+  `--name ""` or `--clear name` removes it; see
+  [Clearing a field](#clearing-a-field).
 - `list --search` matches the label (`--name`) as a case-sensitive substring;
   it does not match the mask, brand or type.
 - `add-ach --company-name` is not stored when `--customer-id` is given: a
   business account reads the company from the customer, and a customer
   without one is a 400, exit 3.
-  `--name ""` or `--clear name` removes it; see
-  [Clearing a field](#clearing-a-field).
 - `delete` requires `--yes`.
 
 ### `payment-links`
