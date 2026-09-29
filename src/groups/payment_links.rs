@@ -385,8 +385,11 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
         let key = field.wire();
         if body.contains_key(key) {
             anyhow::bail!(
-                "--clear {key} contradicts the value given for it; pass one or \
-                 the other"
+                "--clear {} contradicts the value given for it; pass one or \
+                 the other",
+                clap::ValueEnum::to_possible_value(field)
+                    .expect("every variant is a possible value")
+                    .get_name()
             );
         }
         body.insert(key.to_string(), Value::Null);

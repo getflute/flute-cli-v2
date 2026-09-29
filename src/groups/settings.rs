@@ -177,8 +177,11 @@ pub fn build_update_autofill_body(args: &UpdateAutofillArgs) -> Result<Value> {
         );
         if target.contains_key(key) {
             anyhow::bail!(
-                "--clear {key} contradicts the value given for it; pass one or \
-                 the other"
+                "--clear {} contradicts the value given for it; pass one or \
+                 the other",
+                clap::ValueEnum::to_possible_value(field)
+                    .expect("every variant is a possible value")
+                    .get_name()
             );
         }
         target.insert(key.to_string(), Value::Null);
@@ -544,6 +547,19 @@ mod tests {
         };
         let err = build_update_autofill_body(&args).unwrap_err().to_string();
         assert!(err.contains("cannot be cleared"), "{err}");
+    }
+
+    /// The refusal names the flag the caller typed, not the wire key it sets.
+    #[test]
+    fn a_contradicting_clear_is_named_by_its_flag() {
+        let args = UpdateAutofillArgs {
+            product_name: Some("Widget".into()),
+            clear: vec![Clearable::ProductName],
+            ..Default::default()
+        };
+        let err = build_update_autofill_body(&args).unwrap_err().to_string();
+        assert!(err.contains("--clear product-name "), "{err}");
+        assert!(!err.contains("productName"), "{err}");
     }
 
     /// An empty value clears the stored default: the body carries an explicit
