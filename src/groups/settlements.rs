@@ -142,12 +142,12 @@ pub fn build_close_batch_body(payment_processor_id: &str) -> Result<Value> {
 /// is using it as, so it says so rather than picking the first — and none is
 /// a not-found read, which is exit 4 through the API error path. The API
 /// answered 200 with an empty list, and the message names that list as the
-/// source of the not-found.
-fn one_batch(batch_id: &str, items: Vec<Value>) -> Result<Value> {
+/// source of the not-found, under that list response's correlation id.
+fn one_batch(batch_id: &str, items: Vec<Value>, correlation_id: Option<String>) -> Result<Value> {
     match items.len() {
         0 => Err(crate::api::ApiError::Api {
             status: 404,
-            correlation_id: None,
+            correlation_id,
             message: format!(
                 "no settlement batch {batch_id}: the settlements list filtered by \
                  that batch id returned no batch"
@@ -273,7 +273,11 @@ pub async fn dispatch(ctx: &Ctx, command: SettlementsCommand) -> Result<()> {
                 )
                 .await?;
             let body = common::body_of(resp.body)?;
-            let batch = one_batch(&batch_id, common::items_of(&body, "items")?)?;
+            let batch = one_batch(
+                &batch_id,
+                common::items_of(&body, "items")?,
+                resp.correlation_id.clone(),
+            )?;
             render::one(ctx, &SETTLEMENT, &batch, resp.correlation_id)
         }
         SettlementsCommand::Close {
@@ -408,7 +412,7 @@ mod tests {
     /// comes from a 404 rather than from a client error.
     #[test]
     fn no_match_for_a_batch_id_is_a_404() {
-        let err = one_batch("b-1", vec![]).unwrap_err();
+        let err = one_batch("b-1", vec![], None).unwrap_err();
         assert!(
             matches!(
                 err.downcast_ref::<crate::api::ApiError>(),
@@ -427,13 +431,13 @@ mod tests {
             serde_json::json!({"batchId": "b-1"}),
             serde_json::json!({"batchId": "b-2"}),
         ];
-        let err = one_batch("b-1", items).unwrap_err().to_string();
+        let err = one_batch("b-1", items, None).unwrap_err().to_string();
         assert!(err.contains('2'), "{err}");
     }
 
     #[test]
     fn one_match_is_the_batch_itself() {
         let batch = serde_json::json!({"batchId": "b-1", "batchStatus": "Open"});
-        assert_eq!(one_batch("b-1", vec![batch.clone()]).unwrap(), batch);
+        assert_eq!(one_batch("b-1", vec![batch.clone()], None).unwrap(), batch);
     }
 }
