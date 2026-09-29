@@ -7,6 +7,7 @@
 use crate::Ctx;
 use crate::api::ApiPath;
 use crate::cli::common::{self, AccountHolderType, AccountType, PaginationArgs, parse_exp};
+use crate::cli::output::OutputFormat;
 use crate::cli::render::{self, Cell, Column, Resource};
 use anyhow::Result;
 use reqwest::Method;
@@ -359,6 +360,75 @@ pub static PAYMENT_METHOD_CREATED: Resource = Resource {
     yes_no: &[],
 };
 
+/// `get`'s table for a card: the rows [`PAYMENT_METHOD`] declares, less the
+/// bank account's.
+static CARD_VIEW: Resource = Resource {
+    object: "payment_method",
+    object_list: "payment_methods",
+    id: "/paymentMethodId",
+    detail: &[
+        "/paymentMethodId",
+        "/type",
+        "/name",
+        "/isDefault",
+        "/customerId",
+        "/createdOn",
+        "/card/cardMask",
+        "/card/expirationMonth",
+        "/card/expirationYear",
+        "/card/cardTokenType",
+    ],
+    columns: &[],
+    amounts: &[],
+    yes_no: &["/isDefault"],
+};
+
+/// `get`'s table for a bank account: the rows [`PAYMENT_METHOD`] declares,
+/// less the card's.
+static ACH_VIEW: Resource = Resource {
+    object: "payment_method",
+    object_list: "payment_methods",
+    id: "/paymentMethodId",
+    detail: &[
+        "/paymentMethodId",
+        "/type",
+        "/name",
+        "/isDefault",
+        "/customerId",
+        "/createdOn",
+        "/ach/accountNumber",
+        "/ach/routingNumber",
+        "/ach/accountType",
+        "/ach/accountHolderType",
+        "/ach/companyName",
+        "/ach/taxId",
+    ],
+    columns: &[],
+    amounts: &[],
+    yes_no: &["/isDefault"],
+};
+
+/// `get`'s table: the rows of the instrument the method is, and none of the
+/// other's. The response carries both containers and nulls the one that does
+/// not apply, so a card would otherwise report six bank-account fields as
+/// missing. Any other `type` keeps both.
+fn detail_view(data: &Value) -> String {
+    let (view, other) = match data.get("type").and_then(Value::as_str) {
+        Some("Card") => (&CARD_VIEW, "ach"),
+        Some("ACH") => (&ACH_VIEW, "card"),
+        _ => return render::detail_table(&PAYMENT_METHOD, data),
+    };
+    let mut shown = data.clone();
+    // A populated other container is data the view does not name, and still
+    // prints after the declared rows.
+    if let Some(map) = shown.as_object_mut()
+        && map.get(other).is_some_and(Value::is_null)
+    {
+        map.remove(other);
+    }
+    render::detail_table(view, &shown)
+}
+
 /// A card and a bank account keep their masks in different containers, so one
 /// column has to reach both.
 fn masked_number(v: &Value) -> Option<String> {
@@ -398,12 +468,14 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
                     None,
                 )
                 .await?;
-            render::one(
-                ctx,
-                &PAYMENT_METHOD,
-                &common::body_of(resp.body)?,
-                resp.correlation_id,
-            )
+            let data = common::body_of(resp.body)?;
+            match ctx.output {
+                OutputFormat::Table => {
+                    println!("{}", detail_view(&data));
+                    Ok(())
+                }
+                _ => render::one(ctx, &PAYMENT_METHOD, &data, resp.correlation_id),
+            }
         }
         PaymentMethodsCommand::AddCard(args) => {
             let body = build_add_card_body(&args)?;
