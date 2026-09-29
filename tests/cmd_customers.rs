@@ -1286,3 +1286,99 @@ async fn create_table_shows_only_what_the_create_returns() {
         "{table}"
     );
 }
+
+/// A customer read as the sandbox answers for one with a vaulted card and a
+/// vaulted bank account.
+fn vaulted_customer() -> serde_json::Value {
+    serde_json::json!({
+        "achAccounts": [{
+            "accountHolderType": "Personal", "accountNumber": "****9012",
+            "accountType": "Checking", "isDefault": false,
+            "paymentMethodId": "7d3377a1-4482-4fe8-930c-317bd9b906aa",
+            "paymentName": "qa-doc-ach", "routingNumber": "021000021",
+            "taxId": null}],
+        "billingAddress": {
+            "addressLine1": "123 Test St", "addressLine2": null, "city": "Austin",
+            "countryCode": "US", "postalCode": "10001", "stateCode": "TX"},
+        "cards": [{
+            "cardMask": "411111******1111", "cardTokenType": "Local",
+            "cardType": "Visa", "creditDebitType": "Debit",
+            "expirationMonth": 12, "expirationYear": 28, "isDefault": false,
+            "paymentMethodId": "7b6d83de-ee92-41e1-a450-92b915d6cfc0",
+            "paymentName": "qa-doc-card"}],
+        "companyName": null,
+        "customerId": "cus_1",
+        "email": "qa-doc@example.com",
+        "externalId": null,
+        "firstName": "Qa",
+        "hasSmsConsent": false,
+        "lastName": "Doc",
+        "lastTransactionAmount": 2.00,
+        "lastTransactionDate": "2026-09-17T09:01:14.990383Z",
+        "mobilePhoneNumber": null,
+        "numberOfSubscriptions": 0,
+        "shippingAddress": null,
+        "shouldUseBillingAsShippingAddress": false,
+        "transactionsCount": 1,
+        "transactionsVolume": 2.00
+    })
+}
+
+async fn vaulted_customer_table() -> String {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/customers/cus_1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(vaulted_customer()))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "customers", "get", "cus_1"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    String::from_utf8(out).unwrap()
+}
+
+/// Each instrument's fields sit together, card then bank account, and none
+/// of them trails after the other instrument's.
+#[tokio::test]
+async fn get_table_keeps_each_instrument_s_fields_together() {
+    let text = vaulted_customer_table().await;
+    let labels: Vec<&str> = text
+        .lines()
+        .filter_map(|l| l.split(':').next())
+        .filter(|l| l.starts_with("cards[") || l.starts_with("achAccounts["))
+        .collect();
+    assert_eq!(
+        labels,
+        [
+            "cards[0].paymentMethodId",
+            "cards[0].paymentName",
+            "cards[0].cardMask",
+            "cards[0].cardType",
+            "cards[0].creditDebitType",
+            "cards[0].expirationMonth",
+            "cards[0].expirationYear",
+            "cards[0].cardTokenType",
+            "cards[0].isDefault",
+            "achAccounts[0].paymentMethodId",
+            "achAccounts[0].paymentName",
+            "achAccounts[0].accountNumber",
+            "achAccounts[0].routingNumber",
+            "achAccounts[0].accountType",
+            "achAccounts[0].accountHolderType",
+            "achAccounts[0].taxId",
+            "achAccounts[0].isDefault",
+        ]
+    );
+    assert!(
+        text.trim_end()
+            .lines()
+            .last()
+            .unwrap()
+            .starts_with("achAccounts[0].isDefault"),
+        "{text}"
+    );
+}
