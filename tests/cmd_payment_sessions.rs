@@ -216,6 +216,62 @@ async fn a_nonzero_amount_on_a_vault_only_session_is_refused() {
     );
 }
 
+/// A save-method session has no checkout page, so the flags that configure
+/// one are refused before any request, named in the message.
+#[tokio::test]
+async fn a_vault_only_session_refuses_checkout_flags_before_the_wire() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "payment-sessions",
+            "create",
+            "--mode",
+            "save-method",
+            "--card-enabled",
+            "--return-url",
+            "https://example.com/done",
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--card-enabled, --return-url"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
+
+/// A save-method create answers with an id and a null `paymentMethods`, so
+/// its table carries no payment-method rows that could never fill.
+#[tokio::test]
+async fn a_vault_only_create_table_has_no_payment_method_rows() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/payment-sessions"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(serde_json::json!({"id": SESSION, "paymentMethods": null})),
+        )
+        .mount(&server)
+        .await;
+    support::bin(&server)
+        .args([
+            "--output",
+            "table",
+            "payment-sessions",
+            "create",
+            "--mode",
+            "save-method",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(SESSION))
+        .stdout(predicate::str::contains("paymentMethods.").not());
+}
+
 /// Metadata is arbitrary key-value pairs, so a value with an `=` in it has to
 /// survive: only the first separator splits.
 #[tokio::test]
