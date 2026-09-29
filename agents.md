@@ -818,7 +818,9 @@ processor.
 `false`. They are not clearable.
 
 **Address components are not individually clearable.** `--billing-*` flags build
-one nested object shared with `create`; an empty component is omitted from it.
+one nested object shared with `create`. On `create` an empty component is
+omitted from it; on `customers update` an empty `--billing-*` or `--shipping-*`
+value is refused — exit 3, nothing sent — whatever else the update carries.
 
 ## Idempotency
 

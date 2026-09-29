@@ -1403,6 +1403,37 @@ async fn get_table_prints_the_unset_fields_only_when_sent() {
     assert!(tail[0].starts_with("numberOfSubscriptions:"), "{text}");
 }
 
+/// An empty address component beside another field is refused too: the
+/// update would otherwise succeed with the component silently left out.
+#[tokio::test]
+async fn an_empty_address_component_beside_another_field_is_refused() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "customers",
+            "update",
+            "cus_1",
+            "--email",
+            "ada@example.com",
+            "--billing-line1",
+            "",
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains(
+            "--billing-line1 is empty, and address components cannot be cleared individually",
+        ));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "nothing may reach the API"
+    );
+}
+
 /// `--billing-line1 ""` sends nothing, because an address component cannot
 /// be cleared on its own, and the refusal says so.
 #[tokio::test]

@@ -184,6 +184,14 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
     ] {
         common::reject_unclearable(flag, value.as_deref())?;
     }
+    // An empty component would be omitted from the address it builds, so the
+    // update would succeed without the change it names.
+    if let Some(flag) = empty_address_flag(args) {
+        anyhow::bail!(
+            "{flag} is empty, and address components cannot be cleared \
+             individually; pass a value for it"
+        );
+    }
 
     let mut body = Map::new();
     common::put_patch(&mut body, "firstName", &args.first_name);
@@ -216,19 +224,12 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
     }
 
     if body.is_empty() {
-        if let Some(flag) = empty_address_flag(args) {
-            anyhow::bail!(
-                "nothing to update: {flag} is empty, and address components cannot be \
-                 cleared individually; pass a value for it"
-            );
-        }
         anyhow::bail!("nothing to update: pass at least one field, e.g. --email or --company");
     }
     Ok(Value::Object(body))
 }
 
-/// The first address flag given an empty value. An empty component is
-/// omitted from the address it builds, so it sends nothing.
+/// The first address flag given an empty value.
 fn empty_address_flag(args: &UpdateCustomerArgs) -> Option<String> {
     let (b, s) = (&args.billing, &args.shipping);
     [
@@ -899,7 +900,7 @@ mod tests {
     /// An empty address component sends nothing, and the refusal says why
     /// rather than asking for a field the caller did pass.
     #[test]
-    fn an_update_with_only_an_empty_address_component_says_it_cannot_be_cleared() {
+    fn an_empty_address_component_says_it_cannot_be_cleared() {
         let mut args = update_args();
         args.shipping.postal_code = Some(String::new());
         let err = build_update_customer_body(&args).unwrap_err().to_string();
