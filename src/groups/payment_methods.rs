@@ -371,7 +371,7 @@ pub static PAYMENT_METHOD_CREATED: Resource = Resource {
 /// `get`'s table for a card: the rows [`PAYMENT_METHOD`] declares, less the
 /// bank account's, with the expiry on one row. `/card/expiry` is not a field
 /// the API sends: [`detail_view`] puts it in the table's copy of the response.
-static CARD_VIEW: Resource = Resource {
+pub static CARD_VIEW: Resource = Resource {
     object: "payment_method",
     object_list: "payment_methods",
     id: "/paymentMethodId",
@@ -393,7 +393,7 @@ static CARD_VIEW: Resource = Resource {
 
 /// `get`'s table for a bank account: the rows [`PAYMENT_METHOD`] declares,
 /// less the card's.
-static ACH_VIEW: Resource = Resource {
+pub static ACH_VIEW: Resource = Resource {
     object: "payment_method",
     object_list: "payment_methods",
     id: "/paymentMethodId",

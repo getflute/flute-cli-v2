@@ -371,6 +371,48 @@ const RENDERED: &[Rendered] = &[
         variant: "every key",
         at: "/apiKeys/0",
     },
+    Rendered {
+        resource: &flute_cli2::groups::customers::CUSTOMER_CREATED,
+        ident: "CUSTOMER_CREATED",
+        operation_id: "flute-v2-post-customers",
+        variant: "minimal",
+        at: "",
+    },
+    Rendered {
+        resource: &flute_cli2::groups::payment_methods::PAYMENT_METHOD_CREATED,
+        ident: "PAYMENT_METHOD_CREATED",
+        operation_id: "flute-v2-post-payment-methods-cards",
+        variant: "required only",
+        at: "",
+    },
+    Rendered {
+        resource: &flute_cli2::groups::transactions::TRANSACTION_CARD,
+        ident: "TRANSACTION_CARD",
+        operation_id: "flute-v2-post-transactions",
+        variant: "new card, automatic capture",
+        at: "",
+    },
+    Rendered {
+        resource: &flute_cli2::groups::transactions::TRANSACTION_ACH,
+        ident: "TRANSACTION_ACH",
+        operation_id: "flute-v2-post-transactions",
+        variant: "new ACH",
+        at: "",
+    },
+    Rendered {
+        resource: &flute_cli2::groups::payment_sessions::PAYMENT_SESSION_CREATED,
+        ident: "PAYMENT_SESSION_CREATED",
+        operation_id: "flute-v2-post-payment-sessions",
+        variant: "fully specified",
+        at: "",
+    },
+    Rendered {
+        resource: &flute_cli2::groups::payment_sessions::PAYMENT_SESSION_SAVE_METHOD_CREATED,
+        ident: "PAYMENT_SESSION_SAVE_METHOD_CREATED",
+        operation_id: "flute-v2-post-payment-sessions",
+        variant: "vault only",
+        at: "",
+    },
 ];
 
 fn object_for(r: &Rendered) -> serde_json::Value {
@@ -505,18 +547,47 @@ fn group_of(operation_id: &str) -> &'static str {
 /// response carries does not render as absent — it renders as a row saying the
 /// field is empty, which for an amount is a wrong answer rather than a missing
 /// one.
+/// Descriptors bound to the declared response fields but not snapshotted
+/// here: their table renders a copy of the response the command reshapes
+/// first, so a raw fixture would not show what they print. The command tests
+/// assert those tables whole.
+const BOUND_ONLY: &[(&Resource, &str, &str)] = &[
+    (
+        &flute_cli2::groups::payment_methods::CARD_VIEW,
+        "CARD_VIEW",
+        "flute-v2-get-payment-methods-paymentMethodId",
+    ),
+    (
+        &flute_cli2::groups::payment_methods::ACH_VIEW,
+        "ACH_VIEW",
+        "flute-v2-get-payment-methods-paymentMethodId",
+    ),
+];
+
+/// Pointers the CLI writes into a table's copy of a response rather than
+/// reading from it. `/card/expiry` joins `card.expirationMonth` and
+/// `card.expirationYear`, both declared, into one `MM/YY` row.
+const DERIVED: &[&str] = &["/card/expiry"];
+
 #[test]
 fn every_rendered_pointer_names_a_declared_response_field() {
     let mut wrong: Vec<String> = Vec::new();
-    for r in RENDERED {
-        let group = group_of(r.operation_id);
+    let bound = RENDERED
+        .iter()
+        .map(|r| (r.resource, r.ident, r.operation_id))
+        .chain(BOUND_ONLY.iter().copied());
+    for (resource, ident, operation_id) in bound {
+        let group = group_of(operation_id);
         let declared = renderable_fields(group);
         assert!(
             !declared.is_empty(),
             "{group} declares no response fields to bind against"
         );
 
-        for pointer in declared_pointers(r.resource) {
+        for pointer in declared_pointers(resource) {
+            if DERIVED.contains(&pointer) {
+                continue;
+            }
             let wanted = without_indices(pointer);
             let resolves = declared
                 .iter()
@@ -524,7 +595,7 @@ fn every_rendered_pointer_names_a_declared_response_field() {
             if !resolves {
                 wrong.push(format!(
                     "{}.{pointer} names a field no {group} response declares",
-                    r.ident
+                    ident
                 ));
             }
         }
