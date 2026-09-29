@@ -1382,3 +1382,20 @@ async fn get_table_keeps_each_instrument_s_fields_together() {
         "{text}"
     );
 }
+
+/// The customer's flags and each instrument's default read `yes`/`no`, as
+/// `payment-methods get` reads its own `isDefault`.
+#[tokio::test]
+async fn get_table_reads_the_flags_as_yes_or_no() {
+    let text = vaulted_customer_table().await;
+    for label in [
+        "hasSmsConsent:",
+        "shouldUseBillingAsShippingAddress:",
+        "cards[0].isDefault:",
+        "achAccounts[0].isDefault:",
+    ] {
+        let line = text.lines().find(|l| l.starts_with(label)).unwrap();
+        assert!(line.ends_with(" no"), "{line}");
+    }
+    assert!(!text.contains("false"), "{text}");
+}

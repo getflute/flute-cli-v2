@@ -514,7 +514,12 @@ pub static CUSTOMER: Resource = Resource {
         },
     ],
     amounts: &["/transactionsVolume", "/lastTransactionAmount"],
-    yes_no: &[],
+    yes_no: &[
+        "/hasSmsConsent",
+        "/shouldUseBillingAsShippingAddress",
+        "/cards/[]/isDefault",
+        "/achAccounts/[]/isDefault",
+    ],
 };
 
 /// A customer as `create` answers for it: the identifier and nothing else.
