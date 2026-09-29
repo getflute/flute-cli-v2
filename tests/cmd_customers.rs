@@ -1373,14 +1373,6 @@ async fn get_table_keeps_each_instrument_s_fields_together() {
             "achAccounts[0].isDefault",
         ]
     );
-    assert!(
-        text.trim_end()
-            .lines()
-            .last()
-            .unwrap()
-            .starts_with("achAccounts[0].isDefault"),
-        "{text}"
-    );
 }
 
 /// The customer's flags and each instrument's default read `yes`/`no`, as
@@ -1398,4 +1390,15 @@ async fn get_table_reads_the_flags_as_yes_or_no() {
         assert!(line.ends_with(" no"), "{line}");
     }
     assert!(!text.contains("false"), "{text}");
+}
+
+/// `externalId` and `numberOfSubscriptions` hold no row of their own: no
+/// flag sets the one and v2 has no subscriptions. Sent, they print after the
+/// declared rows; absent, they print nothing.
+#[tokio::test]
+async fn get_table_prints_the_unset_fields_only_when_sent() {
+    let text = vaulted_customer_table().await;
+    let tail: Vec<&str> = text.lines().rev().take(2).collect();
+    assert!(tail[1].starts_with("externalId:"), "{text}");
+    assert!(tail[0].starts_with("numberOfSubscriptions:"), "{text}");
 }

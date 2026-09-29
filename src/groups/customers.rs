@@ -441,7 +441,6 @@ pub static CUSTOMER: Resource = Resource {
     id: "/customerId",
     detail: &[
         "/customerId",
-        "/externalId",
         "/firstName",
         "/lastName",
         "/companyName",
@@ -465,7 +464,6 @@ pub static CUSTOMER: Resource = Resource {
         "/transactionsVolume",
         "/lastTransactionAmount",
         "/lastTransactionDate",
-        "/numberOfSubscriptions",
         "/cards/[]/paymentMethodId",
         "/cards/[]/paymentName",
         "/cards/[]/cardMask",
