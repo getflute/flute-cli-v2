@@ -143,15 +143,54 @@ const KEYED_ACCOUNT_DIGITS: usize = 4;
 /// Mask a leaf under a key that says it is an account identifier.
 ///
 /// A leaf with no whitespace is the value itself, and every digit in it goes.
-/// A sentence keeps the short counts that explain a rule and loses every run
-/// long enough to be the account, whatever it is attached to.
+/// A sentence keeps the short counts that explain a rule and loses every
+/// number long enough to be the account, counted across the separators it is
+/// written with: `021 000 021` and `021-000-021` are nine digits, not three
+/// runs of three.
 fn mask_account_leaf(text: &str) -> String {
-    let threshold = if text.contains(char::is_whitespace) {
-        KEYED_ACCOUNT_DIGITS
-    } else {
-        1
-    };
-    mask_runs_of(text, threshold, Run::Anywhere)
+    if !text.contains(char::is_whitespace) {
+        return mask_runs_of(text, 1, Run::Anywhere);
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if !chars[i].is_ascii_digit() {
+            out.push(chars[i]);
+            i += 1;
+            continue;
+        }
+        // A number is digit runs joined by one separator each.
+        let start = i;
+        while i < chars.len()
+            && (chars[i].is_ascii_digit()
+                || (is_digit_separator(chars[i])
+                    && chars.get(i + 1).is_some_and(char::is_ascii_digit)))
+        {
+            i += 1;
+        }
+        let span = &chars[start..i];
+        let digits = span.iter().filter(|c| c.is_ascii_digit()).count();
+        if digits < KEYED_ACCOUNT_DIGITS {
+            out.extend(span);
+            continue;
+        }
+        let mut seen = 0;
+        for &c in span {
+            if c.is_ascii_digit() {
+                seen += 1;
+                out.push(if seen > digits - 4 { c } else { '*' });
+            } else {
+                out.push(c);
+            }
+        }
+    }
+    out
+}
+
+/// A character a number may be grouped with: `021 000 021`, `021-000-021`.
+fn is_digit_separator(c: char) -> bool {
+    matches!(c, ' ' | '-' | '.' | '\u{a0}')
 }
 
 /// Which digit runs a pass may mask.
@@ -770,6 +809,13 @@ mod tests {
                 "cardNumber=4111111111111111 rejected",
                 "411111111111",
             ),
+            (
+                "routingNumber",
+                "021 000 021 is not a routing number",
+                "021 000",
+            ),
+            ("routingNumber", "021-000-021 rejected", "021-000"),
+            ("accountNumber", "Account 123 456 789 is closed", "123 456"),
         ] {
             let body = format!(r#"{{"Errors":{{"{key}":["{message}"]}}}}"#);
             let traced = redact(&body);
