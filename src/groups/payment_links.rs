@@ -256,8 +256,9 @@ pub struct UpdatePaymentLinkArgs {
     /// Clear a field back to nothing. Repeat the flag for several fields.
     ///
     /// An empty value does the same: `--description ""` and
-    /// `--clear description` are one request. `name` and `currency-code`
-    /// cannot be cleared and are not offered.
+    /// `--clear description` are one request. `name`, `currency-code`,
+    /// `card-processor-id` and `ach-processor-id` cannot be cleared and are
+    /// not offered.
     #[arg(long = "clear", value_enum, value_name = "FIELD")]
     pub clear: Vec<Clearable>,
 }
