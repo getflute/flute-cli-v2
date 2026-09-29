@@ -12,17 +12,18 @@ use anyhow::Result;
 use reqwest::Method;
 use serde_json::{Map, Value};
 
-/// The one field `--clear` can null out, and the wire key it nulls.
+/// The one field `--clear` can null out: the label, `paymentName` on the wire.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
 pub enum Clearable {
     Name,
 }
 
 impl Clearable {
-    fn wire(self) -> &'static str {
-        match self {
-            Self::Name => "paymentName",
-        }
+    /// The value as `--clear` spells it on the command line.
+    fn flag(self) -> String {
+        clap::ValueEnum::to_possible_value(&self)
+            .map(|v| v.get_name().to_string())
+            .unwrap_or_default()
     }
 }
 
@@ -249,15 +250,31 @@ mod clearing_tests {
         let body = build_update_payment_method_body(&args).unwrap();
         assert_eq!(body["paymentName"], Value::Null);
     }
+
+    /// The refusal names the field as `--clear` spells it, not `paymentName`.
+    #[test]
+    fn a_contradicting_clear_is_named_as_the_caller_spelled_it() {
+        let args = UpdatePaymentMethodArgs {
+            payment_method_id: "pm_1".into(),
+            payment_name: Some("x".into()),
+            clear: vec![Clearable::Name],
+        };
+        let err = build_update_payment_method_body(&args)
+            .unwrap_err()
+            .to_string();
+        assert!(err.starts_with("--clear name "), "{err}");
+    }
 }
 
 /// Build the `UpdatePaymentMethodRequestDto` body — one property, so an
 /// absent `--name` leaves nothing to send.
 pub fn build_update_payment_method_body(args: &UpdatePaymentMethodArgs) -> Result<Value> {
-    let cleared = args.clear.first().map(|f| f.wire());
-    let name = match (common::patch_string(&args.payment_name), cleared) {
-        (Some(_), Some(key)) => {
-            anyhow::bail!("--clear {key} contradicts the value given for it; pass one or the other")
+    let name = match (common::patch_string(&args.payment_name), args.clear.first()) {
+        (Some(_), Some(field)) => {
+            anyhow::bail!(
+                "--clear {} contradicts the value given for it; pass one or the other",
+                field.flag()
+            )
         }
         (Some(v), None) => v,
         (None, Some(_)) => Value::Null,

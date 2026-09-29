@@ -29,6 +29,13 @@ impl Clearable {
             Self::Mobile => "mobilePhoneNumber",
         }
     }
+
+    /// The value as `--clear` spells it on the command line.
+    fn flag(self) -> String {
+        clap::ValueEnum::to_possible_value(&self)
+            .map(|v| v.get_name().to_string())
+            .unwrap_or_default()
+    }
 }
 
 /// One variant per command, and the arg-bearing ones are large.
@@ -200,8 +207,9 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
         let key = field.wire();
         if body.contains_key(key) {
             anyhow::bail!(
-                "--clear {key} contradicts the value given for it; pass one or \
-                 the other"
+                "--clear {} contradicts the value given for it; pass one or \
+                 the other",
+                field.flag()
             );
         }
         body.insert(key.to_string(), Value::Null);
@@ -246,6 +254,33 @@ mod clearing_tests {
             ..Default::default()
         };
         assert!(build_update_customer_body(&args).is_err());
+    }
+
+    /// The refusal names the field as `--clear` spells it, which is what the
+    /// caller typed, rather than the wire key.
+    #[test]
+    fn a_contradicting_clear_is_named_as_the_caller_spelled_it() {
+        for (args, flag) in [
+            (
+                UpdateCustomerArgs {
+                    company_name: Some("X".into()),
+                    clear: vec![Clearable::Company],
+                    ..Default::default()
+                },
+                "--clear company ",
+            ),
+            (
+                UpdateCustomerArgs {
+                    mobile_phone_number: Some("+14155552309".into()),
+                    clear: vec![Clearable::Mobile],
+                    ..Default::default()
+                },
+                "--clear mobile ",
+            ),
+        ] {
+            let err = build_update_customer_body(&args).unwrap_err().to_string();
+            assert!(err.starts_with(flag), "{err}");
+        }
     }
 
     /// The non-nullable columns are offered by neither spelling.
