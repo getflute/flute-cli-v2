@@ -216,9 +216,53 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
     }
 
     if body.is_empty() {
+        if let Some(flag) = empty_address_flag(args) {
+            anyhow::bail!(
+                "nothing to update: {flag} is empty, and address components cannot be \
+                 cleared individually; pass a value for it"
+            );
+        }
         anyhow::bail!("nothing to update: pass at least one field, e.g. --email or --company");
     }
     Ok(Value::Object(body))
+}
+
+/// The first address flag given an empty value. An empty component is
+/// omitted from the address it builds, so it sends nothing.
+fn empty_address_flag(args: &UpdateCustomerArgs) -> Option<String> {
+    let (b, s) = (&args.billing, &args.shipping);
+    [
+        (
+            "billing",
+            [
+                &b.line1,
+                &b.line2,
+                &b.city,
+                &b.state,
+                &b.postal_code,
+                &b.country,
+            ],
+        ),
+        (
+            "shipping",
+            [
+                &s.line1,
+                &s.line2,
+                &s.city,
+                &s.state,
+                &s.postal_code,
+                &s.country,
+            ],
+        ),
+    ]
+    .into_iter()
+    .find_map(|(prefix, values)| {
+        ["line1", "line2", "city", "state", "postal-code", "country"]
+            .into_iter()
+            .zip(values)
+            .find(|(_, v)| v.as_deref() == Some(""))
+            .map(|(name, _)| format!("--{prefix}-{name}"))
+    })
 }
 
 #[cfg(test)]
@@ -839,6 +883,17 @@ mod tests {
         args.has_sms_consent = Some(false);
         let body = build_update_customer_body(&args).unwrap();
         assert_eq!(body["hasSmsConsent"], false);
+    }
+
+    /// An empty address component sends nothing, and the refusal says why
+    /// rather than asking for a field the caller did pass.
+    #[test]
+    fn an_update_with_only_an_empty_address_component_says_it_cannot_be_cleared() {
+        let mut args = update_args();
+        args.shipping.postal_code = Some(String::new());
+        let err = build_update_customer_body(&args).unwrap_err().to_string();
+        assert!(err.contains("--shipping-postal-code is empty"), "{err}");
+        assert!(err.contains("cannot be cleared individually"), "{err}");
     }
 
     /// An empty PATCH is a round trip that cannot change anything.

@@ -1402,3 +1402,25 @@ async fn get_table_prints_the_unset_fields_only_when_sent() {
     assert!(tail[1].starts_with("externalId:"), "{text}");
     assert!(tail[0].starts_with("numberOfSubscriptions:"), "{text}");
 }
+
+/// `--billing-line1 ""` sends nothing, because an address component cannot
+/// be cleared on its own, and the refusal says so.
+#[tokio::test]
+async fn an_update_with_only_an_empty_address_component_is_refused_with_the_reason() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["customers", "update", "cus_1", "--billing-line1", ""])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains(
+            "--billing-line1 is empty, and address components cannot be cleared individually",
+        ));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
