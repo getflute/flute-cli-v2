@@ -2638,3 +2638,242 @@ async fn an_empty_reference_id_filter_is_refused_with_nothing_sent() {
         "a client-side refusal must issue no request"
     );
 }
+
+// ── one instrument's rows ────────────────────────────────────────────────────
+
+/// A sandbox card sale, as `transactions create` received it.
+const CARD_SALE: &str = r#"
+{
+  "achDetails": null,
+  "addressVerificationServiceResponse": {
+    "action": "Allow",
+    "description": "Street Address and ZIP Code Match the information on file.",
+    "responseCode": "Y"
+  },
+  "amountBreakdown": {
+    "baseAmount": 7.50,
+    "discountAmount": 0.00,
+    "discountRate": 0,
+    "surchargeAmount": 0,
+    "surchargeRate": 0,
+    "taxAmount": 0,
+    "taxRate": 0,
+    "tipAmount": 0,
+    "tipRate": 0
+  },
+  "batchId": null,
+  "cardDetails": {
+    "cardBrand": "Visa",
+    "cardDataSource": "Internet",
+    "cardProcessedAsType": "Credit",
+    "cardType": "Debit",
+    "cardholderVerificationMethod": "NotAuthenticated",
+    "maskedCardNumber": "411111******1111",
+    "paymentMethodId": null
+  },
+  "cardTokenType": null,
+  "currencyCode": "USD",
+  "customerId": null,
+  "declineDetails": null,
+  "merchantId": "b10d6597-0b95-4949-8e4b-03187c812347",
+  "originalTransactionId": null,
+  "paymentMethodType": "Card",
+  "paymentProcessorId": "df8d5b37-42af-4207-a03e-069893816aef",
+  "pricingType": null,
+  "processedAmount": 7.50,
+  "processorDetails": {
+    "authCode": "873813",
+    "mid": null,
+    "rrn": null,
+    "tid": "775ae34e-3df9-442d-9dbd-d463a768a828"
+  },
+  "referenceId": "fixb-card-1790710516",
+  "refundDetails": {
+    "availableRefundAmount": 7.50,
+    "refundedAmount": 0
+  },
+  "source": {
+    "sourceId": "9edddfd9-b6a4-43f6-a371-db59d80c536e",
+    "sourceName": "payson-cli-v2",
+    "sourceType": "ApiKey"
+  },
+  "transactionDateTime": "2026-09-29T19:35:16.964695Z",
+  "transactionEvents": [
+    {
+      "amount": 7.50,
+      "dateTime": "2026-09-29T19:35:17.1300691Z",
+      "declineDetails": null,
+      "originalTransactionId": null,
+      "status": "Approved",
+      "type": "Sale"
+    }
+  ],
+  "transactionId": "56eced0b-47f4-485d-9c8d-4fafbbc352f4",
+  "transactionStatus": "Captured",
+  "transactionType": "Sale"
+}
+"#;
+
+/// A sandbox ACH sale, as `transactions create` received it.
+const ACH_SALE: &str = r#"
+{
+  "achDetails": {
+    "accountHolderType": "Personal",
+    "accountRoutingNumber": "021000021",
+    "accountType": "Checking",
+    "isSameDayProcessing": false,
+    "maskedAccountNumber": "****6789",
+    "paymentMethodId": null,
+    "requesterIpAddress": "127.0.0.1",
+    "secCode": "Web"
+  },
+  "addressVerificationServiceResponse": null,
+  "amountBreakdown": {
+    "baseAmount": 7.50,
+    "discountAmount": 0.00,
+    "discountRate": 0,
+    "surchargeAmount": 0,
+    "surchargeRate": 0,
+    "taxAmount": 0,
+    "taxRate": 0,
+    "tipAmount": 0,
+    "tipRate": 0
+  },
+  "batchId": null,
+  "cardDetails": null,
+  "cardTokenType": null,
+  "currencyCode": "USD",
+  "customerId": null,
+  "declineDetails": null,
+  "merchantId": "b10d6597-0b95-4949-8e4b-03187c812347",
+  "originalTransactionId": null,
+  "paymentMethodType": "ACH",
+  "paymentProcessorId": "b08e71a3-ee7e-4a51-a7ef-11cb377b4003",
+  "pricingType": null,
+  "processedAmount": 7.50,
+  "processorDetails": {
+    "authCode": null,
+    "mid": null,
+    "rrn": null,
+    "tid": null
+  },
+  "referenceId": "fixb-ach-1790710557",
+  "refundDetails": {
+    "availableRefundAmount": 0,
+    "refundedAmount": 0
+  },
+  "source": {
+    "sourceId": "9edddfd9-b6a4-43f6-a371-db59d80c536e",
+    "sourceName": "payson-cli-v2",
+    "sourceType": "ApiKey"
+  },
+  "transactionDateTime": "2026-09-29T19:35:57.4176093Z",
+  "transactionEvents": [
+    {
+      "amount": 7.50,
+      "dateTime": "2026-09-29T19:35:57.4181539Z",
+      "declineDetails": null,
+      "originalTransactionId": null,
+      "status": "Approved",
+      "type": "Sale"
+    }
+  ],
+  "transactionId": "910a681f-8067-4cbd-8122-fd097e21ad13",
+  "transactionStatus": "Scheduled",
+  "transactionType": "Sale"
+}
+"#;
+
+async fn table_of(body: &str) -> String {
+    let server = support::mock_with_token().await;
+    let id = serde_json::from_str::<serde_json::Value>(body).unwrap()["transactionId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/transactions/{id}")))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(body.to_string(), "application/json"))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "transactions", "get", &id])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    String::from_utf8(out.stdout).unwrap()
+}
+
+/// A card transaction's table carries no bank-account rows: the response's
+/// `achDetails` is null, and a row of dashes per field says nothing.
+#[tokio::test]
+async fn a_card_table_shows_only_the_card_rows() {
+    let table = table_of(CARD_SALE).await;
+    assert!(!table.contains("achDetails"), "{table}");
+    for row in [
+        "cardDetails.maskedCardNumber:",
+        "processorDetails.authCode:",
+        "addressVerificationServiceResponse.responseCode:",
+    ] {
+        assert!(table.contains(row), "no {row}\n{table}");
+    }
+}
+
+/// An ACH transaction's table carries no card, authorization or
+/// address-verification rows: the response sends those containers empty.
+#[tokio::test]
+async fn an_ach_table_shows_only_the_bank_account_rows() {
+    let table = table_of(ACH_SALE).await;
+    for absent in [
+        "cardDetails",
+        "processorDetails",
+        "addressVerificationServiceResponse",
+    ] {
+        assert!(!table.contains(absent), "{absent}\n{table}");
+    }
+    for row in ["achDetails.maskedAccountNumber:", "achDetails.secCode:"] {
+        assert!(table.contains(row), "no {row}\n{table}");
+    }
+}
+
+/// A container the other instrument's descriptor omits still prints when it
+/// carries a value: the view hides empty rows, never data.
+#[tokio::test]
+async fn an_ach_table_keeps_a_processor_answer_that_carries_a_value() {
+    let table = table_of(&ACH_SALE.replace(r#""tid": null"#, r#""tid": "tid-7""#)).await;
+    assert!(
+        table
+            .lines()
+            .any(|l| l.starts_with("processorDetails.tid:") && l.ends_with("tid-7")),
+        "{table}"
+    );
+}
+
+/// The instrument chooses the table's rows and nothing else: `json` is the
+/// API's own document either way.
+#[tokio::test]
+async fn an_ach_transaction_envelope_is_the_response() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path(
+            "/v2/transactions/910a681f-8067-4cbd-8122-fd097e21ad13",
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(ACH_SALE, "application/json"))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "transactions",
+            "get",
+            "910a681f-8067-4cbd-8122-fd097e21ad13",
+        ])
+        .output()
+        .unwrap();
+    let envelope: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(envelope["object"], "transaction");
+    assert_eq!(
+        envelope["data"],
+        serde_json::from_str::<serde_json::Value>(ACH_SALE).unwrap()
+    );
+}

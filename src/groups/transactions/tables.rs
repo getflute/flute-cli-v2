@@ -1,7 +1,52 @@
 //! How each transaction response is drawn in `table` mode.
 
+use crate::cli::output::OutputFormat;
 use crate::cli::render::{self, Cell, Column, Resource};
 use serde_json::Value;
+
+/// The shared parts of every transaction descriptor, with the instrument's
+/// rows spliced in: `$instrument` after `paymentMethodType`, and
+/// `$processor` — what the card network answered — after the identifiers.
+macro_rules! transaction {
+    ([$($instrument:literal),* $(,)?], [$($processor:literal),* $(,)?]) => {
+        Resource {
+            object: "transaction",
+            object_list: "transaction_list",
+            id: "/transactionId",
+            detail: &[
+                "/transactionId",
+                "/transactionStatus",
+                "/transactionType",
+                "/transactionDateTime",
+                "/processedAmount",
+                "/currencyCode",
+                "/declineDetails/code",
+                "/declineDetails/message",
+                "/amountBreakdown/baseAmount",
+                "/amountBreakdown/tipAmount",
+                "/amountBreakdown/tipRate",
+                "/amountBreakdown/discountAmount",
+                "/amountBreakdown/discountRate",
+                "/amountBreakdown/surchargeAmount",
+                "/amountBreakdown/surchargeRate",
+                "/paymentMethodType",
+                $($instrument,)*
+                "/referenceId",
+                "/customerId",
+                "/paymentProcessorId",
+                "/merchantId",
+                "/batchId",
+                "/originalTransactionId",
+                $($processor,)*
+                "/refundDetails/refundedAmount",
+                "/refundDetails/availableRefundAmount",
+            ],
+            columns: TRANSACTION_COLUMNS,
+            amounts: TRANSACTION_AMOUNTS,
+            yes_no: &[],
+        }
+    };
+}
 
 /// A transaction, in the order it is worth saying it.
 ///
@@ -16,27 +61,13 @@ use serde_json::Value;
 /// reversal's `processedAmount` is the original charge and a refund's amount
 /// is `refundDetails.refundedAmount`. The list item is the same shape with
 /// fewer fields, so it reads through this one too.
-pub static TRANSACTION: Resource = Resource {
-    object: "transaction",
-    object_list: "transaction_list",
-    id: "/transactionId",
-    detail: &[
-        "/transactionId",
-        "/transactionStatus",
-        "/transactionType",
-        "/transactionDateTime",
-        "/processedAmount",
-        "/currencyCode",
-        "/declineDetails/code",
-        "/declineDetails/message",
-        "/amountBreakdown/baseAmount",
-        "/amountBreakdown/tipAmount",
-        "/amountBreakdown/tipRate",
-        "/amountBreakdown/discountAmount",
-        "/amountBreakdown/discountRate",
-        "/amountBreakdown/surchargeAmount",
-        "/amountBreakdown/surchargeRate",
-        "/paymentMethodType",
+///
+/// This descriptor names both instruments' rows, for a transaction whose
+/// `paymentMethodType` is neither `Card` nor `ACH`. A single transaction of
+/// either type renders through [`TRANSACTION_CARD`] or [`TRANSACTION_ACH`]:
+/// see [`render_transaction`].
+pub static TRANSACTION: Resource = transaction!(
+    [
         "/cardDetails/maskedCardNumber",
         "/cardDetails/cardBrand",
         "/cardDetails/cardType",
@@ -47,12 +78,8 @@ pub static TRANSACTION: Resource = Resource {
         "/achDetails/accountType",
         "/achDetails/secCode",
         "/achDetails/paymentMethodId",
-        "/referenceId",
-        "/customerId",
-        "/paymentProcessorId",
-        "/merchantId",
-        "/batchId",
-        "/originalTransactionId",
+    ],
+    [
         "/processorDetails/authCode",
         "/processorDetails/rrn",
         "/processorDetails/mid",
@@ -60,53 +87,141 @@ pub static TRANSACTION: Resource = Resource {
         "/addressVerificationServiceResponse/action",
         "/addressVerificationServiceResponse/responseCode",
         "/addressVerificationServiceResponse/description",
-        "/refundDetails/refundedAmount",
-        "/refundDetails/availableRefundAmount",
+    ]
+);
+
+/// A card transaction: [`TRANSACTION`] without the bank-account rows.
+pub static TRANSACTION_CARD: Resource = transaction!(
+    [
+        "/cardDetails/maskedCardNumber",
+        "/cardDetails/cardBrand",
+        "/cardDetails/cardType",
+        "/cardDetails/cardDataSource",
+        "/cardDetails/paymentMethodId",
     ],
-    // CUSTOMER reads `customerId`: the list item carries no `customerName`.
-    columns: &[
-        Column {
-            header: "ID",
-            width: 36,
-            cell: Cell::Path("/transactionId"),
-        },
-        Column {
-            header: "DATE",
-            width: 10,
-            cell: Cell::Derived(|v| render::date_only(v, "/transactionDateTime")),
-        },
-        Column {
-            header: "STATUS",
-            width: 12,
-            cell: Cell::Path("/transactionStatus"),
-        },
-        Column {
-            header: "TYPE",
-            width: 14,
-            cell: Cell::Path("/transactionType"),
-        },
-        Column {
-            header: "AMOUNT",
-            width: 10,
-            cell: Cell::Path("/processedAmount"),
-        },
-        Column {
-            header: "CUSTOMER",
-            width: 36,
-            cell: Cell::Path("/customerId"),
-        },
+    [
+        "/processorDetails/authCode",
+        "/processorDetails/rrn",
+        "/processorDetails/mid",
+        "/processorDetails/tid",
+        "/addressVerificationServiceResponse/action",
+        "/addressVerificationServiceResponse/responseCode",
+        "/addressVerificationServiceResponse/description",
+    ]
+);
+
+/// An ACH transaction: [`TRANSACTION`] without the card rows, the processor's
+/// authorization and the address-verification answer, which an ACH response
+/// carries as nulls.
+pub static TRANSACTION_ACH: Resource = transaction!(
+    [
+        "/achDetails/maskedAccountNumber",
+        "/achDetails/accountRoutingNumber",
+        "/achDetails/accountType",
+        "/achDetails/secCode",
+        "/achDetails/paymentMethodId",
     ],
-    amounts: &[
-        "/processedAmount",
-        "/amountBreakdown/baseAmount",
-        "/amountBreakdown/tipAmount",
-        "/amountBreakdown/discountAmount",
-        "/amountBreakdown/surchargeAmount",
-        "/refundDetails/refundedAmount",
-        "/refundDetails/availableRefundAmount",
-    ],
-    yes_no: &[],
-};
+    []
+);
+
+// CUSTOMER reads `customerId`: the list item carries no `customerName`.
+const TRANSACTION_COLUMNS: &[Column] = &[
+    Column {
+        header: "ID",
+        width: 36,
+        cell: Cell::Path("/transactionId"),
+    },
+    Column {
+        header: "DATE",
+        width: 10,
+        cell: Cell::Derived(|v| render::date_only(v, "/transactionDateTime")),
+    },
+    Column {
+        header: "STATUS",
+        width: 12,
+        cell: Cell::Path("/transactionStatus"),
+    },
+    Column {
+        header: "TYPE",
+        width: 14,
+        cell: Cell::Path("/transactionType"),
+    },
+    Column {
+        header: "AMOUNT",
+        width: 10,
+        cell: Cell::Path("/processedAmount"),
+    },
+    Column {
+        header: "CUSTOMER",
+        width: 36,
+        cell: Cell::Path("/customerId"),
+    },
+];
+
+const TRANSACTION_AMOUNTS: &[&str] = &[
+    "/processedAmount",
+    "/amountBreakdown/baseAmount",
+    "/amountBreakdown/tipAmount",
+    "/amountBreakdown/discountAmount",
+    "/amountBreakdown/surchargeAmount",
+    "/refundDetails/refundedAmount",
+    "/refundDetails/availableRefundAmount",
+];
+
+/// The descriptor for one transaction's instrument, and the response with the
+/// other instrument's containers removed where they carry nothing.
+///
+/// A card response sends `achDetails: null`, and an ACH one sends
+/// `cardDetails` and `addressVerificationServiceResponse` as nulls and
+/// `processorDetails` as an object of nulls. Left in, each would print in the
+/// undeclared tail as rows of dashes. A container that does carry a value
+/// stays, so it still prints.
+fn instrument_view(data: &Value) -> (&'static Resource, Value) {
+    let (resource, other): (&'static Resource, &[&str]) =
+        match data.get("paymentMethodType").and_then(Value::as_str) {
+            Some("Card") => (&TRANSACTION_CARD, &["achDetails"]),
+            Some("ACH") => (
+                &TRANSACTION_ACH,
+                &[
+                    "cardDetails",
+                    "processorDetails",
+                    "addressVerificationServiceResponse",
+                ],
+            ),
+            _ => return (&TRANSACTION, data.clone()),
+        };
+    let mut data = data.clone();
+    if let Value::Object(map) = &mut data {
+        map.retain(|key, value| !(other.contains(&key.as_str()) && carries_nothing(value)));
+    }
+    (resource, data)
+}
+
+fn carries_nothing(value: &Value) -> bool {
+    match value {
+        Value::Null => true,
+        Value::Object(map) => map.values().all(Value::is_null),
+        _ => false,
+    }
+}
+
+/// Render one transaction: the instrument's own rows in `table` mode, and
+/// [`TRANSACTION`]'s envelope and identifier otherwise, so `json` and `quiet`
+/// are the same whichever instrument paid.
+pub fn render_transaction(
+    ctx: &crate::Ctx,
+    data: &Value,
+    correlation_id: Option<String>,
+) -> anyhow::Result<()> {
+    match ctx.output {
+        OutputFormat::Table => {
+            let (resource, data) = instrument_view(data);
+            println!("{}", render::detail_table(resource, &data));
+            Ok(())
+        }
+        _ => render::one(ctx, &TRANSACTION, data, correlation_id),
+    }
+}
 
 /// The rows of `inspect`'s header: what decided the payment.
 ///
