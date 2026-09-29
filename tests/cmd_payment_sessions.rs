@@ -400,3 +400,23 @@ async fn the_confirmation_line_is_a_sentence() {
         .success()
         .stdout(format!("Cancelled payment session {SESSION}.\n"));
 }
+
+/// An expiry the API cannot read is refused before the wire, naming the flag.
+#[tokio::test]
+async fn an_expiry_that_is_not_a_utc_date_time_is_refused_before_the_wire() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["payment-sessions", "create", "--expires-at", "tomorrow"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--expires-at"))
+        .stderr(predicate::str::contains("ending in Z"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}

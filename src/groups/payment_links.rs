@@ -69,6 +69,49 @@ impl Clearable {
     }
 }
 
+/// Parse an expiry as the API takes one: a UTC date-time in ISO 8601 with a
+/// `Z` suffix, e.g. `2026-09-15T00:00:00Z`, with optional fractional seconds.
+///
+/// The API answers anything else with a 400: a word or a bare date with a
+/// .NET conversion error that names no flag, and a date-time without the `Z`
+/// or with an offset as not a UTC date-time. Whether it is in the future is
+/// left to the server, whose clock decides it. An empty value passes through,
+/// because on `update` it is the removal.
+pub(crate) fn parse_utc_expiry(raw: &str) -> Result<String> {
+    if raw.is_empty() || is_utc_date_time(raw) {
+        return Ok(raw.to_string());
+    }
+    anyhow::bail!("expected a UTC date-time in ISO 8601 ending in Z, e.g. 2026-09-15T00:00:00Z")
+}
+
+fn is_utc_date_time(raw: &str) -> bool {
+    let Some(rest) = raw.strip_suffix('Z') else {
+        return false;
+    };
+    let (main, fraction) = rest.split_once('.').unwrap_or((rest, "0"));
+    const SHAPE: &[u8] = b"dddd-dd-ddTdd:dd:dd";
+    let shaped = main.len() == SHAPE.len()
+        && main.bytes().zip(SHAPE).all(|(c, &want)| match want {
+            b'd' => c.is_ascii_digit(),
+            _ => c == want,
+        });
+    if !shaped || fraction.is_empty() || !fraction.bytes().all(|c| c.is_ascii_digit()) {
+        return false;
+    }
+    // Every slice is ASCII digits, checked above.
+    let field = |r: std::ops::Range<usize>| main[r].parse::<u32>().unwrap_or(u32::MAX);
+    let (year, month, day) = (field(0..4), field(5..7), field(8..10));
+    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    let days = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap => 29,
+        2 => 28,
+        _ => return false,
+    };
+    (1..=days).contains(&day) && field(11..13) < 24 && field(14..16) < 60 && field(17..19) < 60
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(clap::Subcommand, Debug)]
 pub enum PaymentLinksCommand {
@@ -140,9 +183,9 @@ pub struct CreatePaymentLinkArgs {
     /// Merchant-internal notes. Never shown to customers.
     #[arg(long)]
     pub description: Option<String>,
-    /// UTC expiry (ISO 8601), e.g. `2026-09-15T00:00:00.000Z`. Omit for a
-    /// link that never expires.
-    #[arg(long)]
+    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`.
+    /// Omit for a link that never expires.
+    #[arg(long, value_parser = parse_utc_expiry)]
     pub expires_on: Option<String>,
 }
 
@@ -205,8 +248,10 @@ pub struct UpdatePaymentLinkArgs {
     /// New merchant-internal notes.
     #[arg(long, id = "update_link_description", value_name = "DESCRIPTION")]
     pub description: Option<String>,
-    /// New UTC expiry (ISO 8601). Must be in the future.
-    #[arg(long, id = "update_link_expires_on", value_name = "EXPIRES_ON")]
+    /// New UTC expiry (ISO 8601, ending in `Z`), e.g.
+    /// `2026-09-15T00:00:00Z`. Must be in the future.
+    #[arg(long, id = "update_link_expires_on", value_name = "EXPIRES_ON",
+          value_parser = parse_utc_expiry)]
     pub expires_on: Option<String>,
     /// Clear a field back to nothing. Repeat the flag for several fields.
     ///

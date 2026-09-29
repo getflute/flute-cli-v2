@@ -556,3 +556,43 @@ async fn the_confirmation_lines_are_sentences() {
         .success()
         .stdout(format!("Deleted payment link {LINK}.\n"));
 }
+
+/// An expiry the API cannot read is refused before the wire, naming the
+/// flag, on create and on update alike.
+#[tokio::test]
+async fn an_expiry_that_is_not_a_utc_date_time_is_refused_before_the_wire() {
+    let server = support::mock_with_token().await;
+    for args in [
+        vec![
+            "payment-links",
+            "create",
+            "--card-enabled",
+            "--currency-code",
+            "USD",
+            "--expires-on",
+            "tomorrow",
+        ],
+        vec![
+            "payment-links",
+            "update",
+            "8f0e1d2c-3b4a-4c5d-9e6f-7a8b9c0d1e2f",
+            "--expires-on",
+            "2026-10-15",
+        ],
+    ] {
+        support::bin(&server)
+            .args(&args)
+            .assert()
+            .code(3)
+            .stderr(predicate::str::contains("--expires-on"))
+            .stderr(predicate::str::contains("ending in Z"));
+    }
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
