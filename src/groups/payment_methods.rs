@@ -211,8 +211,13 @@ pub fn build_add_card_body(args: &AddCardArgs) -> Result<Value> {
 /// Four fields are required by schema, and the two enums are capitalised on
 /// the wire.
 pub fn build_add_ach_body(args: &AddAchArgs) -> Result<Value> {
-    if args.account_number.trim().is_empty() || args.routing_number.trim().is_empty() {
-        anyhow::bail!("--account and --routing are both required");
+    for (flag, value) in [
+        ("--account", &args.account_number),
+        ("--routing", &args.routing_number),
+    ] {
+        if value.trim().is_empty() {
+            anyhow::bail!("{flag} is required");
+        }
     }
     let mut body = Map::new();
     body.insert(
@@ -662,6 +667,19 @@ mod tests {
                 "accountHolderType": "Personal",
                 "accountType": "Checking"})
         );
+    }
+
+    /// The refusal names the one flag that is empty.
+    #[test]
+    fn an_empty_account_or_routing_number_is_named() {
+        let mut args = ach();
+        args.routing_number = " ".into();
+        let err = build_add_ach_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--routing is required");
+        let mut args = ach();
+        args.account_number = String::new();
+        let err = build_add_ach_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--account is required");
     }
 
     /// Capitalised on the wire; a lowercase near-miss is rejected rather than

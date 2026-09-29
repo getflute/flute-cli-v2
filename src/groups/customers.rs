@@ -442,8 +442,13 @@ pub struct CreateCustomerArgs {
 /// sets `additionalProperties: false` and the API distinguishes an absent key
 /// from a null one.
 pub fn build_create_customer_body(args: &CreateCustomerArgs) -> Result<Value> {
-    if args.first_name.is_empty() || args.last_name.is_empty() {
-        anyhow::bail!("--first-name and --last-name are both required");
+    for (flag, value) in [
+        ("--first-name", &args.first_name),
+        ("--last-name", &args.last_name),
+    ] {
+        if value.is_empty() {
+            anyhow::bail!("{flag} is required");
+        }
     }
     let mut body = Map::new();
     body.insert("firstName".into(), Value::String(args.first_name.clone()));
@@ -740,11 +745,17 @@ mod tests {
         assert_eq!(body["shouldUseBillingAsShippingAddress"], true);
     }
 
+    /// The refusal names the one flag that is empty.
     #[test]
     fn rejects_an_empty_required_name() {
         let mut args = minimal();
         args.first_name = String::new();
-        assert!(build_create_customer_body(&args).is_err());
+        let err = build_create_customer_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--first-name is required");
+        let mut args = minimal();
+        args.last_name = String::new();
+        let err = build_create_customer_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--last-name is required");
     }
 
     fn list_args() -> ListCustomersArgs {
