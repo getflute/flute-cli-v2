@@ -396,21 +396,57 @@ fn detail_rows(resource: &Resource, data: &Value) -> Vec<(String, String)> {
 /// from the table reads as one the resource never had. A pattern with a `/[]`
 /// step is the exception, because it addresses elements rather than a row —
 /// a `parts[].name` row would report a part that does not exist.
+///
+/// Consecutive patterns that step into the same array are one group, read
+/// element by element: each part's `id` then `name`, then the next part's,
+/// rather than every part's `id` followed by every part's `name`.
 fn declared_rows(resource: &Resource, leaves: &[Leaf]) -> Vec<(String, String)> {
     let mut rows = Vec::new();
-    for pattern in resource.detail {
-        let mut matched = leaves
-            .iter()
-            .filter(|leaf| leaf.pattern == *pattern)
-            .map(|leaf| (leaf.label.clone(), leaf.value.clone()))
-            .peekable();
-        if matched.peek().is_some() {
-            rows.extend(matched);
-        } else if !pattern.contains("/[]") {
-            rows.push((label_of(pattern), MISSING.to_string()));
+    let mut patterns = resource.detail.iter().peekable();
+    while let Some(pattern) = patterns.next() {
+        let Some(array) = array_prefix(pattern) else {
+            match leaves.iter().find(|leaf| leaf.pattern == *pattern) {
+                Some(_) => rows.extend(matching(leaves, pattern)),
+                None => rows.push((label_of(pattern), MISSING.to_string())),
+            }
+            continue;
+        };
+        let mut group = vec![*pattern];
+        while let Some(next) = patterns.next_if(|p| array_prefix(p) == Some(array)) {
+            group.push(*next);
         }
+        let mut elements: Vec<(usize, (String, String))> = group
+            .iter()
+            .flat_map(|p| matching(leaves, p))
+            .map(|row| (element_index(&row.0), row))
+            .collect();
+        elements.sort_by_key(|(index, _)| *index);
+        rows.extend(elements.into_iter().map(|(_, row)| row));
     }
     rows
+}
+
+/// The rows one declared pattern matches, in response order.
+fn matching(leaves: &[Leaf], pattern: &str) -> Vec<(String, String)> {
+    leaves
+        .iter()
+        .filter(|leaf| leaf.pattern == pattern)
+        .map(|leaf| (leaf.label.clone(), leaf.value.clone()))
+        .collect()
+}
+
+/// The pointer up to and including its first `/[]` step, if it has one.
+fn array_prefix(pattern: &str) -> Option<&str> {
+    pattern.find("/[]").map(|at| &pattern[..at + 3])
+}
+
+/// The first element index in a rendered label: `parts[2].name` is `2`.
+fn element_index(label: &str) -> usize {
+    label
+        .split_once('[')
+        .and_then(|(_, rest)| rest.split_once(']'))
+        .and_then(|(index, _)| index.parse().ok())
+        .unwrap_or(0)
 }
 
 /// A descriptor pointer as its rendered label: `/billingAddress/city` becomes
@@ -702,6 +738,43 @@ mod tests {
             .position(|l| l == "aaaFirstAlphabetically")
             .unwrap();
         assert!(declared < undeclared, "{labels:?}");
+    }
+
+    /// Consecutive patterns into one array read element by element, so each
+    /// element's fields sit together however many elements there are.
+    #[test]
+    fn detail_table_groups_an_arrays_fields_by_element() {
+        static PARTS: Resource = Resource {
+            object: "widget",
+            object_list: "widget_list",
+            id: "/widgetId",
+            detail: &["/widgetId", "/parts/[]/id", "/parts/[]/name", "/status"],
+            columns: &[],
+            amounts: &[],
+            yes_no: &[],
+        };
+        let v = json!({
+            "widgetId": "w_1",
+            "status": "ok",
+            "parts": [{"id": "p_0", "name": "zero"}, {"id": "p_1", "name": "one"}],
+        });
+        let out = detail_table(&PARTS, &v);
+        let labels: Vec<&str> = out
+            .lines()
+            .map(|l| l.split(':').next().unwrap().trim())
+            .collect();
+        assert_eq!(
+            labels,
+            [
+                "widgetId",
+                "parts[0].id",
+                "parts[0].name",
+                "parts[1].id",
+                "parts[1].name",
+                "status"
+            ],
+            "{out}"
+        );
     }
 
     /// An empty container is not nothing. Rendering it as blank would read as
