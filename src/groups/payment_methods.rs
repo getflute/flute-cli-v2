@@ -51,10 +51,10 @@ pub enum PaymentMethodsCommand {
     /// Rename a vaulted payment method
     /// (PATCH /v2/payment-methods/{paymentMethodId}).
     Update(UpdatePaymentMethodArgs),
-    /// Remove a payment method from the vault
+    /// Delete a payment method from the vault
     /// (DELETE /v2/payment-methods/{paymentMethodId}).
     ///
-    /// Requires `--yes` to prevent accidental removal.
+    /// Requires `--yes` to prevent accidental deletions.
     Delete {
         /// Payment method UUID to delete (positional).
         payment_method_id: String,
@@ -540,16 +540,16 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
         PaymentMethodsCommand::Delete {
             payment_method_id, ..
         } => {
-            // A 404 here is exit 0 but not a removal: the server answers the
-            // same for "already removed" and "never existed".
+            // A 404 here is exit 0 but not a deletion: the server answers the
+            // same for "already deleted" and "never existed".
             common::delete(
                 ctx,
                 &PAYMENT_METHOD,
                 ApiPath::from("/v2/payment-methods").id(&payment_method_id)?,
                 &payment_method_id,
                 "deleted",
-                &format!("Removed payment method {payment_method_id}."),
-                &format!("No payment method {payment_method_id} was found; nothing was removed."),
+                &format!("Deleted payment method {payment_method_id}."),
+                &format!("No payment method {payment_method_id} was found; nothing was deleted."),
             )
             .await
         }

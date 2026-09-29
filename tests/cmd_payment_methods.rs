@@ -550,7 +550,7 @@ async fn the_confirmation_lines_are_sentences() {
         .args(["payment-methods", "delete", PM, "--yes"])
         .assert()
         .success()
-        .stdout(format!("Removed payment method {PM}.\n"));
+        .stdout(format!("Deleted payment method {PM}.\n"));
 }
 
 /// A payment method read as the sandbox answers for it: both containers
@@ -647,4 +647,25 @@ async fn a_card_s_json_keeps_the_null_ach_container() {
     let env: serde_json::Value = serde_json::from_slice(&out).unwrap();
     assert_eq!(env["data"]["ach"], serde_json::Value::Null);
     assert_eq!(env["data"]["card"]["expirationMonth"], 12);
+}
+
+/// A delete that finds nothing says so in the verb `customers delete` uses.
+#[tokio::test]
+async fn a_delete_that_finds_nothing_says_nothing_was_deleted() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("/v2/payment-methods/{PM}")))
+        .respond_with(
+            ResponseTemplate::new(404)
+                .set_body_json(serde_json::json!({"Title": "Not found", "CorrelationId": "c-1"})),
+        )
+        .mount(&server)
+        .await;
+    support::bin(&server)
+        .args(["payment-methods", "delete", PM, "--yes"])
+        .assert()
+        .success()
+        .stdout(format!(
+            "No payment method {PM} was found; nothing was deleted.\n"
+        ));
 }
