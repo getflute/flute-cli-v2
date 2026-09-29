@@ -133,13 +133,25 @@ pub fn mask_digit_runs(text: &str) -> String {
     mask_runs_of(text, ACCOUNT_DIGITS, Run::Standalone)
 }
 
-/// Mask every digit run, whatever its length.
+/// The shortest digit run treated as an account identifier under a key that
+/// says the text is about one.
 ///
-/// Only for text already under a key that says it is an account identifier.
-/// There a three-digit run is part of an account number rather than a port,
-/// so the length heuristic has nothing left to decide.
-fn mask_every_digit_run(text: &str) -> String {
-    mask_runs_of(text, 1, Run::Anywhere)
+/// No card, bank account or routing number is shorter, and the counts a
+/// validation message states (`must be 9 digits`) are.
+const KEYED_ACCOUNT_DIGITS: usize = 4;
+
+/// Mask a leaf under a key that says it is an account identifier.
+///
+/// A leaf with no whitespace is the value itself, and every digit in it goes.
+/// A sentence keeps the short counts that explain a rule and loses every run
+/// long enough to be the account, whatever it is attached to.
+fn mask_account_leaf(text: &str) -> String {
+    let threshold = if text.contains(char::is_whitespace) {
+        KEYED_ACCOUNT_DIGITS
+    } else {
+        1
+    };
+    mask_runs_of(text, threshold, Run::Anywhere)
 }
 
 /// Which digit runs a pass may mask.
@@ -399,7 +411,8 @@ enum Leaf {
     /// Removed outright. PCI-DSS forbids logging a verification value at all,
     /// and the last four characters of a secret are still leaked entropy.
     Secret,
-    /// Every digit run masked to its last four, and the prose left alone.
+    /// Every digit run long enough to be the account masked to its last
+    /// four, and the prose left alone.
     Account,
 }
 
@@ -418,7 +431,7 @@ fn mask_leaves(value: &Value, leaf: Leaf) -> Value {
         Value::Null => Value::Null,
         Value::String(s) => Value::String(match leaf {
             Leaf::Secret => "***".into(),
-            Leaf::Account => mask_every_digit_run(s),
+            Leaf::Account => mask_account_leaf(s),
         }),
         // A numeric CVV or account number is the same value in a different
         // JSON type, and masking one shape but not the other is no rule.
@@ -723,5 +736,54 @@ mod tests {
     fn an_account_keyed_value_is_masked_even_when_glued_to_other_text() {
         let out = redact(r#"{"accountNumber":"acct-000123456789"}"#);
         assert!(!out.contains("000123456789"), "{out}");
+    }
+
+    /// A validation message under an account key keeps the count it states,
+    /// in the trace and in the error envelope alike.
+    #[test]
+    fn a_rule_under_an_account_key_keeps_its_digit_count() {
+        let body = r#"{"Errors":{"routingNumber":["Routing number must be 9 digits."]}}"#;
+        let traced = redact(body);
+        assert!(traced.contains("must be 9 digits."), "{traced}");
+        let shaped = redact_preserving_shape(&serde_json::from_str(body).unwrap());
+        assert!(shaped.to_string().contains("must be 9 digits."), "{shaped}");
+    }
+
+    /// A message under an account key that quotes the number loses it, down
+    /// to the shortest account number and in whatever grouping it is written.
+    #[test]
+    fn a_message_under_an_account_key_that_quotes_the_number_is_masked() {
+        for (key, message, secret) in [
+            (
+                "routingNumber",
+                "021000021 is not a routing number",
+                "021000021",
+            ),
+            ("accountNumber", "Account 98765 is closed", "98765"),
+            (
+                "cardNumber",
+                "4111 1111 1111 1111 is not valid",
+                "4111 1111 1111",
+            ),
+            (
+                "cardNumber",
+                "cardNumber=4111111111111111 rejected",
+                "411111111111",
+            ),
+        ] {
+            let body = format!(r#"{{"Errors":{{"{key}":["{message}"]}}}}"#);
+            let traced = redact(&body);
+            assert!(!traced.contains(secret), "{traced}");
+            let shaped = redact_preserving_shape(&serde_json::from_str(&body).unwrap());
+            assert!(!shaped.to_string().contains(secret), "{shaped}");
+        }
+    }
+
+    /// A bare value under an account key loses every digit, however short.
+    #[test]
+    fn a_short_bare_value_under_an_account_key_is_masked() {
+        let body = r#"{"Errors":{"routingNumber":["123"]}}"#;
+        let shaped = redact_preserving_shape(&serde_json::from_str(body).unwrap());
+        assert!(!shaped.to_string().contains("123"), "{shaped}");
     }
 }

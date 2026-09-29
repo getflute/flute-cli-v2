@@ -352,6 +352,16 @@ mod tests {
         assert!(!message.contains("123456789"), "{message}");
     }
 
+    /// A rule the API states under an account field keeps its digit count.
+    #[test]
+    fn a_routing_number_rule_keeps_its_digit_count() {
+        let body = r#"{"Errors":{"routingNumber":["Routing number must be 9 digits."]}}"#;
+        let ApiError::Api { message, .. } = parse_error_body(400, body, None) else {
+            panic!("expected an Api error")
+        };
+        assert_eq!(message, "routingNumber: Routing number must be 9 digits.");
+    }
+
     /// The long-run rule still catches what the key-based one cannot: a PAN
     /// quoted under a field name that says nothing.
     #[test]
