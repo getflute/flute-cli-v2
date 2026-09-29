@@ -54,13 +54,13 @@ Options:
           Arbitrary `key=value` pair to attach, handed back on the read. Repeat the flag for several pairs
 
       --card-enabled
-          Accept card payments
+          Accept card payments. With neither `--card-enabled` nor `--ach-enabled`, nor a processor id for either, the session offers every payment method the account has an active processor for
 
       --card-processor-id <CARD_PROCESSOR_ID>
           Charge card payments through this processor
 
       --ach-enabled
-          Accept ACH payments
+          Accept ACH payments. With neither `--card-enabled` nor `--ach-enabled`, nor a processor id for either, the session offers every payment method the account has an active processor for
 
       --ach-processor-id <ACH_PROCESSOR_ID>
           Charge ACH payments through this processor

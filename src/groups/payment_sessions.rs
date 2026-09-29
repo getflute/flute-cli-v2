@@ -122,7 +122,9 @@ pub struct CreatePaymentSessionArgs {
     /// the flag for several pairs.
     #[arg(long = "metadata", value_name = "KEY=VALUE")]
     pub metadata: Vec<String>,
-    /// Accept card payments.
+    /// Accept card payments. With neither `--card-enabled` nor
+    /// `--ach-enabled`, nor a processor id for either, the session offers
+    /// every payment method the account has an active processor for.
     #[arg(long = "card-enabled", id = "session_card_enabled")]
     pub card_enabled: bool,
     /// Charge card payments through this processor.
@@ -132,7 +134,9 @@ pub struct CreatePaymentSessionArgs {
         value_name = "CARD_PROCESSOR_ID"
     )]
     pub card_processor_id: Option<String>,
-    /// Accept ACH payments.
+    /// Accept ACH payments. With neither `--card-enabled` nor
+    /// `--ach-enabled`, nor a processor id for either, the session offers
+    /// every payment method the account has an active processor for.
     #[arg(long = "ach-enabled", id = "session_ach_enabled")]
     pub ach_enabled: bool,
     /// Charge ACH payments through this processor.
