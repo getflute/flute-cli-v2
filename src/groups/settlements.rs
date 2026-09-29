@@ -102,11 +102,18 @@ pub fn build_list_batches_query(args: &ListBatchesArgs) -> Result<Vec<(&'static 
     common::push_str(&mut query, "sortBy", &args.sort_by);
     common::push_str(&mut query, "fromDate", &args.from_date);
     common::push_str(&mut query, "toDate", &args.to_date);
-    for id in args.batch_ids.iter().filter(|s| !s.is_empty()) {
-        query.push(("batchIds", id.clone()));
-    }
-    for id in args.payment_processor_ids.iter().filter(|s| !s.is_empty()) {
-        query.push(("paymentProcessorIds", id.clone()));
+    for (flag, key, ids) in [
+        ("--batch-ids", "batchIds", &args.batch_ids),
+        (
+            "--processor-ids",
+            "paymentProcessorIds",
+            &args.payment_processor_ids,
+        ),
+    ] {
+        for id in ids {
+            common::reject_empty_id(flag, id)?;
+            query.push((key, id.clone()));
+        }
     }
     if let Some(status) = args.batch_status {
         query.push(("batchStatus", common::wire(status)));
@@ -344,12 +351,19 @@ mod tests {
         assert!(q.iter().all(|(_, v)| !v.contains(',')), "{q:?}");
     }
 
-    /// An empty repeatable flag contributes nothing, as an empty scalar does.
+    /// An empty id names no batch or processor, and dropping it would answer
+    /// with the unfiltered collection.
     #[test]
-    fn an_empty_array_filter_value_is_treated_as_absent() {
+    fn an_empty_array_filter_value_is_refused() {
         let mut args = list_args();
-        args.batch_ids = vec![String::new()];
-        assert!(build_list_batches_query(&args).unwrap().is_empty());
+        args.batch_ids = vec!["b_1".into(), String::new()];
+        let err = build_list_batches_query(&args).unwrap_err().to_string();
+        assert!(err.contains("--batch-ids needs a value"), "{err}");
+
+        let mut args = list_args();
+        args.payment_processor_ids = vec![" ".into()];
+        let err = build_list_batches_query(&args).unwrap_err().to_string();
+        assert!(err.contains("--processor-ids needs a value"), "{err}");
     }
 
     /// **`desc` is the declared default here**, unlike every other list in the

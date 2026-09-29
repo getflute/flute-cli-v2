@@ -321,7 +321,7 @@ pub fn build_list_pos_transactions_query(
         query.push(("posTransactionStatus", common::wire(status)));
     }
     common::push_str(&mut query, "sortBy", &args.sort_by);
-    common::push_str(&mut query, "terminalId", &args.terminal_id);
+    common::push_id(&mut query, "--terminal-id", "terminalId", &args.terminal_id)?;
     common::push_str(&mut query, "fromDate", &args.from_date);
     common::push_str(&mut query, "toDate", &args.to_date);
     Ok(query)
@@ -875,6 +875,18 @@ mod tests {
 
     fn list_args() -> ListPosTransactionsArgs {
         ListPosTransactionsArgs::default()
+    }
+
+    /// An empty terminal id names no terminal, and dropping it would answer
+    /// with every terminal's transactions.
+    #[test]
+    fn an_empty_terminal_id_filter_is_refused() {
+        let mut args = list_args();
+        args.terminal_id = Some(String::new());
+        let err = build_list_pos_transactions_query(&args)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("--terminal-id needs a value"), "{err}");
     }
 
     /// No flags means no query: the server's declared defaults govern.

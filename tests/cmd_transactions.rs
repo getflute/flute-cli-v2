@@ -2655,3 +2655,32 @@ async fn a_partial_reversal_the_api_would_not_honour_is_refused_before_the_rever
         );
     }
 }
+
+/// An empty `--reference-id` would drop the filter and answer with the
+/// unfiltered collection, so the reconcile lookup is refused before any
+/// request.
+#[tokio::test]
+async fn an_empty_reference_id_filter_is_refused_with_nothing_sent() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "transactions",
+            "list",
+            "--reference-id",
+            "",
+        ])
+        .assert()
+        .code(3)
+        .stdout(predicates::str::contains(r#""kind": "client""#));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "a client-side refusal must issue no request"
+    );
+}

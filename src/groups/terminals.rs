@@ -103,7 +103,12 @@ pub fn build_list_terminals_query(args: &ListTerminalsArgs) -> Result<Vec<(&'sta
         query.push(("connectionStatus", common::wire(v)));
     }
     common::push_str(&mut query, "sortBy", &args.sort_by);
-    common::push_str(&mut query, "serialNumber", &args.serial_number);
+    common::push_id(
+        &mut query,
+        "--serial-number",
+        "serialNumber",
+        &args.serial_number,
+    )?;
     common::push_str(&mut query, "search", &args.search);
     Ok(query)
 }
@@ -323,12 +328,18 @@ mod tests {
         assert_eq!(order(false, false), None);
     }
 
-    /// An empty filter string is not a filter.
+    /// An empty search is no search. An empty serial number names no
+    /// terminal, and dropping it would answer with every terminal.
     #[test]
-    fn an_empty_terminal_filter_is_treated_as_absent() {
+    fn an_empty_search_is_absent_and_an_empty_serial_number_is_refused() {
         let mut args = list_args();
         args.search = Some(String::new());
         assert!(build_list_terminals_query(&args).unwrap().is_empty());
+
+        let mut args = list_args();
+        args.serial_number = Some(" ".into());
+        let err = build_list_terminals_query(&args).unwrap_err().to_string();
+        assert!(err.contains("--serial-number needs a value"), "{err}");
     }
 
     /// The shared bound, reached through the flattened struct rather than

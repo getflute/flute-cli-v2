@@ -383,7 +383,14 @@ parser decodes, so such an identifier would address an operation other than the
 one named. An identifier sent in a query parameter or a body is held to the
 empty rule alone — `settlements get`'s batch id, `settlements close
 --payment-processor-id`, `pos print-receipt --terminal-id` and `payment-methods
-set-default --customer-id` — so an empty filter cannot return the unfiltered list.
+set-default --customer-id`. So is every list filter whose value names a
+resource: `transactions list`'s `--source-id`, `--batch-id`, `--customer-id`,
+`--merchant-id` and `--reference-id`, `payment-methods list --customer-id`,
+`pos list --terminal-id`, `terminals list --serial-number`, and each repeat of
+`settlements list`'s `--batch-ids` and `--processor-ids`. An empty one is a
+`client` envelope and exit 3 with nothing sent, so an empty filter cannot return
+the unfiltered list. A free-text filter such as `--search`, `--email` or
+`--full-name` sends nothing when empty.
 
 An identifier that passes those checks but is not the shape the server expects
 — `not-a-real-id` where a UUID goes — is a **400, exit 3**, not a 404: the

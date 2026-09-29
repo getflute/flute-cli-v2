@@ -178,7 +178,7 @@ pub fn build_list_payment_methods_query(
     }
     common::push_str(&mut query, "sortBy", &args.sort_by);
     common::push_str(&mut query, "search", &args.search);
-    common::push_str(&mut query, "customerId", &args.customer_id);
+    common::push_id(&mut query, "--customer-id", "customerId", &args.customer_id)?;
     common::push_str(&mut query, "createdFrom", &args.created_from);
     common::push_str(&mut query, "createdTo", &args.created_to);
     Ok(query)
@@ -606,6 +606,20 @@ mod tests {
                 .unwrap()
                 .is_empty()
         );
+    }
+
+    /// An empty customer id names no customer, and dropping it would answer
+    /// with every customer's payment methods.
+    #[test]
+    fn an_empty_customer_id_filter_is_refused() {
+        let args = ListPaymentMethodsArgs {
+            customer_id: Some(String::new()),
+            ..Default::default()
+        };
+        let err = build_list_payment_methods_query(&args)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("--customer-id needs a value"), "{err}");
     }
 
     /// This endpoint declares a single `search`, unlike `customers list`'s

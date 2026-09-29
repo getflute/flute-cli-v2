@@ -587,3 +587,27 @@ fn a_partial_reversal_is_let_through_only_for_a_settled_card() {
         "a transaction whose state cannot be read is not assumed settled"
     );
 }
+
+/// An empty id filter names nothing, and dropping it would answer with the
+/// unfiltered collection: the reconcile lookup would read as a match.
+#[test]
+fn an_empty_id_filter_on_the_transaction_list_is_refused() {
+    type Set = fn(&mut ListTransactionsArgs, Option<String>);
+    let cases: [(&str, Set); 5] = [
+        ("--source-id", |a, v| a.source_id = v),
+        ("--batch-id", |a, v| a.batch_id = v),
+        ("--customer-id", |a, v| a.customer_id = v),
+        ("--merchant-id", |a, v| a.merchant_id = v),
+        ("--reference-id", |a, v| a.reference_id = v),
+    ];
+    for (flag, set) in cases {
+        for empty in ["", "  "] {
+            let mut args = ListTransactionsArgs::default();
+            set(&mut args, Some(empty.into()));
+            let err = build_list_transactions_query(&args)
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains(&format!("{flag} needs a value")), "{err}");
+        }
+    }
+}

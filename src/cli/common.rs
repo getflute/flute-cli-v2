@@ -158,6 +158,21 @@ pub fn push_str(
     }
 }
 
+/// Push a query filter whose value names a resource, refusing an empty one
+/// by its flag: dropped, it would answer with the unfiltered collection.
+pub fn push_id(
+    query: &mut Vec<(&'static str, String)>,
+    flag: &str,
+    key: &'static str,
+    value: &Option<String>,
+) -> Result<()> {
+    if let Some(v) = value {
+        reject_empty_id(flag, v)?;
+        query.push((key, v.clone()));
+    }
+    Ok(())
+}
+
 /// The `paymentMethods` object from the card and ACH `(enabled, processor id)`
 /// pairs, empty when neither method is named.
 ///

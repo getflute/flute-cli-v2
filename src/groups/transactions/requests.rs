@@ -20,14 +20,14 @@ pub fn build_list_transactions_query(
     if let Some(source) = args.source_type {
         query.push(("sourceType", common::wire(source)));
     }
-    common::push_str(&mut query, "sourceId", &args.source_id);
-    common::push_str(&mut query, "batchId", &args.batch_id);
+    common::push_id(&mut query, "--source-id", "sourceId", &args.source_id)?;
+    common::push_id(&mut query, "--batch-id", "batchId", &args.batch_id)?;
     if let Some(status) = args.transaction_status {
         query.push(("transactionStatus", common::wire(status)));
     }
     common::push_str(&mut query, "paymentMethodType", &args.payment_method_type);
-    common::push_str(&mut query, "customerId", &args.customer_id);
-    common::push_str(&mut query, "merchantId", &args.merchant_id);
+    common::push_id(&mut query, "--customer-id", "customerId", &args.customer_id)?;
+    common::push_id(&mut query, "--merchant-id", "merchantId", &args.merchant_id)?;
     // Amounts reach the query as their exact digits, never through an f64.
     for (key, value) in [
         ("minAmount", args.min_amount),
@@ -37,7 +37,12 @@ pub fn build_list_transactions_query(
             query.push((key, v.to_string()));
         }
     }
-    common::push_str(&mut query, "referenceId", &args.reference_id);
+    common::push_id(
+        &mut query,
+        "--reference-id",
+        "referenceId",
+        &args.reference_id,
+    )?;
     Ok(query)
 }
 
