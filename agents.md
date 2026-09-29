@@ -611,10 +611,11 @@ flute2 terminals list [OPTIONS]
 flute2 terminals status [OPTIONS] <TERMINAL_ID>
 ```
 
-`--status` filters on `ready`, `busy` or `offline`, which is what the query
-parameter declares. The response reports a *different* vocabulary for the same
-field, and the two cannot both be right. Do not assume a value you read back is
-a value you can filter by.
+`--status` filters on `ready`, `busy` or `offline`, and `terminalStatus` reads
+back as `Ready`, `Busy` or `Offline`: the same three values. A terminal is
+`Busy` while a POS transaction is in progress on it and `Ready` once that
+transaction ends. The published response schema lists `Active` in place of
+`Ready`; the API does not send it.
 
 ### `settlements`
 

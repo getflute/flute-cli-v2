@@ -1,11 +1,10 @@
 //! `terminals`: list and status.
 //!
 //! Two reads and no writes, which makes this the one group whose whole surface
-//! is query parameters. Both operations report a `terminalStatus`, and the two
-//! declared enums for it do not agree: the *query* parameter declares `Ready`,
-//! `Busy`, `Offline` and both *responses* declare `Active`, `Busy`, `Offline`.
-//! The CLI sends what the parameter declares and prints what the API answers,
-//! so the disagreement stays visible instead of being papered over.
+//! is query parameters. Both operations report a `terminalStatus` of `Ready`,
+//! `Busy` or `Offline`, the same three values the query parameter filters on.
+//! The published response schemas declare `Active` in place of `Ready`; the
+//! API answers `Ready`, and refuses `Active` as a filter value.
 
 use crate::Ctx;
 use crate::api::ApiPath;
@@ -14,7 +13,7 @@ use crate::cli::render::{self, Cell, Column, Resource};
 use anyhow::Result;
 use reqwest::Method;
 
-/// The `terminalStatus` **query** enum, which is not the response enum.
+/// The `terminalStatus` filter: the same values a response reports.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum TerminalStatusFilter {
     Ready,
