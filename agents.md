@@ -370,7 +370,9 @@ All amounts are plain decimals — `--amount 10.50` — validated to two decimal
 places and sent as exact JSON numbers. **No amount passes through a float.**
 A negative amount or rate is refused, and the refusal names the flag and the
 rule it broke, as every other malformed value does. `--exp` is `MM/YY` or
-`MM/YYYY`.
+`MM/YYYY`. `--expires-on` and `--expires-at` take a UTC date-time
+ending in `Z`, e.g. `2026-09-15T00:00:00Z`; an offset, `+00:00` included, is
+refused before the wire, exit 3, because the API refuses it.
 
 `--payment-processor-id` is required on `transactions create`, `transactions
 credit` and `settlements close`. `capture`, `reversal`, `tip-adjust` and the
@@ -519,6 +521,9 @@ flute2 customers delete [OPTIONS] <CUSTOMER_ID>
 - The two booleans **take a value on `update`** — `--sms-consent false` — and
   are bare switches on `create`. A patch has to be able to clear a flag.
 - `delete` requires `--yes`.
+- `list` returns newest first. Observed on the sandbox: the order is the same
+  with `--desc` or `--sort-by`, and `--created-from`/`--created-to` do not
+  narrow the result — the server applies neither.
 
 ### `payment-methods`
 
@@ -533,6 +538,11 @@ flute2 payment-methods set-default [OPTIONS] --customer-id <CUSTOMER_ID> <PAYMEN
 ```
 
 - `update` changes the label and nothing else — that is all the endpoint takes.
+- `list --search` matches the label (`--name`) as a case-sensitive substring;
+  it does not match the mask, brand or type.
+- `add-ach --company-name` is not stored when `--customer-id` is given: a
+  business account reads the company from the customer, and a customer
+  without one is a 400, exit 3.
   `--name ""` or `--clear name` removes it; see
   [Clearing a field](#clearing-a-field).
 - `delete` requires `--yes`.
@@ -555,7 +565,8 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
 - `update` is an RFC 7396 merge patch: an empty value or `--clear <field>`
   removes a value — see [Clearing a field](#clearing-a-field). Clearing
   `--amount` makes a fixed-price link one the payer fills in.
-- `share` sends a real message. `--consent` is required by the API.
+- `share` sends a real message. `--consent` is required: a share without it
+  is refused before the wire, exit 3.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
   `sortOrder`; with neither, results come back newest first. `terminals list`
   and `pos list` take the same pair.
@@ -574,7 +585,14 @@ flute2 payment-sessions cancel [OPTIONS] <PAYMENT_SESSION_ID>
   zero** for `--mode save-method`, which the CLI sends for you; **absent** for a
   flexible session the payer sets at checkout. All three are enforced before the
   wire, because OpenAPI can express none of them.
-  A save-method session refuses `--tip-amount` too, since it charges nothing.
+  A save-method session refuses `--tip-amount` too, since it charges nothing,
+  and every flag that configures a checkout page: `--card-enabled`,
+  `--ach-enabled`, either processor id, `--return-url`, `--page-name`,
+  `--payment-notes`, `--after-completion-message`, `--expires-at` and
+  `--metadata`. Each is refused before the wire, exit 3.
+- **Omitting both `--card-enabled` and `--ach-enabled` offers every payment
+  method** the account has an active processor for; the session then reads
+  back `paymentMethods: null`.
 - `--metadata key=value` is repeatable and splits on the **first** `=`, so a URL
   or a query string survives as a value.
 - `cancel` requires `--yes`. A second cancel is a 400, exit 3, and a 404 is exit 4.
@@ -647,6 +665,8 @@ flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
   refusal rather than a guess. The open batch has a `null` `batchId`, so it
   cannot be read by id.
 - **`--asc`, not `--desc`** — this list's `sortOrder` defaults to `desc`.
+  `--sort-by` takes only the field names `--help` lists, and `--status`
+  matches in any case, so `Settled` as the table prints it is accepted.
 - `close` settles the named processor's whole open batch, not one
   transaction.
 
