@@ -683,8 +683,12 @@ fn report_clap(err: &clap::Error, json: bool) -> ExitCode {
 
 /// Reduce a clap error to the complaint alone for the JSON envelope.
 ///
-/// The `Usage:` block clap appends restates the help, which a machine
-/// consumer already has a command for and a log line has no room for.
+/// clap renders the complaint as its first paragraph, after an `error: `
+/// label, and follows it with a `tip:`, a `Usage:` block and a pointer to
+/// `--help`. Those restate the help, which a machine consumer already has a
+/// command for and a log line has no room for. A list clap attaches to the
+/// complaint itself — the missing arguments, the possible values — is part of
+/// that paragraph, and its lines are joined onto the sentence.
 fn clap_error_message(err: &clap::Error) -> String {
     let full = strip_ansi(&err.to_string());
     // A group invoked with no subcommand carries the group's help page as its
@@ -701,10 +705,9 @@ fn clap_error_message(err: &clap::Error) -> String {
             );
         }
     }
-    match full.split_once("\n\nUsage:") {
-        Some((head, _)) => head.trim().to_string(),
-        None => full.trim().to_string(),
-    }
+    let head = full.trim().split("\n\n").next().unwrap_or_default();
+    let head = head.strip_prefix("error:").unwrap_or(head);
+    head.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// The command a rendered clap message is about, read off its `Usage:` line.
