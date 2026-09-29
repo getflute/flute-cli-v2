@@ -1,7 +1,7 @@
 mod support;
 
 use predicates::prelude::*;
-use wiremock::matchers::{method, path};
+use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, ResponseTemplate};
 
 const BATCH: &str = "21c75430-a316-456f-9126-365760dca33a";
@@ -291,4 +291,24 @@ async fn sort_by_offers_only_the_fields_the_api_sorts_on() {
             .iter()
             .all(|r| r.url.path() == "/oauth2/token"),
     );
+}
+
+/// The table prints a batch's status as the API spells it, `Settled`, so
+/// `--status` takes that spelling as well as the lowercase one.
+#[tokio::test]
+async fn status_takes_the_spelling_the_table_prints() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/settlements/batches"))
+        .and(query_param("batchStatus", "Settled"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"items": []})))
+        .expect(2)
+        .mount(&server)
+        .await;
+    for spelling in ["Settled", "settled"] {
+        support::bin(&server)
+            .args(["settlements", "list", "--status", spelling])
+            .assert()
+            .success();
+    }
 }

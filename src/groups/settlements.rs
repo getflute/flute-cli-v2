@@ -87,6 +87,7 @@ pub struct ListBatchesArgs {
     #[arg(
         long = "status",
         value_enum,
+        ignore_case = true,
         id = "batch_status",
         value_name = "BATCH_STATUS"
     )]
