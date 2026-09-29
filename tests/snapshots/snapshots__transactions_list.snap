@@ -1,0 +1,52 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+List transactions for the current merchant (GET /v2/transactions)
+
+Usage: flute2 transactions list [OPTIONS]
+
+Options:
+      --page-index <PAGE_INDEX>
+          Page number to fetch. Zero-based
+      --page-size <PAGE_SIZE>
+          Maximum results per page (1-100). Omit it to use the server's default
+      --all
+          Fetch every page until the collection is exhausted
+      --sort-by <SORT_BY>
+          Sort results by this field [possible values: cardTokenType, customerCompanyName, customerName, maskedCardNumber, merchantCompanyName, paymentMethodType, processedAmount, transactionDateTime, transactionId, transactionStatus]
+      --asc
+          Sort ascending. With neither `--asc` nor `--desc`, results come back newest first
+      --desc
+          Sort descending
+      --from <FROM_DATE>
+          Filter results from this date-time inclusive (ISO 8601)
+      --to <TO_DATE>
+          Filter results up to this date-time inclusive (ISO 8601)
+      --source-type <SOURCE_TYPE>
+          Filter by the transaction source [possible values: api-key, invoice, mobile-app, portal, quick-payment, subscription, tap-to-pay, terminal, web-component]
+      --source-id <SOURCE_ID>
+          Filter by the source identifier
+      --batch-id <BATCH_ID>
+          Filter by settlement batch ID
+      --status <TRANSACTION_STATUS>
+          Filter results by status [possible values: authorized, cancelled, captured, charged-back, cleared, declined, failed, held, held-by-processor, informational, in-progress, partially-authorized, pending, refunded, scheduled, settled, verified, voided]
+      --payment-method-type <PAYMENT_METHOD_TYPE>
+          Filter by payment method type
+      --customer-id <CUSTOMER_ID>
+          Filter by customer UUID
+      --merchant-id <MERCHANT_ID>
+          Filter by merchant UUID
+      --min-amount <MIN_AMOUNT>
+          Filter results at or above this amount
+      --max-amount <MAX_AMOUNT>
+          Filter results at or below this amount
+      --reference-id <REFERENCE_ID>
+          Filter by merchant-assigned reference ID
+  -h, --help
+          Print help
+
+Global options:
+      --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]
+      --output <OUTPUT>    Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table` [env: FLUTE2_OUTPUT=] [possible values: table, json, quiet]
+      --debug              Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

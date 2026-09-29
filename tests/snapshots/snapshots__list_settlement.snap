@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+ID                                    PROCESSOR             BATCH DATE  TXNS    SALES         REFUNDS       NET           STATUS    
+------------------------------------------------------------------------------------------------------------------------------------
+21c75430-a316-456f-9126-365760dca33a  TSYS                  2026-03-23  15      1300.00       50.00         1250.00       Settled

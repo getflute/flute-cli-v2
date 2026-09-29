@@ -1,0 +1,34 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+CLI for the Flute payments platform
+
+Usage: flute2 [OPTIONS] [COMMAND]
+
+Commands:
+  auth              Authentication and profile management
+  ping              API health check
+  version           Print CLI version and active profile
+  transactions      Transaction operations (create, capture, reversal, …)
+  customers         Customer operations (create, get, list, update, delete)
+  payment-methods   Payment-method vault operations (list, get, add-card, add-ach, update, delete, set-default)
+  payment-links     Payment link operations (create, get, list, update, delete, share)
+  payment-sessions  Payment session operations (create, get, cancel)
+  terminals         Terminal operations (list, status)
+  pos               POS transaction operations (create [--wait], get, list, cancel, print-receipt)
+  settlements       Settlement batch operations (list, get, close)
+  settings          Account settings operations (payment-config, contact-info, autofill, update-autofill)
+  api-keys          Merchant API key operations (create, list, revoke)
+  completion        Print shell completion script for the given shell
+  update            Update the flute2 CLI to the latest release
+  help              Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+
+Global options:
+      --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]
+      --output <OUTPUT>    Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table` [env: FLUTE2_OUTPUT=] [possible values: table, json, quiet]
+      --debug              Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

@@ -1,0 +1,46 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+transactionId:                                   90d084d6-55b8-4fb8-b658-861534d07f9a
+transactionStatus:                               Captured
+transactionType:                                 Sale
+transactionDateTime:                             2026-05-29T22:04:31.771Z
+processedAmount:                                 10.50
+currencyCode:                                    USD
+declineDetails.code:                             —
+declineDetails.message:                          —
+amountBreakdown.baseAmount:                      —
+amountBreakdown.tipAmount:                       —
+amountBreakdown.tipRate:                         —
+amountBreakdown.discountAmount:                  —
+amountBreakdown.discountRate:                    —
+amountBreakdown.surchargeAmount:                 —
+amountBreakdown.surchargeRate:                   —
+paymentMethodType:                               —
+cardDetails.maskedCardNumber:                    —
+cardDetails.cardBrand:                           —
+cardDetails.cardType:                            —
+cardDetails.cardDataSource:                      —
+cardDetails.paymentMethodId:                     —
+achDetails.maskedAccountNumber:                  —
+achDetails.accountRoutingNumber:                 —
+achDetails.accountType:                          —
+achDetails.secCode:                              —
+achDetails.paymentMethodId:                      —
+referenceId:                                     —
+customerId:                                      588f57a5-fe6a-4844-851e-e98914e81980
+paymentProcessorId:                              —
+merchantId:                                      —
+batchId:                                         —
+originalTransactionId:                           —
+processorDetails.authCode:                       —
+processorDetails.rrn:                            —
+processorDetails.mid:                            —
+processorDetails.tid:                            —
+addressVerificationServiceResponse.action:       —
+addressVerificationServiceResponse.responseCode: —
+addressVerificationServiceResponse.description:  —
+refundDetails.refundedAmount:                    —
+refundDetails.availableRefundAmount:             —
+refundDetails.isFullyRefunded:                   —

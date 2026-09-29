@@ -1,0 +1,31 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Settle the open batch for a payment processor (POST /v2/settlements/batches/close).
+
+This is a batch-level operation, not a per-transaction one. It closes and settles the processor's entire open batch. Use `--payment-processor-id` to identify the processor.
+
+Usage: flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
+
+Options:
+      --payment-processor-id <PAYMENT_PROCESSOR_ID>
+          UUID of the payment processor whose open batch should be settled (required)
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Global options:
+      --profile <PROFILE>
+          Active profile (environment). `sandbox` (default) or `production`/`prod`
+          
+          [env: FLUTE2_PROFILE=]
+
+      --output <OUTPUT>
+          Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table`
+          
+          [env: FLUTE2_OUTPUT=]
+          [possible values: table, json, quiet]
+
+      --debug
+          Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

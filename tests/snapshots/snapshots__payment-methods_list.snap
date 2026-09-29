@@ -1,0 +1,24 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+List vaulted payment methods (GET /v2/payment-methods)
+
+Usage: flute2 payment-methods list [OPTIONS]
+
+Options:
+      --page-index <PAGE_INDEX>      Page number to fetch. Zero-based
+      --page-size <PAGE_SIZE>        Maximum results per page (1-100). Omit it to use the server's default
+      --all                          Fetch every page until the collection is exhausted
+      --sort-by <SORT_BY>            Sort results by this field name
+      --desc                         Sort descending. The default is ascending
+      --search <SEARCH>              Server-side text search
+      --customer-id <CUSTOMER_ID>    Filter by customer UUID
+      --created-from <CREATED_FROM>  Filter results created from this date-time inclusive (ISO 8601)
+      --created-to <CREATED_TO>      Filter results created up to this date-time inclusive (ISO 8601)
+  -h, --help                         Print help
+
+Global options:
+      --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]
+      --output <OUTPUT>    Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table` [env: FLUTE2_OUTPUT=] [possible values: table, json, quiet]
+      --debug              Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

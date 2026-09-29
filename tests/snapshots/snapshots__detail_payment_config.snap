@@ -1,0 +1,29 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+availablePaymentProcessors[0].paymentProcessorId:                       8db2ff47-b143-4adb-ab58-a11111111111
+availablePaymentProcessors[0].processorName:                            TSYS
+availablePaymentProcessors[0].isDefault:                                true
+availablePaymentProcessors[0].type:                                     Tsys
+availablePaymentProcessors[0].settlementBatchTimeSlots[0].hours:        2
+availablePaymentProcessors[0].settlementBatchTimeSlots[0].minutes:      10
+availablePaymentProcessors[0].settlementBatchTimeSlots[0].timezoneName: America/New_York
+currency:                                                               USD
+availableCurrencies:                                                    USD
+availableCardTypes:                                                     Visa, MasterCard
+availableTransactionTypes:                                              Sale, Refund
+maxTransactionAmount:                                                   10000.00
+isTipsEnabled:                                                          true
+defaultTipsOptions:                                                     10, 15, 20
+zeroCostProcessingOption:                                               None
+defaultSurchargeRate:                                                   1.5
+defaultCashDiscountRate:                                                —
+defaultDualPricingRate:                                                 —
+addressVerificationServiceOptions.isEnabled:                            true
+addressVerificationServiceOptions.profile:                              Strict
+isCustomerCardSavingByTerminalEnabled:                                  true
+companyName:                                                            Analytical Engines
+mccCode:                                                                5411
+mccCodeDescription:                                                     —
+ttpIosTerminalProfileId:                                                —

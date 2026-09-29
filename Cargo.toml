@@ -1,0 +1,79 @@
+[package]
+name = "flute2"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "Cross-platform CLI for the Flute payments platform (v2 API)"
+repository = "https://github.com/getflute/flute-cli-v2"
+readme = "readme.md"
+homepage = "https://github.com/getflute/flute-cli-v2"
+# Distribution is GitHub Releases; nothing here is meant for a registry.
+publish = false
+
+# `publish = false` also hides the binary from cargo-dist, which would then
+# find nothing to release.
+[package.metadata.dist]
+dist = true
+
+[[bin]]
+name = "flute2"
+path = "src/main.rs"
+
+[lib]
+name = "flute_cli2"
+path = "src/lib.rs"
+
+# The live sandbox suite sends real traffic, so it is compiled only under the
+# `live` feature and a plain `cargo test` cannot build it.
+[features]
+live = []
+
+[[test]]
+name = "live"
+path = "tests/live.rs"
+required-features = ["live"]
+
+[dependencies]
+anyhow = "1"
+axoupdater = { version = "0.10.0", default-features = false, features = ["tokio", "github_releases"] }
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+dirs = "5"
+keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native-sync-persistent"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rpassword = "7"
+rust_decimal = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "signal"] }
+toml = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url = "2"
+
+[dev-dependencies]
+assert_cmd = "2"
+insta = { version = "1", features = ["json"] }
+jsonschema = "0.26"
+predicates = "3"
+pretty_assertions = "1"
+sha2 = "0.10"
+temp-env = "0.3"
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "test-util"] }
+# Exact, because 0.6.5 uses `let`-chains and cannot compile on the MSRV the
+# `msrv` CI job holds the crate to. The pin is lifted when that job's
+# toolchain moves past 1.87.
+wiremock = "=0.6.2"
+
+# The one lint beyond clippy's default groups, and it defends the invariant
+# with money at stake: an amount that reaches an f64 operator has already lost
+# precision, and nothing downstream can recover it.
+[lints.clippy]
+float_arithmetic = "deny"
+
+[profile.dist]
+inherits = "release"
+lto = "thin"

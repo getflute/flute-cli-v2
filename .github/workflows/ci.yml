@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# The suite is hermetic and offline, so nothing here needs a token beyond the
+# read the checkout performs.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: format, lint, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      # No third-party action installs the toolchain. `rustup` is already on
+      # the runner, so a supply chain that would need pinning is avoided
+      # rather than pinned: the only action here is GitHub's own checkout.
+      - name: Install the stable toolchain
+        run: |
+          rustup toolchain install stable --profile minimal \
+            --component rustfmt,clippy
+          rustup default stable
+          rustc --version && cargo --version
+
+      # `keyring`'s linux-native backend links against libdbus-1, so without
+      # these the build fails inside libdbus-sys's build script rather than in
+      # anything this crate wrote.
+      - name: Install libdbus-1-dev and pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+
+      - name: cargo clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      # **The suite must be hermetic, and this is what proves the job is not
+      # quietly supplying credentials.** `cargo test` never reaches the
+      # network and never reads the keychain; a job that had a client id in
+      # its environment could hide a test that depended on one.
+      - name: Refuse to run the suite with credentials in the environment
+        run: |
+          leaked=$(env | grep -E '^FLUTE2_' | cut -d= -f1 || true)
+          if [ -n "$leaked" ]; then
+            echo "::error::the suite is hermetic and this job sets: $leaked"
+            exit 1
+          fi
+
+      - name: cargo test
+        run: cargo test --locked
+
+      # The live suite needs a sandbox account, so it is compiled here and
+      # never run: a scenario that does not build fails this job.
+      - name: Build the live suite without running it
+        run: cargo test --locked --features live --test live --no-run
+
+      # The vendored bundle's hash is asserted by the suite, which can only
+      # see a local edit. Drift in the *published* bundle is spec-drift.yml's
+      # job, because detecting it needs a fetch.
+      - name: Generated API facts are current
+        run: python3 docs/reference/group-facts.py --check
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Install the MSRV toolchain
+        run: |
+          rustup toolchain install 1.85 --profile minimal
+          rustc +1.85 --version
+
+      - name: Install libdbus-1-dev and pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+
+      # **`--locked` is load-bearing.** Without it the job resolves a
+      # different dependency tree from the one under review, and the MSRV
+      # claim in Cargo.toml stops applying to what ships.
+      - name: cargo +1.85 test --locked
+        run: cargo +1.85 test --locked

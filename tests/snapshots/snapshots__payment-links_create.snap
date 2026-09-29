@@ -1,0 +1,40 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Create a new payment link (POST /v2/payment-links)
+
+Usage: flute2 payment-links create [OPTIONS]
+
+Options:
+      --card-enabled
+          Accept card payments. At least one payment method is required
+      --card-processor-id <CARD_PROCESSOR_ID>
+          Charge card payments through this processor
+      --ach-enabled
+          Accept ACH payments
+      --ach-processor-id <ACH_PROCESSOR_ID>
+          Charge ACH payments through this processor
+      --amount <AMOUNT>
+          Amount to collect. Plain decimal, e.g. `100.00`. Omit for a link the payer fills in
+      --currency-code <CURRENCY_CODE>
+          Currency code, e.g. `USD` (required)
+      --link-type <LINK_TYPE>
+          Link type: `single-use` (default) or `multi-use` [possible values: multi-use, single-use]
+      --customer-id <CUSTOMER_ID>
+          Customer UUID to issue the link for
+      --reference-id <REFERENCE_ID>
+          Merchant-assigned reference ID
+      --name <NAME>
+          Merchant-facing label for the link
+      --description <DESCRIPTION>
+          Merchant-internal notes. Never shown to customers
+      --expires-on <EXPIRES_ON>
+          UTC expiry (ISO 8601), e.g. `2026-09-15T00:00:00.000Z`. Omit for a link that never expires
+  -h, --help
+          Print help
+
+Global options:
+      --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]
+      --output <OUTPUT>    Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table` [env: FLUTE2_OUTPUT=] [possible values: table, json, quiet]
+      --debug              Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

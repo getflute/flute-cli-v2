@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+ID                                    STATUS    LINE    
+--------------------------------------------------------
+b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31  Active    Online

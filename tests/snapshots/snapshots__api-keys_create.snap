@@ -1,0 +1,34 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Create a merchant API key (POST /v2/api-keys).
+
+The response contains `clientSecret`, which is shown only once. Store it securely immediately after creation.
+
+Usage: flute2 api-keys create [OPTIONS] --merchant-id <MERCHANT_ID> --name <API_KEY_NAME>
+
+Options:
+      --merchant-id <MERCHANT_ID>
+          Merchant UUID (required)
+
+      --name <API_KEY_NAME>
+          API key display name (required)
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Global options:
+      --profile <PROFILE>
+          Active profile (environment). `sandbox` (default) or `production`/`prod`
+          
+          [env: FLUTE2_PROFILE=]
+
+      --output <OUTPUT>
+          Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table`
+          
+          [env: FLUTE2_OUTPUT=]
+          [possible values: table, json, quiet]
+
+      --debug
+          Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

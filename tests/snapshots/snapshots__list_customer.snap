@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+ID                                    NAME                          EMAIL                         PHONE           LAST TXN  
+----------------------------------------------------------------------------------------------------------------------------
+8db2ff47-b143-4adb-ab58-a11111111111  Ada Lovelace                  ada@example.com               +14155552309    2026-05-29

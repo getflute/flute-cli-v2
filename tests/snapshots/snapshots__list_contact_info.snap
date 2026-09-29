@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+CONTACT                             
+------------------------------------
+8d638f27-1a16-4f1b-92fe-0ea16d4a6461

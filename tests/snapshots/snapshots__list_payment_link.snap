@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+ID                                    NAME                  URL                                 AMOUNT      STATUS      PAID    COLLECTED   
+--------------------------------------------------------------------------------------------------------------------------------------------
+3f8b2c1d-6e40-4a92-b7c5-1d2e3f4a5b60  Spring campaign       https://pay.example.com/l/abc123    25.00       Active      3       75.00
