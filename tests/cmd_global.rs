@@ -195,7 +195,7 @@ async fn a_bodyless_failure_reports_the_correlation_id_from_the_header() {
         .and(wiremock::matchers::path("/v2/ping"))
         .respond_with(
             wiremock::ResponseTemplate::new(401)
-                .insert_header("x-correlation-id", "corr-from-header"),
+                .insert_header("x-arise-trace-correlationid", "corr-from-header"),
         )
         .mount(&server)
         .await;
@@ -211,6 +211,62 @@ async fn a_bodyless_failure_reports_the_correlation_id_from_the_header() {
     assert_eq!(v["kind"], "api");
     assert_eq!(v["status"], 401);
     assert_eq!(v["correlation_id"], "corr-from-header");
+}
+
+/// A ProblemDetails 400 carries a `traceId`, the ASP.NET activity id, which is
+/// not the correlation id the header carries. The header is what support
+/// searches by, so it wins; the trace id is reported only when no header
+/// arrived.
+#[tokio::test]
+async fn the_correlation_header_outranks_a_problem_details_trace_id() {
+    let server = support::mock_with_token().await;
+    let body = serde_json::json!({
+        "title": "One or more validation errors occurred.",
+        "status": 400,
+        "errors": {"$.merchantId": ["The JSON value could not be converted to System.Guid."]},
+        "traceId": "00-trace-01",
+    });
+    wiremock::Mock::given(wiremock::matchers::method("GET"))
+        .and(wiremock::matchers::path("/v2/ping"))
+        .respond_with(
+            wiremock::ResponseTemplate::new(400)
+                .insert_header("x-arise-trace-correlationid", "corr-from-header")
+                .set_body_json(&body),
+        )
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args(["--output", "json", "ping"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["correlation_id"], "corr-from-header", "{v}");
+}
+
+/// Without the header, the trace id is the only identifier there is.
+#[tokio::test]
+async fn a_problem_details_trace_id_is_reported_when_no_header_arrived() {
+    let server = support::mock_with_token().await;
+    let body = serde_json::json!({"title": "Bad", "status": 400, "traceId": "00-trace-01"});
+    wiremock::Mock::given(wiremock::matchers::method("GET"))
+        .and(wiremock::matchers::path("/v2/ping"))
+        .respond_with(wiremock::ResponseTemplate::new(400).set_body_json(&body))
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args(["--output", "json", "ping"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["correlation_id"], "00-trace-01", "{v}");
 }
 
 /// A bare `flute2` is a request for help, not a usage error: nothing was

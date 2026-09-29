@@ -3,7 +3,7 @@
 //! `run()` builds one client and hands it down, which is what makes a mock
 //! server reachable from the compiled binary.
 
-use crate::api::error::{ApiError, parse_error_body};
+use crate::api::error::{ApiError, parse_error_envelope};
 use crate::auth::token::{Fetcher, OAuth2Fetcher, TokenStore};
 use crate::config::Profile;
 use reqwest::header::ACCEPT;
@@ -14,6 +14,10 @@ use std::time::Duration;
 use tracing::{debug, info};
 
 const JSON: &str = "application/json";
+
+/// The header the API stamps its correlation id on, on every response that
+/// reaches its tracing middleware: successes and failures alike.
+const CORRELATION_HEADER: &str = "x-arise-trace-correlationid";
 
 const USER_AGENT: &str = concat!("flute2/", env!("CARGO_PKG_VERSION"));
 
@@ -318,13 +322,17 @@ impl ApiClient {
                 correlation_id: outcome.correlation_id,
             })
         } else {
-            // The header is the only identifier a bodyless failure has.
-            Err(parse_error_body(
+            // The header is the only identifier a bodyless failure has, and
+            // it outranks a ProblemDetails `traceId`, which is a different
+            // value.
+            let (error, trace_id) = parse_error_envelope(
                 outcome.status,
                 &outcome.text,
                 outcome.www_authenticate.as_deref(),
-            )
-            .or_correlation_id(outcome.correlation_id))
+            );
+            Err(error
+                .or_correlation_id(outcome.correlation_id)
+                .or_correlation_id(trace_id))
         }
     }
 
@@ -373,7 +381,7 @@ impl ApiClient {
             .await
             .map_err(|e| ApiError::Transport(crate::api::with_causes(e)))?;
         let status = resp.status().as_u16();
-        let correlation_id = header(&resp, "x-correlation-id");
+        let correlation_id = header(&resp, CORRELATION_HEADER);
         let www_authenticate = header(&resp, "www-authenticate");
         let text = resp
             .text()
@@ -856,7 +864,9 @@ mod tests {
         token_ok(&server).mount(&server).await;
         Mock::given(method("GET"))
             .and(path("/v2/ping"))
-            .respond_with(ResponseTemplate::new(200).insert_header("x-correlation-id", "corr-1"))
+            .respond_with(
+                ResponseTemplate::new(200).insert_header("x-arise-trace-correlationid", "corr-1"),
+            )
             .mount(&server)
             .await;
 

@@ -68,8 +68,9 @@ CI log stays quiet.
   **sorted order** at every depth rather than the order the API sent them.
   **On a collection read `data` is the array itself**, not a `{items, total}`
   wrapper: the count is `meta.page_info.totalItems`.
-- `meta.correlation_id` is present when the API returned one. It is what
-  support asks for. Observed present on a 4xx and absent on ordinary reads, so
+- `meta.correlation_id` is the id the API stamped on the response, and what
+  support asks for. Observed on successes and failures alike; a response that
+  never reached the API's tracing, such as a bodyless 401, carries none, so
   treat it as optional.
 - `meta.page_info` reproduces the API's `pageInfo` field for field on a
   collection read, and is **absent** — not null — on a write, on a single-object

@@ -172,7 +172,24 @@ fn join_prose(parts: &[&str]) -> String {
 ///
 /// `www_authenticate` is the last resort: some 401s carry no body at all, and
 /// the header is then the only statement of what went wrong.
+///
+/// The correlation id is the body's `CorrelationId`, else its `traceId`.
 pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>) -> ApiError {
+    let (error, trace_id) = parse_error_envelope(status, body, www_authenticate);
+    error.or_correlation_id(trace_id)
+}
+
+/// [`parse_error_body`] with the body's `traceId` handed back beside the
+/// error instead of folded into it.
+///
+/// A ProblemDetails `traceId` is the ASP.NET activity id, a different value
+/// from the correlation id the response header carries, so a caller holding
+/// that header ranks it between the body's `CorrelationId` and the trace id.
+pub fn parse_error_envelope(
+    status: u16,
+    body: &str,
+    www_authenticate: Option<&str>,
+) -> (ApiError, Option<String>) {
     // **Redact while the body is still structured.** A CVV is three digits and
     // an ACH account number nine, so neither is distinguishable by shape —
     // only the field name says they are sensitive, and flattening the envelope
@@ -190,11 +207,14 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
             Some(h) if !h.trim().is_empty() => h.trim().to_string(),
             _ => format!("HTTP {status} with no response body"),
         };
-        return ApiError::Api {
-            status,
-            correlation_id: None,
-            message: redact_message(&message),
-        };
+        return (
+            ApiError::Api {
+                status,
+                correlation_id: None,
+                message: redact_message(&message),
+            },
+            None,
+        );
     }
 
     // OpenIddict first: `error` as a string appears in no other shape, so the
@@ -207,11 +227,14 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
         if let Some(uri) = e.error_uri.as_deref().filter(|s| !s.is_empty()) {
             message = format!("{message} ({uri})");
         }
-        return ApiError::Api {
-            status,
-            correlation_id: None,
-            message: redact_message(&message),
-        };
+        return (
+            ApiError::Api {
+                status,
+                correlation_id: None,
+                message: redact_message(&message),
+            },
+            None,
+        );
     }
 
     match serde_json::from_str::<ErrorEnvelope>(&safe_text) {
@@ -265,22 +288,27 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
             if let Some(r) = e.resolution.as_deref().filter(|s| !s.is_empty()) {
                 message = format!("{message} Resolution: {r}");
             }
+            (
+                ApiError::Api {
+                    status,
+                    correlation_id: e.correlation_id,
+                    // The message reaches stderr and the JSON envelope, and an
+                    // error body routinely quotes the value that caused the
+                    // failure — so a PAN can arrive here even though nothing
+                    // in this module put it there.
+                    message: redact_message(&message),
+                },
+                e.trace_id,
+            )
+        }
+        Err(_) => (
             ApiError::Api {
                 status,
-                // ProblemDetails carries no correlation id, only a trace id.
-                correlation_id: e.correlation_id.or(e.trace_id),
-                // The message reaches stderr and the JSON envelope, and an
-                // error body routinely quotes the value that caused the
-                // failure — so a PAN can arrive here even though nothing in
-                // this module put it there.
-                message: redact_message(&message),
-            }
-        }
-        Err(_) => ApiError::Api {
-            status,
-            correlation_id: None,
-            message: redact_message(&safe_text),
-        },
+                correlation_id: None,
+                message: redact_message(&safe_text),
+            },
+            None,
+        ),
     }
 }
 
