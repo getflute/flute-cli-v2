@@ -447,13 +447,20 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
     Ok(Value::Object(body))
 }
 
-/// The `SharePaymentLinkRequestDto` body: all three fields are required, so
-/// `hasCustomerConsent` is always present and carries whatever the switch
-/// said. Hiding a `false` would leave the API unable to refuse an
-/// unconsented share.
+/// The `SharePaymentLinkRequestDto` body: all three fields are required.
+///
+/// The API refuses a share whose `hasCustomerConsent` is false with a 400,
+/// so a share without `--consent` is refused here, naming the flag, and the
+/// body always carries `true`.
 pub fn build_share_payment_link_body(args: &SharePaymentLinkArgs) -> Result<Value> {
     if args.recipient.trim().is_empty() {
         anyhow::bail!("--recipient is required: a share has to go somewhere");
+    }
+    if !args.has_customer_consent {
+        anyhow::bail!(
+            "--consent is required: the API shares a payment link only with the \
+             customer's consent to receive it"
+        );
     }
     Ok(Value::Object(Map::from_iter([
         ("shareBy".to_string(), serde_json::json!(args.share_by)),

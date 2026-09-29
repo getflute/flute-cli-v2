@@ -489,21 +489,11 @@ async fn share_by_offers_only_the_two_values_this_schema_declares() {
         .stderr(predicate::str::contains("sms"));
 }
 
-/// `hasCustomerConsent` is required, so it is always sent — `false` when the
-/// switch is absent, which is what lets the API refuse an unconsented share
-/// rather than the CLI hiding the field.
+/// The API refuses a share without the customer's consent, so a share
+/// without `--consent` is refused before the wire, exit 3, naming the flag.
 #[tokio::test]
-async fn share_always_sends_the_consent_field() {
+async fn share_without_consent_is_refused_before_the_wire() {
     let server = support::mock_with_token().await;
-    Mock::given(method("POST"))
-        .and(path(format!("/v2/payment-links/{LINK}/share")))
-        .and(body_json(serde_json::json!({
-            "shareBy": "Email",
-            "recipient": "ada@example.com",
-            "hasCustomerConsent": false})))
-        .respond_with(ResponseTemplate::new(204))
-        .mount(&server)
-        .await;
     support::bin(&server)
         .args([
             "payment-links",
@@ -515,7 +505,16 @@ async fn share_always_sends_the_consent_field() {
             "ada@example.com",
         ])
         .assert()
-        .success();
+        .code(3)
+        .stderr(predicate::str::contains("--consent is required"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
 }
 
 /// Both bodyless verbs say what they did, in a sentence.

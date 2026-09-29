@@ -293,8 +293,7 @@ fn share_args(consent: bool) -> SharePaymentLinkArgs {
     }
 }
 
-/// All three fields are required, so the consent flag is always sent —
-/// including when it is false, which is what lets the API refuse.
+/// All three fields are required and reach the body under their wire names.
 #[test]
 fn a_share_always_sends_all_three_required_fields() {
     let body = build_share_payment_link_body(&share_args(true)).unwrap();
@@ -305,8 +304,16 @@ fn a_share_always_sends_all_three_required_fields() {
             "recipient": "+14155552309",
             "hasCustomerConsent": true})
     );
-    let body = build_share_payment_link_body(&share_args(false)).unwrap();
-    assert_eq!(body["hasCustomerConsent"], false);
+}
+
+/// The API refuses an unconsented share, so the CLI refuses it first and
+/// names the flag.
+#[test]
+fn a_share_without_consent_is_refused() {
+    let err = build_share_payment_link_body(&share_args(false))
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("--consent is required"), "{err}");
 }
 
 #[test]
