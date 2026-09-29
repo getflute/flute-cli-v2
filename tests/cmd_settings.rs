@@ -478,3 +478,33 @@ async fn update_autofill_reports_the_settings_the_api_stored() {
     assert_eq!(v["data"]["level3Settings"]["product"]["code"], "W1", "{v}");
     assert!(v["data"].get("updated").is_none(), "{v}");
 }
+
+/// Whether a processor is the default is a question, so its flag reads as
+/// `yes` or `no` in the table, as `payment-methods` renders its own.
+#[tokio::test]
+async fn payment_config_table_reads_is_default_as_yes_or_no() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/settings/payment-config"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "availablePaymentProcessors": [
+                {"paymentProcessorId": "6bbfbe3e-04dd-41cd-82bf-1466e0159007", "isDefault": true},
+                {"paymentProcessorId": "8db2ff47-b143-4adb-ab58-a11111111111", "isDefault": false}]})))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "settings", "payment-config"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let out = String::from_utf8(out).unwrap();
+    let flag = |i: usize| {
+        out.lines()
+            .find(|l| l.starts_with(&format!("availablePaymentProcessors[{i}].isDefault:")))
+            .map(|l| l.split_whitespace().last().unwrap_or("").to_string())
+    };
+    assert_eq!(flag(0).as_deref(), Some("yes"), "{out}");
+    assert_eq!(flag(1).as_deref(), Some("no"), "{out}");
+}

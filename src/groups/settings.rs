@@ -265,7 +265,7 @@ pub static PAYMENT_CONFIG: Resource = Resource {
         cell: Cell::Path("/availablePaymentProcessors/0/paymentProcessorId"),
     }],
     amounts: &["/maxTransactionAmount"],
-    yes_no: &[],
+    yes_no: &["/availablePaymentProcessors/[]/isDefault"],
 };
 
 pub static CONTACT_INFO: Resource = Resource {

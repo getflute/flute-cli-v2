@@ -4,7 +4,7 @@ expression: "render::detail_table(r.resource, &object_for(r))"
 ---
 availablePaymentProcessors[0].paymentProcessorId:                       8db2ff47-b143-4adb-ab58-a11111111111
 availablePaymentProcessors[0].processorName:                            TSYS
-availablePaymentProcessors[0].isDefault:                                true
+availablePaymentProcessors[0].isDefault:                                yes
 availablePaymentProcessors[0].type:                                     Tsys
 availablePaymentProcessors[0].settlementBatchTimeSlots[0].hours:        2
 availablePaymentProcessors[0].settlementBatchTimeSlots[0].minutes:      10
