@@ -315,6 +315,29 @@ pub static PAYMENT_SESSION: Resource = Resource {
     yes_no: &[],
 };
 
+/// A payment session as `create` answers for it: the identifier and the
+/// payment methods the session offers.
+///
+/// The create response carries `id` and `paymentMethods` and nothing else, so
+/// the read's rows would all be dashes; `payment-sessions get` reads the
+/// session back. The same envelope name and identifier as
+/// [`PAYMENT_SESSION`].
+pub static PAYMENT_SESSION_CREATED: Resource = Resource {
+    object: "payment_session",
+    object_list: "payment_session_list",
+    id: "/id",
+    detail: &[
+        "/id",
+        "/paymentMethods/card/enabled",
+        "/paymentMethods/card/processorId",
+        "/paymentMethods/ach/enabled",
+        "/paymentMethods/ach/processorId",
+    ],
+    columns: &[],
+    amounts: &[],
+    yes_no: &[],
+};
+
 pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> {
     match command {
         PaymentSessionsCommand::Create(args) => {
@@ -325,7 +348,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
                 .await?;
             render::one(
                 ctx,
-                &PAYMENT_SESSION,
+                &PAYMENT_SESSION_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )

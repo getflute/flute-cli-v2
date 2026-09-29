@@ -476,6 +476,22 @@ pub static CUSTOMER: Resource = Resource {
     yes_no: &[],
 };
 
+/// A customer as `create` answers for it: the identifier and nothing else.
+///
+/// The create response carries `customerId` alone, so the read's rows would
+/// all be dashes; `customers get` reads the record back. The same envelope
+/// name and identifier as [`CUSTOMER`], so `--output json` and `quiet` cannot
+/// tell them apart.
+pub static CUSTOMER_CREATED: Resource = Resource {
+    object: "customer",
+    object_list: "customer_list",
+    id: "/customerId",
+    detail: &["/customerId"],
+    columns: &[],
+    amounts: &[],
+    yes_no: &[],
+};
+
 /// A person or a company: the API supplies whichever it has, and a customer
 /// with only a company name must not render as a blank row.
 fn full_name(v: &Value) -> Option<String> {
@@ -506,7 +522,7 @@ pub async fn dispatch(ctx: &Ctx, command: CustomersCommand) -> Result<()> {
                 .await?;
             render::one(
                 ctx,
-                &CUSTOMER,
+                &CUSTOMER_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )

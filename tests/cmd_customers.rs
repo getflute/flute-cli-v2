@@ -1253,3 +1253,36 @@ async fn a_list_with_more_pages_says_so_on_stderr_in_table_mode() {
     let stderr = String::from_utf8_lossy(&json.get_output().stderr).to_string();
     assert!(!stderr.contains("--all"), "{stderr}");
 }
+
+/// `create` answers with the identifier alone, so its table is that one row,
+/// not the read's rows dashed out. The body is a sandbox create response.
+#[tokio::test]
+async fn create_table_shows_only_what_the_create_returns() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/customers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "customerId": "01a0ee2f-ea24-7734-a50b-b3988a38dfee"})))
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args([
+            "--output",
+            "table",
+            "customers",
+            "create",
+            "--first-name",
+            "Demo",
+            "--last-name",
+            "Customer",
+        ])
+        .output()
+        .unwrap();
+    let table = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(
+        table.trim_end(),
+        "customerId: 01a0ee2f-ea24-7734-a50b-b3988a38dfee",
+        "{table}"
+    );
+}

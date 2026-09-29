@@ -326,6 +326,22 @@ pub static PAYMENT_METHOD: Resource = Resource {
     yes_no: &["/isDefault"],
 };
 
+/// A payment method as `add-card` and `add-ach` answer for it: the
+/// identifier and nothing else.
+///
+/// Both create responses carry `paymentMethodId` alone, so the read's rows
+/// would all be dashes; `payment-methods get` reads the record back. The same
+/// envelope name and identifier as [`PAYMENT_METHOD`].
+pub static PAYMENT_METHOD_CREATED: Resource = Resource {
+    object: "payment_method",
+    object_list: "payment_methods",
+    id: "/paymentMethodId",
+    detail: &["/paymentMethodId"],
+    columns: &[],
+    amounts: &[],
+    yes_no: &[],
+};
+
 /// A card and a bank account keep their masks in different containers, so one
 /// column has to reach both.
 fn masked_number(v: &Value) -> Option<String> {
@@ -380,7 +396,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
                 .await?;
             render::one(
                 ctx,
-                &PAYMENT_METHOD,
+                &PAYMENT_METHOD_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )
@@ -393,7 +409,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
                 .await?;
             render::one(
                 ctx,
-                &PAYMENT_METHOD,
+                &PAYMENT_METHOD_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )
