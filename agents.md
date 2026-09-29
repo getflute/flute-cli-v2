@@ -133,6 +133,10 @@ flag, with one exception: an **unparseable `--output` value** is itself the
 usage error, so there is no mode to render it in and stdout stays empty. `--help`
 and `--version` are not failures: they print to stdout and exit 0.
 
+A usage error's `message` is clap's complaint alone — no `error:` label, tip,
+`Usage:` block or `--help` pointer — with any list clap attaches to it
+(missing arguments, possible values) on the same line.
+
 ### Exit codes
 
 | Code | Meaning |
@@ -435,9 +439,13 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   attached to a customer, the API reads the address and phone off the customer
   record, and a customer missing them is rejected server-side with a message
   naming the field. The CLI cannot see that half. `--requester-ip` is required
-  on the wire too, and defaults to `127.0.0.1`.
+  on the wire too, and defaults to `127.0.0.1`. For a US address the server
+  also requires `--billing-city` and `--billing-state`, and answers `400`
+  naming the field without them.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
-  `sortOrder`; with neither, results come back newest first. `--sort-by`
+  `sortOrder`, and without `--sort-by` they also send
+  `sortBy=transactionDateTime`, because the server ignores a direction that
+  names no field. With neither, results come back newest first. `--sort-by`
   takes only the field names `--help` lists.
 - **`reversal` is the one endpoint for a void and for a refund.** The payment
   method and the settled state are detected server-side. Without `--amount` it
@@ -464,12 +472,19 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
 - **`capture` sends `captureAmount`**, not `amount` — the operation's own
   example is wrong about its own schema, and an unknown field is rejected
   rather than ignored.
+- **`share-receipt` requires `--consent`.** SMS is the only channel, and the
+  API refuses an SMS receipt without the customer's consent, so one without
+  the flag is refused before the wire: `client`, exit 3, nothing sent.
+- **A single transaction's table shows its own instrument.** A card
+  transaction's rows are the card's, authorization and address check; a bank
+  account's are `achDetails`. `json` and `quiet` are unchanged.
 - **`inspect` curates the `table` view, and only that.** It reads the same
   endpoint as `get` and lays out the fields that matter when a payment goes
   wrong, decline reason first, while `get`'s table hides nothing — including
-  fields this CLI does not know about. Under `--output json` the two are
-  byte-identical, so an agent gains nothing from `inspect` and spends a second
-  round trip on it. Neither has an endpoint of its own beyond the read.
+  fields this CLI does not know about. Under `--output json` the two carry the
+  same `data` — only `meta.correlation_id`, which names the request, differs —
+  so an agent gains nothing from `inspect` and spends a second round trip on
+  it. Neither has an endpoint of its own beyond the read.
 - `list` filters are all **server-side**. There is no client-side filtering
   anywhere in this CLI: a filter applied locally reports a wrong answer on any
   collection larger than one page.
@@ -626,8 +641,11 @@ flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
 ```
 
 - **`get` has no endpoint of its own**: it is the list endpoint with the
-  documented `batchIds` filter applied **server-side**. An empty result is exit
-  4, and two matches for one id is a refusal rather than a guess.
+  documented `batchIds` filter applied **server-side**. An empty result is
+  `kind: "api"`, status 404, exit 4, although the API answered 200: the message
+  says the filtered list returned no batch. Two matches for one id is a
+  refusal rather than a guess. The open batch has a `null` `batchId`, so it
+  cannot be read by id.
 - **`--asc`, not `--desc`** — this list's `sortOrder` defaults to `desc`.
 - `close` settles the named processor's whole open batch, not one
   transaction.
