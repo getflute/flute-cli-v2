@@ -84,10 +84,11 @@ pub struct ListPaymentMethodsArgs {
     /// Sort results by this field name.
     #[arg(long, id = "pm_sort_by", value_name = "SORT_BY")]
     pub sort_by: Option<String>,
-    /// Sort descending. The default is ascending.
+    /// Sort descending.
     #[arg(long, id = "pm_desc")]
     pub desc: bool,
-    /// Server-side text search.
+    /// Match payment methods whose label (the `--name` they were given)
+    /// contains this text, case-sensitively.
     #[arg(long)]
     pub search: Option<String>,
     /// Filter by customer UUID.
@@ -149,7 +150,9 @@ pub struct AddAchArgs {
     /// Friendly label for this payment method.
     #[arg(long = "name", id = "pm_ach_name", value_name = "NAME")]
     pub name: Option<String>,
-    /// Company name, for a business account.
+    /// Company name, for a business account. With `--customer-id` the
+    /// customer's company name is used instead and this value is not stored,
+    /// so a business account needs a company name on the customer.
     #[arg(long, id = "pm_company_name", value_name = "COMPANY_NAME")]
     pub company_name: Option<String>,
 }

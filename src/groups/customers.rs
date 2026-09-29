@@ -79,7 +79,7 @@ pub struct ListCustomersArgs {
     /// Sort results by this field name.
     #[arg(long)]
     pub sort_by: Option<String>,
-    /// Sort descending. The default is ascending.
+    /// Sort descending. Without it, results come back newest first.
     #[arg(long)]
     pub desc: bool,
     /// Filter by full name.
