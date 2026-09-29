@@ -134,13 +134,18 @@ pub fn build_close_batch_body(payment_processor_id: &str) -> Result<Value> {
 ///
 /// More than one match would mean `batchIds` is not the identity the command
 /// is using it as, so it says so rather than picking the first — and none is
-/// a not-found read, which is exit 4 through the API error path.
+/// a not-found read, which is exit 4 through the API error path. The API
+/// answered 200 with an empty list, and the message names that list as the
+/// source of the not-found.
 fn one_batch(batch_id: &str, items: Vec<Value>) -> Result<Value> {
     match items.len() {
         0 => Err(crate::api::ApiError::Api {
             status: 404,
             correlation_id: None,
-            message: format!("no settlement batch {batch_id}"),
+            message: format!(
+                "no settlement batch {batch_id}: the settlements list filtered by \
+                 that batch id returned no batch"
+            ),
         }
         .into()),
         1 => Ok(items.into_iter().next().expect("length checked")),

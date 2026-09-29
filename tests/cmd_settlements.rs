@@ -113,6 +113,37 @@ async fn settlement_get_of_an_unknown_batch_exits_four() {
         .stderr(predicate::str::contains(BATCH));
 }
 
+/// The not-found envelope keeps `kind: "api"` and status 404, and its message
+/// says the filtered list came back empty.
+#[tokio::test]
+async fn settlement_get_of_an_unknown_batch_says_the_filtered_list_was_empty() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/settlements/batches"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "items": [],
+            "pageInfo": {"hasMore": false}})))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json", "settlements", "get", BATCH])
+        .assert()
+        .code(4)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "api", "{v}");
+    assert_eq!(v["status"], 404, "{v}");
+    assert_eq!(
+        v["message"],
+        format!(
+            "no settlement batch {BATCH}: the settlements list filtered by that \
+             batch id returned no batch"
+        )
+    );
+}
+
 /// More than one match for a single batch id would mean the filter is not the
 /// identity it is being used as, so the command says so rather than picking
 /// the first.
