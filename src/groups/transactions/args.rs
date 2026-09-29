@@ -193,11 +193,11 @@ pub struct ListTransactionsArgs {
         ]
     )]
     pub sort_by: Option<String>,
-    /// Sort ascending. With neither `--asc` nor `--desc`, results come back
-    /// newest first.
+    /// Sort ascending, by `--sort-by` or else by transaction date. With
+    /// neither `--asc` nor `--desc`, results come back newest first.
     #[arg(long, id = "txn_asc", conflicts_with = "txn_desc")]
     pub asc: bool,
-    /// Sort descending.
+    /// Sort descending, by `--sort-by` or else by transaction date.
     #[arg(long, id = "txn_desc")]
     pub desc: bool,
     /// Filter results from this date-time inclusive (ISO 8601).

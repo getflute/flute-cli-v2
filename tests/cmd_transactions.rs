@@ -2973,3 +2973,28 @@ async fn share_receipt_without_consent_is_refused_with_nothing_sent() {
         "a client-side refusal must issue no request"
     );
 }
+
+/// `--asc` alone reaches the wire with a field to sort by, because the server
+/// ignores a `sortOrder` that has none.
+#[tokio::test]
+async fn list_asc_alone_sends_the_transaction_date_as_the_sort_field() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/transactions"))
+        .and(wiremock::matchers::query_param("sortOrder", "asc"))
+        .and(wiremock::matchers::query_param(
+            "sortBy",
+            "transactionDateTime",
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "items": [],
+            "pageInfo": {"hasMore": false, "pageIndex": 0, "pageSize": 20, "totalItems": 0}
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    support::bin(&server)
+        .args(["--output", "json", "transactions", "list", "--asc"])
+        .assert()
+        .success();
+}

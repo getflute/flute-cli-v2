@@ -14,7 +14,13 @@ pub fn build_list_transactions_query(
     args.pagination.validate()?;
     let mut query = args.pagination.query();
     query.extend(common::sort_order(args.asc, args.desc));
-    common::push_str(&mut query, "sortBy", &args.sort_by);
+    // The server ignores a `sortOrder` that has no `sortBy`, so a direction
+    // alone sorts by date — the field its default, newest-first order uses.
+    let sort_by = args
+        .sort_by
+        .clone()
+        .or_else(|| (args.asc || args.desc).then(|| "transactionDateTime".to_string()));
+    common::push_str(&mut query, "sortBy", &sort_by);
     common::push_str(&mut query, "fromDate", &args.from_date);
     common::push_str(&mut query, "toDate", &args.to_date);
     if let Some(source) = args.source_type {

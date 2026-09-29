@@ -16,9 +16,9 @@ Options:
       --sort-by <SORT_BY>
           Sort results by this field [possible values: cardTokenType, customerCompanyName, customerName, maskedCardNumber, merchantCompanyName, paymentMethodType, processedAmount, transactionDateTime, transactionId, transactionStatus]
       --asc
-          Sort ascending. With neither `--asc` nor `--desc`, results come back newest first
+          Sort ascending, by `--sort-by` or else by transaction date. With neither `--asc` nor `--desc`, results come back newest first
       --desc
-          Sort descending
+          Sort descending, by `--sort-by` or else by transaction date
       --from <FROM_DATE>
           Filter results from this date-time inclusive (ISO 8601)
       --to <TO_DATE>

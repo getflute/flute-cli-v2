@@ -569,6 +569,38 @@ fn a_transaction_list_sends_the_sort_order_it_is_asked_for() {
     assert_eq!(order(false, false), None);
 }
 
+/// The server ignores `sortOrder` without `sortBy`, so a direction alone
+/// sends the date as the field; a named field wins, and no direction sends
+/// neither.
+#[test]
+fn a_sort_direction_without_a_field_sorts_by_transaction_date() {
+    let sort_by = |sort_by: Option<&str>, asc, desc| {
+        let q = build_list_transactions_query(&ListTransactionsArgs {
+            sort_by: sort_by.map(str::to_string),
+            asc,
+            desc,
+            ..Default::default()
+        })
+        .unwrap();
+        q.iter()
+            .find(|(k, _)| *k == "sortBy")
+            .map(|(_, v)| v.clone())
+    };
+    assert_eq!(
+        sort_by(None, true, false).as_deref(),
+        Some("transactionDateTime")
+    );
+    assert_eq!(
+        sort_by(None, false, true).as_deref(),
+        Some("transactionDateTime")
+    );
+    assert_eq!(
+        sort_by(Some("processedAmount"), true, false).as_deref(),
+        Some("processedAmount")
+    );
+    assert_eq!(sort_by(None, false, false), None);
+}
+
 /// The API voids an unsettled card transaction in full and reverses an ACH
 /// one in full whatever `reversalAmount` says, so a partial is let through
 /// only for a settled card transaction.
