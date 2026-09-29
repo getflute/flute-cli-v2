@@ -1712,14 +1712,10 @@ async fn the_envelope_sorts_object_keys_at_every_depth() {
     assert!(at("aa") < at("zz"), "{text}");
 }
 
-/// A detail view answers for the shape it was given, and a field belonging to
-/// the other shape is not a field this response left out.
-///
-/// `GET /v2/transactions/{id}` declares `amountBreakdown`, `processorDetails`
-/// and `declineDetails`; `processorResponse`, `amountDetails` and the
-/// `ach-hold` verb's `type` are the write responses' own, and a read that
-/// reported them as absent would describe a response the endpoint cannot
-/// send.
+/// A detail view reports the read shape's own fields, dashed where the
+/// response is silent, and no row for `processorResponse`, `amountDetails` or
+/// a top-level `type`: no transaction response carries them, so a row for one
+/// would describe a response the endpoint cannot send.
 #[tokio::test]
 async fn get_table_reports_no_field_belonging_to_a_write_response() {
     let server = support::mock_with_token().await;
@@ -1755,20 +1751,35 @@ async fn get_table_reports_no_field_belonging_to_a_write_response() {
     }
 }
 
-/// The same rule the other way round: a write response is not missing the
-/// containers only a read carries.
+/// Every transaction write answers with the read's shape, so its table leads
+/// with the same curated rows as `get`: the decline reason straight after the
+/// amount, and no row for a field no transaction response carries.
+///
+/// The body is a declined sandbox create, trimmed to the fields the table
+/// curates.
 #[tokio::test]
-async fn create_table_reports_no_field_belonging_to_a_read_response() {
+async fn a_declined_create_table_leads_with_the_decline_reason() {
     let server = support::mock_with_token().await;
     Mock::given(method("POST"))
         .and(path("/v2/transactions"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "transactionId": TXN,
-            "transactionStatus": "Approved",
-            "processedAmount": support::spec::amount("115.50"),
+            "transactionStatus": "Declined",
+            "transactionType": "Sale",
+            "transactionDateTime": "2026-09-29T16:59:29.166989Z",
+            "processedAmount": 1,
             "currencyCode": "USD",
-            "amountDetails": {"baseAmount": support::spec::amount("100.00")},
-            "processorResponse": {"responseCode": "00", "responseMessage": "Approved"}})))
+            "declineDetails": {"code": "AVS", "message": "Address verification failed"},
+            "amountBreakdown": {"baseAmount": 1, "tipAmount": 0, "tipRate": 0},
+            "processorDetails": {"authCode": null, "mid": null, "rrn": null, "tid": null},
+            "addressVerificationServiceResponse": {
+                "action": "Deny",
+                "responseCode": "N",
+                "description": "Neither the Street Address or ZIP Code match the information on file."
+            },
+            "refundDetails": {"availableRefundAmount": 0, "refundedAmount": 0},
+            "paymentMethodType": "Card",
+            "cardDetails": {"maskedCardNumber": "411111******1111", "cardBrand": "Visa"}})))
         .mount(&server)
         .await;
 
@@ -1781,7 +1792,7 @@ async fn create_table_reports_no_field_belonging_to_a_read_response() {
             "--payment-processor-id",
             "pp-1",
             "--amount",
-            "115.50",
+            "1.00",
             "--card",
             "4111111111111111",
             "--cvv",
@@ -1792,85 +1803,28 @@ async fn create_table_reports_no_field_belonging_to_a_read_response() {
         .output()
         .unwrap();
     let table = String::from_utf8(out.stdout).unwrap();
+    let lines: Vec<&str> = table.lines().collect();
+    let row = |key: &str| {
+        lines
+            .iter()
+            .position(|l| l.starts_with(&format!("{key}:")))
+            .unwrap_or_else(|| panic!("no {key} row:\n{table}"))
+    };
 
-    assert!(table.contains("amountDetails.tipAmount:"), "{table}");
+    assert_eq!(
+        row("declineDetails.message"),
+        row("declineDetails.code") + 1
+    );
+    assert!(row("declineDetails.code") < 8, "{table}");
     assert!(
-        table.contains("processorResponse.responseDefinition:"),
+        lines[row("amountBreakdown.baseAmount")].ends_with("1.00"),
         "{table}"
     );
-    for read_only in [
-        "amountBreakdown.",
-        "processorDetails.",
-        "declineDetails.",
-        "achDetails.",
-        "cardDetails.",
-        "refundDetails.",
-    ] {
+    assert!(lines[row("addressVerificationServiceResponse.responseCode")].ends_with('N'));
+    for absent in ["processorResponse.", "amountDetails.", "isFullyRefunded"] {
         assert!(
-            !table.contains(read_only),
-            "a write reported {read_only:?}:\n{table}"
-        );
-    }
-}
-
-/// The seven writes are three declared shapes, not one. A reversal's response
-/// declares the processor's answer and the amount and nothing else, so an
-/// `amountDetails` or `type` row would report a field this operation cannot
-/// send — the same rule that separates the reads from the writes, one level
-/// down.
-#[tokio::test]
-async fn reversal_and_ach_hold_report_only_their_own_declared_shapes() {
-    let server = support::mock_with_token().await;
-    support::mount(
-        &server,
-        "flute-v2-post-transactions-transactionId-reversal",
-        "full",
-    )
-    .await;
-    support::mount(
-        &server,
-        "flute-v2-post-transactions-transactionId-ach-hold",
-        "default",
-    )
-    .await;
-
-    let reversal = support::bin(&server)
-        .args([
-            "--output",
-            "table",
-            "transactions",
-            "reversal",
-            "--transaction-id",
-            TXN,
-        ])
-        .output()
-        .unwrap();
-    let reversal = String::from_utf8(reversal.stdout).unwrap();
-    assert!(
-        reversal.contains("processorResponse.responseCode:"),
-        "{reversal}"
-    );
-    assert!(reversal.contains("processedAmount:"), "{reversal}");
-    for absent in ["amountDetails.", "\ntype:", "addressVerificationService"] {
-        assert!(
-            !reversal.contains(absent),
-            "a reversal reported {absent:?}:\n{reversal}"
-        );
-    }
-
-    // The ACH action names the operation in `type` and carries no amount of
-    // its own at all.
-    let hold = support::bin(&server)
-        .args(["--output", "table", "transactions", "ach-hold", TXN])
-        .output()
-        .unwrap();
-    let hold = String::from_utf8(hold.stdout).unwrap();
-    assert!(hold.contains("type:"), "{hold}");
-    assert!(hold.contains("processorResponse.processorName:"), "{hold}");
-    for absent in ["amountDetails.", "processedAmount:", "currencyCode:"] {
-        assert!(
-            !hold.contains(absent),
-            "an ACH hold reported {absent:?}:\n{hold}"
+            !table.contains(absent),
+            "a create reported {absent:?}:\n{table}"
         );
     }
 }

@@ -261,11 +261,10 @@ struct Rendered {
 /// Every resource gets a list rendering too, singletons included: a descriptor
 /// declares its columns whether or not an endpoint returns a collection today,
 /// and an unexercised column is where a wrong header or width survives.
-/// Four render empty, and deliberately. `AMOUNT_CALCULATION`'s response is a
+/// One renders empty, and deliberately: `AMOUNT_CALCULATION`'s response is a
 /// quote per instrument with no single total, so there is no honest column to
-/// put one in; the three write descriptors describe what a write answers
-/// with, and no write answers with a collection. All four are POSTs returning
-/// one object, with no collection endpoint to need a column.
+/// put one in, and it is a POST returning one object, with no collection
+/// endpoint to need a column.
 const RENDERED: &[Rendered] = &[
     Rendered {
         resource: &flute_cli2::groups::customers::CUSTOMER,
@@ -287,27 +286,6 @@ const RENDERED: &[Rendered] = &[
         operation_id: "flute-v2-get-transactions",
         variant: "first page, server defaults",
         at: "/items/0",
-    },
-    Rendered {
-        resource: &flute_cli2::groups::transactions::TRANSACTION_WRITE,
-        ident: "TRANSACTION_WRITE",
-        operation_id: "flute-v2-post-transactions",
-        variant: "new card, automatic capture",
-        at: "",
-    },
-    Rendered {
-        resource: &flute_cli2::groups::transactions::TRANSACTION_WRITE_SHORT,
-        ident: "TRANSACTION_WRITE_SHORT",
-        operation_id: "flute-v2-post-transactions-transactionId-reversal",
-        variant: "full",
-        at: "",
-    },
-    Rendered {
-        resource: &flute_cli2::groups::transactions::TRANSACTION_ACH_ACTION,
-        ident: "TRANSACTION_ACH_ACTION",
-        operation_id: "flute-v2-post-transactions-transactionId-ach-hold",
-        variant: "default",
-        at: "",
     },
     Rendered {
         resource: &flute_cli2::groups::transactions::AMOUNT_CALCULATION,

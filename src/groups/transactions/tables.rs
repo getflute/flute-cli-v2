@@ -3,18 +3,19 @@
 use crate::cli::render::{self, Cell, Column, Resource};
 use serde_json::Value;
 
-/// A transaction as the **reads** answer for it, in the order it is worth
-/// saying it.
+/// A transaction, in the order it is worth saying it.
 ///
 /// The **decline reason ranks immediately after the amount**: it is the field
 /// a caller most needs and the one a renderer that drops containers hides.
 ///
-/// One descriptor per response shape, because the declared set is the shape
-/// of the view: `GET /v2/transactions/{transactionId}` carries
-/// `amountBreakdown`, `declineDetails` and `processorDetails`, and reporting
-/// the writes' `processorResponse` as absent here would describe a field this
-/// endpoint cannot send. The list item is the same shape with fewer fields,
-/// so it reads through this one too.
+/// Every single-transaction response has this shape: the `GET` and all seven
+/// writes — create, capture, tip-adjust, reversal, credit, ach-hold and
+/// ach-release — answer with the same object, `amountBreakdown`,
+/// `declineDetails`, `processorDetails` and the address-verification answer
+/// included. A write answers for the transaction it addressed, so a
+/// reversal's `processedAmount` is the original charge and a refund's amount
+/// is `refundDetails.refundedAmount`. The list item is the same shape with
+/// fewer fields, so it reads through this one too.
 pub static TRANSACTION: Resource = Resource {
     object: "transaction",
     object_list: "transaction_list",
@@ -61,7 +62,6 @@ pub static TRANSACTION: Resource = Resource {
         "/addressVerificationServiceResponse/description",
         "/refundDetails/refundedAmount",
         "/refundDetails/availableRefundAmount",
-        "/refundDetails/isFullyRefunded",
     ],
     // CUSTOMER reads `customerId`: the list item carries no `customerName`.
     columns: &[
@@ -108,112 +108,12 @@ pub static TRANSACTION: Resource = Resource {
     yes_no: &[],
 };
 
-/// A charge, as `create`, `capture` and `tip-adjust` answer for it.
-///
-/// The same resource under the same envelope name and the same identifier as
-/// every other transaction descriptor, so `--output json` cannot tell them
-/// apart — only the table's shape differs, because these responses do. These
-/// three declare the fullest of them: `amountDetails` and `processorResponse`
-/// where the reads carry `amountBreakdown` and `processorDetails`, and the
-/// address-verification answer.
-///
-/// `responseDetails` and `receipt` are deliberately unnamed: every example
-/// shows them null and no schema declares what they hold, so naming the
-/// container would print a row for it beside rows for its own contents. They
-/// still print, as any unnamed field does.
-///
-/// No columns, because no write answers with a collection. The same is true
-/// of the two below.
-pub static TRANSACTION_WRITE: Resource = Resource {
-    object: "transaction",
-    object_list: "transaction_list",
-    id: "/transactionId",
-    detail: &[
-        "/transactionId",
-        "/transactionStatus",
-        "/processedAmount",
-        "/currencyCode",
-        "/processorResponse/responseCode",
-        "/processorResponse/responseMessage",
-        "/processorResponse/responseDefinition",
-        "/processorResponse/processorName",
-        "/amountDetails/baseAmount",
-        "/amountDetails/tipAmount",
-        "/amountDetails/tipRate",
-        "/amountDetails/discountAmount",
-        "/amountDetails/discountRate",
-        "/amountDetails/surchargeAmount",
-        "/addressVerificationServiceResponse/responseCode",
-        "/addressVerificationServiceResponse/description",
-        "/addressVerificationServiceResponse/action",
-    ],
-    columns: &[],
-    amounts: &[
-        "/processedAmount",
-        "/amountDetails/baseAmount",
-        "/amountDetails/tipAmount",
-        "/amountDetails/discountAmount",
-        "/amountDetails/surchargeAmount",
-    ],
-    yes_no: &[],
-};
-
-/// Money moved on its own, as `reversal` and `credit` answer for it.
-///
-/// Both declare the processor's answer and the amount that moved, and no
-/// breakdown of it: a reversal reverses a charge that was itemised when it
-/// was made, and a credit is an amount sent with nothing to itemise.
-pub static TRANSACTION_WRITE_SHORT: Resource = Resource {
-    object: "transaction",
-    object_list: "transaction_list",
-    id: "/transactionId",
-    detail: &[
-        "/transactionId",
-        "/transactionStatus",
-        "/processedAmount",
-        "/currencyCode",
-        "/processorResponse/responseCode",
-        "/processorResponse/responseMessage",
-        "/processorResponse/responseDefinition",
-        "/processorResponse/processorName",
-    ],
-    columns: &[],
-    amounts: &["/processedAmount"],
-    yes_no: &[],
-};
-
-/// A hold placed or released, as `ach-hold` and `ach-release` answer for it.
-///
-/// No amount at all: the operation moves no money, it changes whether a
-/// pending debit may proceed, and `type` names which of the two happened —
-/// the only response in the group that reports the operation rather than the
-/// transaction's own type.
-pub static TRANSACTION_ACH_ACTION: Resource = Resource {
-    object: "transaction",
-    object_list: "transaction_list",
-    id: "/transactionId",
-    detail: &[
-        "/transactionId",
-        "/type",
-        "/transactionStatus",
-        "/referenceId",
-        "/processorResponse/responseCode",
-        "/processorResponse/responseMessage",
-        "/processorResponse/responseDefinition",
-        "/processorResponse/processorName",
-    ],
-    columns: &[],
-    amounts: &[],
-    yes_no: &[],
-};
-
 /// The rows of `inspect`'s header: what decided the payment.
 ///
 /// Both outcomes are asked about, because only one of them is ever there: the
 /// authorization code is the evidence a charge worked, and `declineDetails`
 /// is the one code-and-message pair `GetTransactionResponseDtoFull` declares
-/// for one that did not. The write responses carry `processorResponse`
-/// instead, and `inspect` never sees one — it reads through the `GET`.
+/// for one that did not.
 const INSPECT_HEADER: &[(&str, &str)] = &[
     ("transactionId", "/transactionId"),
     ("transactionStatus", "/transactionStatus"),

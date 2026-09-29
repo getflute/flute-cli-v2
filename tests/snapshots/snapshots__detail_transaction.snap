@@ -43,4 +43,3 @@ addressVerificationServiceResponse.responseCode: —
 addressVerificationServiceResponse.description:  —
 refundDetails.refundedAmount:                    —
 refundDetails.availableRefundAmount:             —
-refundDetails.isFullyRefunded:                   —

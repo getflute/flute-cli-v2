@@ -5,7 +5,7 @@ use crate::api::ApiPath;
 use crate::cli::common::{self};
 use crate::cli::money::{self};
 use crate::cli::output::OutputFormat;
-use crate::cli::render::{self, Resource};
+use crate::cli::render;
 use anyhow::Result;
 use reqwest::Method;
 use serde_json::Value;
@@ -35,7 +35,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                 .request(Method::POST, "/v2/transactions", &[], Some(body))
                 .await?;
             let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
-            render::one(ctx, &TRANSACTION_WRITE, &data, resp.correlation_id)
+            render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
         }
         TransactionsCommand::Get { transaction_id } => {
             let resp = ctx
@@ -92,7 +92,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
             amount,
         } => {
             let body = build_capture_body(amount)?;
-            action(ctx, &transaction_id, "capture", body, &TRANSACTION_WRITE).await
+            action(ctx, &transaction_id, "capture", body).await
         }
         TransactionsCommand::Reversal {
             transaction_id,
@@ -113,14 +113,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                     .await?;
                 refuse_a_partial_reversal_the_api_ignores(&common::body_of(resp.body)?)?;
             }
-            action(
-                ctx,
-                &transaction_id,
-                "reversal",
-                body,
-                &TRANSACTION_WRITE_SHORT,
-            )
-            .await
+            action(ctx, &transaction_id, "reversal", body).await
         }
         TransactionsCommand::TipAdjust {
             transaction_id,
@@ -129,34 +122,13 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
         } => {
             money::note_fractional_rates(&[("--tip-rate", tip_rate)]);
             let body = build_tip_adjustment_body(tip_amount, tip_rate)?;
-            action(
-                ctx,
-                &transaction_id,
-                "tip-adjustment",
-                Some(body),
-                &TRANSACTION_WRITE,
-            )
-            .await
+            action(ctx, &transaction_id, "tip-adjustment", Some(body)).await
         }
         TransactionsCommand::AchHold { transaction_id } => {
-            action(
-                ctx,
-                &transaction_id,
-                "ach-hold",
-                None,
-                &TRANSACTION_ACH_ACTION,
-            )
-            .await
+            action(ctx, &transaction_id, "ach-hold", None).await
         }
         TransactionsCommand::AchRelease { transaction_id } => {
-            action(
-                ctx,
-                &transaction_id,
-                "ach-release",
-                None,
-                &TRANSACTION_ACH_ACTION,
-            )
-            .await
+            action(ctx, &transaction_id, "ach-release", None).await
         }
         TransactionsCommand::ShareReceipt(args) => {
             let body = build_share_receipt_body(&args)?;
@@ -188,7 +160,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                 .request(Method::POST, "/v2/transactions/credit", &[], Some(body))
                 .await?;
             let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
-            render::one(ctx, &TRANSACTION_WRITE_SHORT, &data, resp.correlation_id)
+            render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
         }
         TransactionsCommand::CalculateAmount(args) => {
             money::note_fractional_rates(&[
@@ -225,7 +197,6 @@ async fn action(
     transaction_id: &str,
     verb: &'static str,
     body: Option<Value>,
-    resource: &'static Resource,
 ) -> Result<()> {
     let resp = ctx
         .api
@@ -240,7 +211,7 @@ async fn action(
         .await?;
     let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
     note_assigned_reference(verb, &data);
-    render::one(ctx, resource, &data, resp.correlation_id)
+    render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
 }
 
 /// The stderr line an action earns when the API answers with a `referenceId`
