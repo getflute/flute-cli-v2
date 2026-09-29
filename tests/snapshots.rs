@@ -463,10 +463,10 @@ fn renderable_fields(group: &str) -> std::collections::BTreeSet<String> {
             continue;
         }
         // An operation whose declared response *shape* is a divergence
-        // describes a page it never returns, so its own examples are what it
-        // answers with.
+        // describes a page it never returns, so the schema the divergence
+        // names is what it answers with.
         let declared = match support::spec::response_shape_divergence(contract.operation_id) {
-            Some(_) => support::spec::response_example_pointers(contract.operation_id),
+            Some(schema) => support::spec::schema_leaves(schema),
             None => support::spec::response_leaves(contract.operation_id),
         };
         for leaf in declared {

@@ -459,7 +459,12 @@ pub fn assert_exchange_conforms(operation_id: &str, req: &RequestFixture, resp: 
             panic!("{operation_id}: {status} declares no body, fixture invents one")
         }
         (true, Some(body)) => match response_shape_divergence(operation_id) {
-            Some(d) => assert_matches_declared_examples(operation_id, &status, body, d),
+            Some(schema) => assert_validates(
+                operation_id,
+                "response",
+                &serde_json::json!({ "$ref": format!("#/components/schemas/{schema}") }),
+                body,
+            ),
             None => assert_validates(
                 operation_id,
                 "response",
@@ -523,9 +528,17 @@ pub enum Rule {
         keywords: &'static [&'static str],
     },
 
-    /// Validate the **response** body against the operation's own declared
-    /// response examples instead of its declared response schema.
-    ResponseShape { operations: &'static [&'static str] },
+    /// Validate the **response** body against another declared component
+    /// schema instead of the operation's own declared response schema.
+    ///
+    /// The substitute is a schema, not the operation's examples: an example
+    /// constrains nothing it leaves out and permits every field it shows,
+    /// true or not, so an example-shaped oracle agrees with whatever the
+    /// examples say.
+    ResponseShape {
+        operations: &'static [&'static str],
+        schema: &'static str,
+    },
 }
 
 pub static DIVERGENCES: &[Divergence] = &[
@@ -587,8 +600,13 @@ pub static DIVERGENCES: &[Divergence] = &[
                   description requires for a SaveMethod session",
     },
     Divergence {
+        // The seven writes declare `PageOfGetTransactionResponseDto`, and
+        // their examples show `processorResponse` and `amountDetails`; the
+        // API answers each with one transaction in the read's shape, the
+        // object `GET /v2/transactions/{transactionId}` declares.
         name: "the paged response declared on seven single-transaction writes",
         rule: Rule::ResponseShape {
+            schema: "GetTransactionResponseDtoFull",
             operations: &[
                 "flute-v2-post-transactions",
                 "flute-v2-post-transactions-transactionId-capture",
@@ -600,15 +618,26 @@ pub static DIVERGENCES: &[Divergence] = &[
             ],
         },
         evidence: "live_card_sale_auto_capture",
-        removal: "the seven writes declare a single-transaction response schema",
+        removal: "the seven writes declare GetTransactionResponseDtoFull as their response schema",
     },
 ];
 
-pub fn response_shape_divergence(operation_id: &str) -> Option<&'static Divergence> {
-    DIVERGENCES.iter().find(|d| match &d.rule {
-        Rule::ResponseShape { operations } => operations.contains(&operation_id),
-        Rule::RequestField { .. } | Rule::RequestFieldConstraint { .. } => false,
+/// The component schema a `ResponseShape` divergence validates this
+/// operation's response against, if one does.
+pub fn response_shape_divergence(operation_id: &str) -> Option<&'static str> {
+    DIVERGENCES.iter().find_map(|d| match &d.rule {
+        Rule::ResponseShape { operations, schema } => {
+            operations.contains(&operation_id).then_some(*schema)
+        }
+        Rule::RequestField { .. } | Rule::RequestFieldConstraint { .. } => None,
     })
+}
+
+/// The leaf pointers of one named component schema, in the surface matrix's
+/// spelling.
+pub fn schema_leaves(schema: &str) -> Vec<String> {
+    let mut visited = HashSet::new();
+    leaves(&SPEC["components"]["schemas"][schema], "", &mut visited)
 }
 
 /// Remove each `RequestField` pointer scoped to this operation.
@@ -692,83 +721,6 @@ fn remove_pointer(root: &mut Value, pointer: &str) {
     if let Some(map) = node.as_object_mut() {
         map.remove(*last);
     }
-}
-
-/// The fallback oracle for a wrong response *shape*, which no pointer strip
-/// can express.
-///
-/// Asserts that at least one example exists — a divergence with no examples to
-/// fall back on is a rule with no oracle and must fail loudly rather than pass
-/// silently — that every key in the fixture appears in the union of those
-/// examples' keys, and that the fixture is not itself a page.
-///
-/// The bundle uses **both** spellings: `flute-v2-post-transactions` declares
-/// `examples` (a map of named entries, each wrapping its payload in `value`),
-/// and the other six declare a single `example`. Reading only the plural form
-/// would leave six of the seven with no oracle.
-fn assert_matches_declared_examples(
-    operation_id: &str,
-    status: &str,
-    fixture: &Value,
-    divergence: &Divergence,
-) {
-    // Read from SPEC, not RELAXED: `relax` strips the singular `example`
-    // keyword as an annotation, and six of the seven exempt operations
-    // declare exactly that spelling.
-    let content = &operation_raw(operation_id)["responses"][status]["content"]["application/json"];
-
-    let mut allowed: BTreeSet<String> = BTreeSet::new();
-    let mut example_count = 0usize;
-
-    if let Some(map) = content["examples"].as_object() {
-        for entry in map.values() {
-            let payload = if entry["value"].is_null() {
-                entry
-            } else {
-                &entry["value"]
-            };
-            if let Some(obj) = payload.as_object() {
-                example_count += 1;
-                allowed.extend(obj.keys().cloned());
-            }
-        }
-    }
-    if let Some(obj) = content["example"].as_object() {
-        example_count += 1;
-        allowed.extend(obj.keys().cloned());
-    }
-
-    assert!(
-        example_count > 0,
-        "{operation_id}: {} exempts the declared response schema but the \
-         operation declares no response example for {status}, so the rule has \
-         no oracle",
-        divergence.name
-    );
-
-    let obj = fixture.as_object().unwrap_or_else(|| {
-        panic!(
-            "{operation_id}: {} expects a single object response",
-            divergence.name
-        )
-    });
-
-    // The rule is self-limiting in the direction that matters: the genuinely
-    // paged operation declares a page example and cannot be swept in.
-    assert!(
-        !(obj.contains_key("items") && obj.contains_key("pageInfo")),
-        "{operation_id}: {} applies to single-object responses, but the fixture \
-         is a page. GET /v2/transactions declares the same schema and its \
-         example genuinely is a page — the exemption must not reach it.",
-        divergence.name
-    );
-
-    let unknown: Vec<&String> = obj.keys().filter(|k| !allowed.contains(*k)).collect();
-    assert!(
-        unknown.is_empty(),
-        "{operation_id}: response fixture has fields no declared example \
-         carries: {unknown:?}. Declared: {allowed:?}"
-    );
 }
 
 // ── Leaf request-field derivation (layer 4a) ─────────────────────────────────
@@ -973,60 +925,4 @@ pub fn response_enum(operation_id: &str, pointer: &str) -> BTreeSet<String> {
         .and_then(|schema| schema_at(schema, pointer))
         .unwrap_or_else(|| panic!("{what} is not a declared response field"));
     declared_enum(schema, &what)
-}
-
-/// The pointers the declared 2xx response **examples** carry, containers
-/// included.
-///
-/// The oracle for an operation whose declared response *schema* is a known
-/// divergence: what such an operation answers with is what its own examples
-/// show, and the schema beside them describes a page it never returns.
-pub fn response_example_pointers(operation_id: &str) -> Vec<String> {
-    let op = operation_raw(operation_id);
-    let mut out = Vec::new();
-    for (status, resp) in op["responses"].as_object().unwrap() {
-        if !status.starts_with('2') {
-            continue;
-        }
-        let content = &resp["content"]["application/json"];
-        let mut payloads: Vec<&Value> = Vec::new();
-        if let Some(map) = content["examples"].as_object() {
-            payloads.extend(map.values().map(|entry| {
-                if entry["value"].is_null() {
-                    entry
-                } else {
-                    &entry["value"]
-                }
-            }));
-        }
-        if content["example"].is_object() {
-            payloads.push(&content["example"]);
-        }
-        for payload in payloads {
-            example_pointers(payload, "", &mut out);
-        }
-    }
-    out.sort();
-    out.dedup();
-    out
-}
-
-fn example_pointers(value: &Value, prefix: &str, out: &mut Vec<String>) {
-    match value {
-        Value::Object(map) => {
-            for (key, sub) in map {
-                let pointer = format!("{prefix}/{key}");
-                example_pointers(sub, &pointer, out);
-                out.push(pointer);
-            }
-        }
-        Value::Array(items) => {
-            let pointer = format!("{prefix}/[]");
-            for item in items {
-                example_pointers(item, &pointer, out);
-            }
-            out.push(pointer);
-        }
-        _ => {}
-    }
 }
