@@ -207,22 +207,34 @@ fn a_tip_adjustment_with_a_zero_half_is_refused_as_a_pair() {
     }
 }
 
-/// All three fields are required by schema, so all three are always sent
-/// — `hasCustomerConsent` false included, because omitting it would fail
-/// the required check rather than mean "no consent".
+/// All three fields are required by schema, so all three are always sent.
 #[test]
 fn a_share_receipt_body_always_carries_all_three_required_fields() {
     let args = ShareReceiptArgs {
         transaction_id: "txn_1".into(),
         share_by: ShareBy::Sms,
         recipient: "+14155552309".into(),
-        has_customer_consent: false,
+        has_customer_consent: true,
     };
     let body = build_share_receipt_body(&args).unwrap();
     assert_eq!(body["shareBy"], "Sms");
     assert_eq!(body["recipient"], "+14155552309");
-    assert_eq!(body["hasCustomerConsent"], false);
+    assert_eq!(body["hasCustomerConsent"], true);
     assert_eq!(body.as_object().unwrap().len(), 3);
+}
+
+/// The API refuses an SMS receipt without consent, so the refusal is local
+/// and names the flag.
+#[test]
+fn a_share_receipt_without_consent_is_refused() {
+    let args = ShareReceiptArgs {
+        transaction_id: "txn_1".into(),
+        share_by: ShareBy::Sms,
+        recipient: "+14155552309".into(),
+        has_customer_consent: false,
+    };
+    let err = build_share_receipt_body(&args).unwrap_err().to_string();
+    assert!(err.contains("--consent"), "{err}");
 }
 
 #[test]

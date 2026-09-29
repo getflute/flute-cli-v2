@@ -2941,3 +2941,35 @@ async fn inspect_of_a_card_transaction_shows_the_card_and_its_authorization() {
     );
     assert!(!table.contains("achDetails"), "{table}");
 }
+
+/// An SMS receipt without `--consent` is refused before the wire: exit 3, a
+/// `client` envelope naming the flag, and no request.
+#[tokio::test]
+async fn share_receipt_without_consent_is_refused_with_nothing_sent() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "transactions",
+            "share-receipt",
+            TXN,
+            "--share-by",
+            "sms",
+            "--recipient",
+            "+14155552309",
+        ])
+        .assert()
+        .code(3)
+        .stdout(predicate::str::contains(r#""kind": "client""#))
+        .stdout(predicate::str::contains("--consent"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "a client-side refusal must issue no request"
+    );
+}

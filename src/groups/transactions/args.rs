@@ -290,7 +290,7 @@ pub struct ShareReceiptArgs {
     /// Customer mobile number in E.164 form, for an SMS receipt.
     #[arg(long)]
     pub recipient: String,
-    /// The customer has consented to receive the receipt (required for SMS).
+    /// The customer has consented to receive the receipt (required).
     #[arg(long = "consent")]
     pub has_customer_consent: bool,
 }

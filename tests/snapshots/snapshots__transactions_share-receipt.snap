@@ -12,7 +12,7 @@ Arguments:
 Options:
       --share-by <SHARE_BY>    How to send the receipt. `sms` is the only channel the API accepts [possible values: sms]
       --recipient <RECIPIENT>  Customer mobile number in E.164 form, for an SMS receipt
-      --consent                The customer has consented to receive the receipt (required for SMS)
+      --consent                The customer has consented to receive the receipt (required)
   -h, --help                   Print help
 
 Global options:
