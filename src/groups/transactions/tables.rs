@@ -10,8 +10,10 @@ use serde_json::Value;
 /// writes — create, capture, tip-adjust, reversal, credit, ach-hold and
 /// ach-release — answer with the same object. A write answers for the
 /// transaction it addressed, so a reversal's `processedAmount` is the original
-/// charge and its `transactionStatus` says what the reversal did. The list
-/// item is the same shape with fewer fields, so it reads through this one too.
+/// charge: a void says so in `transactionStatus`, and a refund leaves the
+/// status `Settled` and says so only in `refundDetails.refundedAmount`, the
+/// running total refunded. The list item is the same shape with fewer fields,
+/// so it reads through this one too.
 /// `inspect` is the fuller view, and `--output json` the whole response.
 pub static TRANSACTION: Resource = Resource {
     object: "transaction",
@@ -21,6 +23,7 @@ pub static TRANSACTION: Resource = Resource {
         "/transactionId",
         "/transactionStatus",
         "/processedAmount",
+        "/refundDetails/refundedAmount",
         "/processorDetails/authCode",
         "/declineDetails/message",
     ],
@@ -70,6 +73,7 @@ const TRANSACTION_AMOUNTS: &[&str] = &[
     "/amountBreakdown/tipAmount",
     "/amountBreakdown/discountAmount",
     "/amountBreakdown/surchargeAmount",
+    "/refundDetails/refundedAmount",
 ];
 
 /// The rows of `inspect`'s header: what the transaction is and, when it was
@@ -109,7 +113,8 @@ const INSPECT_ACH: &[(&str, &str)] = &[
     ("achDetails.secCode", "/achDetails/secCode"),
 ];
 
-/// The rows of `inspect`'s amount section, ending with the total charged.
+/// The rows of `inspect`'s amount section: the total charged, then how much
+/// of it has been refunded.
 const INSPECT_BREAKDOWN: &[(&str, &str)] = &[
     ("  baseAmount", "/amountBreakdown/baseAmount"),
     ("  tipAmount", "/amountBreakdown/tipAmount"),
@@ -119,6 +124,7 @@ const INSPECT_BREAKDOWN: &[(&str, &str)] = &[
     ("  surchargeAmount", "/amountBreakdown/surchargeAmount"),
     ("  surchargeRate", "/amountBreakdown/surchargeRate"),
     ("  processedAmount", "/processedAmount"),
+    ("  refundedAmount", "/refundDetails/refundedAmount"),
 ];
 
 /// `inspect`'s table: the fields that decide whether a payment worked, then

@@ -1636,7 +1636,7 @@ async fn the_envelope_sorts_object_keys_at_every_depth() {
     assert!(at("aa") < at("zz"), "{text}");
 }
 
-/// `get`'s table is the summary: the same five rows for every transaction,
+/// `get`'s table is the summary: the same six rows for every transaction,
 /// dashed where the response is silent, and nothing else.
 #[tokio::test]
 async fn get_table_is_the_summary() {
@@ -1673,6 +1673,7 @@ async fn get_table_is_the_summary() {
             ("transactionId", TXN),
             ("transactionStatus", "Captured"),
             ("processedAmount", "106.50"),
+            ("refundDetails.refundedAmount", "\u{2014}"),
             ("processorDetails.authCode", "GOLD42"),
             ("declineDetails.message", "\u{2014}"),
         ],
@@ -1737,7 +1738,7 @@ async fn a_declined_create_table_carries_the_decline_reason() {
                 && l.ends_with("Address verification failed")),
         "{table}"
     );
-    assert_eq!(table.lines().count(), 5, "{table}");
+    assert_eq!(table.lines().count(), 6, "{table}");
 }
 
 /// `inspect` is a sectioned view: the fields that decide whether a payment
@@ -2843,4 +2844,56 @@ async fn list_asc_alone_sends_the_transaction_date_as_the_sort_field() {
         .args(["--output", "json", "transactions", "list", "--asc"])
         .assert()
         .success();
+}
+
+/// A refund answers with the settled charge it reversed: the status stays
+/// `Settled` and the amount stays the original, so the refunded total is the
+/// row that says the reversal happened, in the summary and in `inspect`.
+///
+/// The body is a sandbox partial refund of a settled card sale, trimmed.
+#[tokio::test]
+async fn a_refund_s_table_reports_the_refunded_amount() {
+    let server = support::mock_with_token().await;
+    let body = serde_json::json!({
+        "transactionId": TXN,
+        "transactionStatus": "Settled",
+        "transactionType": "Sale",
+        "processedAmount": support::spec::amount("10.50"),
+        "paymentMethodType": "Card",
+        "refundDetails": {
+            "availableRefundAmount": support::spec::amount("6.50"),
+            "refundedAmount": support::spec::amount("4")
+        }
+    });
+    Mock::given(method("POST"))
+        .and(path(format!("/v2/transactions/{TXN}/reversal")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(body.clone()))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/transactions/{TXN}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(body))
+        .mount(&server)
+        .await;
+
+    for (args, label) in [
+        (
+            vec!["transactions", "reversal", "--transaction-id", TXN],
+            "refundDetails.refundedAmount:",
+        ),
+        (vec!["transactions", "inspect", TXN], "  refundedAmount:"),
+    ] {
+        let out = support::bin(&server)
+            .args(["--output", "table"])
+            .args(&args)
+            .output()
+            .unwrap();
+        let table = String::from_utf8(out.stdout).unwrap();
+        assert!(
+            table
+                .lines()
+                .any(|l| l.starts_with(label) && l.ends_with("4.00")),
+            "{args:?}:\n{table}"
+        );
+    }
 }

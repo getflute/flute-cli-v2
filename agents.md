@@ -464,7 +464,13 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   it voids an unsettled card transaction in full and reverses an ACH one in
   full whatever amount is sent. So with `--amount` the CLI first reads the
   transaction and refuses (exit 3, no reversal sent) unless it is a card
-  transaction in `Settled` or `Refunded`. A partial amount on `capture` or `reversal` must be
+  transaction in `Settled` or `Refunded`. The response is the transaction
+  that was reversed, not a new one: `processedAmount` is the original charge.
+  A void reads `transactionStatus: "Voided"`; a refund of a settled card can
+  leave the status `Settled`, and says what it did in
+  `refundDetails.refundedAmount`, the total refunded so far. Observed on the
+  sandbox: after a void, `availableRefundAmount` still reports the full
+  amount, so do not read it as refundable. A partial amount on `capture` or `reversal` must be
   **greater than zero**: the whole of it is asked for by omitting the flag,
   not by naming nothing. `tip-adjust`'s `--tip-amount` and `--tip-rate` carry
   the same floor — zero moves no tip, so either is refused before the wire.
