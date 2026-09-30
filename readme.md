@@ -132,11 +132,11 @@ flute2 transactions create \
 flute2 --output json transactions create … | jq -r '.data.transactionStatus'
 ```
 
-**See why, in one screen:** `transactions inspect <transaction-id>` shows the status, the amounts, the decline reason and the address-verification result together, where `get` prints every field the API returns.
+**See why, in one screen:** `transactions inspect <transaction-id>` shows the status, the amounts, the decline reason and the address-verification result together; `get` prints a summary, and `--output json` every field the API returns.
 
 **Output modes** are controlled by `--output table|json|quiet` (or the `FLUTE2_OUTPUT` env var / `output` key in `~/.flute2/config.toml`):
 
-- `table` — human-readable (default)
+- `table` — a human-readable summary (default)
 - `json` — structured envelope, suitable for scripts and agents
 - `quiet` — resource id only, one per line; ideal for shell capture: `TXN=$(flute2 --output quiet transactions create --payment-processor-id <id> --amount 10.50 …)`
 
@@ -257,7 +257,7 @@ A terminal takes one in-progress transaction at a time.
 
 `data` is what the resource reports, with its object keys emitted in sorted order at every depth. On a collection read it is the array itself. `page_info` reproduces the API's `pageInfo` and is absent — not null — where there are no pages.
 
-`table`, the default, is for reading: declared fields first, in the order that matters when a payment goes wrong. Nothing is hidden, so a field the API adds still appears.
+`table`, the default, is for reading: a short summary of each resource — a handful of fields, each holding its row with a dash when the response lacks it. `--output json` carries every field the API returns.
 
 `quiet` prints the identifier alone, for chaining:
 

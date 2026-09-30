@@ -3,12 +3,10 @@ source: tests/snapshots.rs
 expression: "render::detail_table(r.resource, &object_for(r))"
 ---
 batchId:              21c75430-a316-456f-9126-365760dca33a
-externalBatchId:      BATCH-001
-batchStatus:          Settled
-paymentProcessorId:   8db2ff47-b143-4adb-ab58-a11111111111
 paymentProcessorName: TSYS
 createdOn:            2026-03-23T12:00:00Z
 transactionCount:     15
 totalSalesAmount:     1300.00
 totalRefundsAmount:   50.00
 totalNetAmount:       1250.00
+batchStatus:          Settled

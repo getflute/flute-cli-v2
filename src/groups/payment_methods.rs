@@ -307,19 +307,10 @@ pub static PAYMENT_METHOD: Resource = Resource {
         "/paymentMethodId",
         "/type",
         "/name",
+        "/card/cardMask",
+        "/ach/accountNumber",
         "/isDefault",
         "/customerId",
-        "/createdOn",
-        "/card/cardMask",
-        "/card/expirationMonth",
-        "/card/expirationYear",
-        "/card/cardTokenType",
-        "/ach/accountNumber",
-        "/ach/routingNumber",
-        "/ach/accountType",
-        "/ach/accountHolderType",
-        "/ach/companyName",
-        "/ach/taxId",
     ],
     columns: &[
         Column {
@@ -379,12 +370,10 @@ pub static CARD_VIEW: Resource = Resource {
         "/paymentMethodId",
         "/type",
         "/name",
-        "/isDefault",
-        "/customerId",
-        "/createdOn",
         "/card/cardMask",
         "/card/expiry",
-        "/card/cardTokenType",
+        "/isDefault",
+        "/customerId",
     ],
     columns: &[],
     amounts: &[],
@@ -401,46 +390,32 @@ pub static ACH_VIEW: Resource = Resource {
         "/paymentMethodId",
         "/type",
         "/name",
+        "/ach/accountNumber",
+        "/ach/accountType",
         "/isDefault",
         "/customerId",
-        "/createdOn",
-        "/ach/accountNumber",
-        "/ach/routingNumber",
-        "/ach/accountType",
-        "/ach/accountHolderType",
-        "/ach/companyName",
-        "/ach/taxId",
     ],
     columns: &[],
     amounts: &[],
     yes_no: &["/isDefault"],
 };
 
-/// `get`'s table: the rows of the instrument the method is, and none of the
-/// other's. The response carries both containers and nulls the one that does
-/// not apply, so a card would otherwise report six bank-account fields as
-/// missing. Any other `type` keeps both. A card's month and year become one
-/// `card.expiry` row, spelt as `list`'s EXP column spells it.
+/// `get`'s table: the rows of the instrument the method is. The response
+/// carries both containers and nulls the one that does not apply, so a card
+/// would otherwise report the bank account's fields as missing. Any other
+/// `type` keeps both. A card's month and year become one `card.expiry` row,
+/// spelt as `list`'s EXP column spells it.
 fn detail_view(data: &Value) -> String {
-    let (view, other) = match data.get("type").and_then(Value::as_str) {
-        Some("Card") => (&CARD_VIEW, "ach"),
-        Some("ACH") => (&ACH_VIEW, "card"),
+    let view = match data.get("type").and_then(Value::as_str) {
+        Some("Card") => &CARD_VIEW,
+        Some("ACH") => &ACH_VIEW,
         _ => return render::detail_table(&PAYMENT_METHOD, data),
     };
     let mut shown = data.clone();
-    // A populated other container is data the view does not name, and still
-    // prints after the declared rows.
-    if let Some(map) = shown.as_object_mut() {
-        if map.get(other).is_some_and(Value::is_null) {
-            map.remove(other);
-        }
-    }
     if let (Some(exp), Some(card)) = (
         expiry(data),
         shown.pointer_mut("/card").and_then(Value::as_object_mut),
     ) {
-        card.remove("expirationMonth");
-        card.remove("expirationYear");
         card.insert("expiry".into(), Value::String(exp));
     }
     render::detail_table(view, &shown)

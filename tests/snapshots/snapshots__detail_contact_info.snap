@@ -5,11 +5,5 @@ expression: "render::detail_table(r.resource, &object_for(r))"
 contactInfos[0].contactInfoId:     8d638f27-1a16-4f1b-92fe-0ea16d4a6461
 contactInfos[0].addressName:       Main Office
 contactInfos[0].isMainAddress:     true
-contactInfos[0].isDefaultAddress:  true
 contactInfos[0].email:             contact@example.com
 contactInfos[0].mobilePhoneNumber: +14155552309
-contactInfos[0].addressLine1:      1 Main St
-contactInfos[0].city:              Austin
-contactInfos[0].stateCode:         TX
-contactInfos[0].postalCode:        78701
-contactInfos[0].countryCode:       US

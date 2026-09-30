@@ -495,51 +495,6 @@ async fn transaction_get_exchange_matches_the_contract() {
     support::assert_exchange_observed(&server, &ex).await;
 }
 
-/// The create response carries four containers the *get* response schema does
-/// not name — `amountDetails`, `processorResponse`, `responseDetails` and
-/// `receipt`. A descriptor built from one shape must not drop the other's
-/// fields, and a decline message is the field that must never vanish.
-#[tokio::test]
-async fn create_table_keeps_container_fields_the_descriptor_does_not_name() {
-    let server = support::mock_with_token().await;
-    Mock::given(method("POST"))
-        .and(path("/v2/transactions"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "transactionId": "txn_1",
-            "transactionStatus": "Declined",
-            "processorResponse": {"responseCode": "05", "responseMessage": "Do not honor"},
-            "responseDetails": null
-        })))
-        .mount(&server)
-        .await;
-
-    support::bin(&server)
-        .args([
-            "--output",
-            "table",
-            "transactions",
-            "create",
-            "--payment-processor-id",
-            "pp-1",
-            "--amount",
-            "10.50",
-            "--card",
-            "4111111111111111",
-            "--cvv",
-            "123",
-            "--exp",
-            "12/2032",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains(
-            "processorResponse.responseMessage",
-        ))
-        .stdout(predicate::str::contains("Do not honor"))
-        // An explicit null is a dash, not an omission.
-        .stdout(predicate::str::contains("responseDetails"));
-}
-
 /// An amount that renders as `10.5` is a wrong answer about money.
 #[tokio::test]
 async fn get_table_renders_the_processed_amount_with_its_exact_digits() {
@@ -1352,30 +1307,6 @@ async fn transaction_ach_hold_exchange_matches_the_contract() {
     support::assert_exchange_observed(&server, &ex).await;
 }
 
-/// `referenceId` is the merchant's own handle on the transaction, and
-/// `GetTransactionResponseDtoShort` declares it on both ACH actions. Naming it
-/// in the descriptor is what makes a response that *drops* it say so: an
-/// undeclared field the server omits leaves no row at all, while a declared
-/// one holds a dashed one.
-#[tokio::test]
-async fn an_ach_hold_that_returns_no_reference_says_so() {
-    let server = support::mock_with_token().await;
-    Mock::given(method("POST"))
-        .and(path(format!("/v2/transactions/{TXN}/ach-hold")))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "transactionId": TXN,
-            "transactionStatus": "Held"})))
-        .mount(&server)
-        .await;
-
-    let out = support::bin(&server)
-        .args(["--output", "table", "transactions", "ach-hold", TXN])
-        .output()
-        .unwrap();
-    let hold = String::from_utf8(out.stdout).unwrap();
-    assert!(hold.contains("referenceId:"), "{hold}");
-}
-
 /// `share-receipt` is SMS-only: the endpoint's validator answers
 /// `ShareBy must be Sms; it is the only supported channel.` for anything else,
 /// so a channel the API refuses is refused here instead of on a round trip.
@@ -1632,13 +1563,6 @@ async fn inspect_reads_through_the_get_endpoint_and_curates_the_table() {
         .mount(&server)
         .await;
 
-    // `get` prints everything, including the field the CLI does not know.
-    support::bin(&server)
-        .args(["--output", "table", "transactions", "get", TXN])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("somethingNewTheApiAdded"));
-
     // `inspect` prints the curated set, and the decline reason is in it.
     support::bin(&server)
         .args(["--output", "table", "transactions", "inspect", TXN])
@@ -1712,12 +1636,10 @@ async fn the_envelope_sorts_object_keys_at_every_depth() {
     assert!(at("aa") < at("zz"), "{text}");
 }
 
-/// A detail view reports the read shape's own fields, dashed where the
-/// response is silent, and no row for `processorResponse`, `amountDetails` or
-/// a top-level `type`: no transaction response carries them, so a row for one
-/// would describe a response the endpoint cannot send.
+/// `get`'s table is the summary: the same five rows for every transaction,
+/// dashed where the response is silent, and nothing else.
 #[tokio::test]
-async fn get_table_reports_no_field_belonging_to_a_write_response() {
+async fn get_table_is_the_summary() {
     let server = support::mock_with_token().await;
     Mock::given(method("GET"))
         .and(path(format!("/v2/transactions/{TXN}")))
@@ -1725,7 +1647,7 @@ async fn get_table_reports_no_field_belonging_to_a_write_response() {
             "transactionId": TXN,
             "transactionStatus": "Captured",
             "transactionType": "Sale",
-            "processedAmount": support::spec::amount("106.50"),
+            "processedAmount": support::spec::amount("106.5"),
             "currencyCode": "USD",
             "amountBreakdown": {"baseAmount": support::spec::amount("100.00")},
             "processorDetails": {"authCode": "GOLD42"},
@@ -1738,27 +1660,32 @@ async fn get_table_reports_no_field_belonging_to_a_write_response() {
         .output()
         .unwrap();
     let table = String::from_utf8(out.stdout).unwrap();
-
-    // The read shape's own fields are there, dashed where the response is
-    // silent, which is what makes the absence of the others meaningful.
-    assert!(table.contains("amountBreakdown.tipAmount:"), "{table}");
-    assert!(table.contains("declineDetails.message:"), "{table}");
-    for write_only in ["processorResponse.", "amountDetails.", "\ntype:"] {
-        assert!(
-            !table.contains(write_only),
-            "a read reported {write_only:?}:\n{table}"
-        );
-    }
+    let rows: Vec<(&str, &str)> = table
+        .lines()
+        .map(|l| {
+            let (label, value) = l.split_once(':').unwrap();
+            (label, value.trim())
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        [
+            ("transactionId", TXN),
+            ("transactionStatus", "Captured"),
+            ("processedAmount", "106.50"),
+            ("processorDetails.authCode", "GOLD42"),
+            ("declineDetails.message", "\u{2014}"),
+        ],
+        "{table}"
+    );
 }
 
-/// Every transaction write answers with the read's shape, so its table leads
-/// with the same curated rows as `get`: the decline reason straight after the
-/// amount, and no row for a field no transaction response carries.
+/// A write's table is the same summary as `get`'s, and a decline's reason is
+/// in it.
 ///
-/// The body is a declined sandbox create, trimmed to the fields the table
-/// curates.
+/// The body is a declined sandbox create, trimmed.
 #[tokio::test]
-async fn a_declined_create_table_leads_with_the_decline_reason() {
+async fn a_declined_create_table_carries_the_decline_reason() {
     let server = support::mock_with_token().await;
     Mock::given(method("POST"))
         .and(path("/v2/transactions"))
@@ -1803,30 +1730,14 @@ async fn a_declined_create_table_leads_with_the_decline_reason() {
         .output()
         .unwrap();
     let table = String::from_utf8(out.stdout).unwrap();
-    let lines: Vec<&str> = table.lines().collect();
-    let row = |key: &str| {
-        lines
-            .iter()
-            .position(|l| l.starts_with(&format!("{key}:")))
-            .unwrap_or_else(|| panic!("no {key} row:\n{table}"))
-    };
-
-    assert_eq!(
-        row("declineDetails.message"),
-        row("declineDetails.code") + 1
-    );
-    assert!(row("declineDetails.code") < 8, "{table}");
     assert!(
-        lines[row("amountBreakdown.baseAmount")].ends_with("1.00"),
+        table
+            .lines()
+            .any(|l| l.starts_with("declineDetails.message:")
+                && l.ends_with("Address verification failed")),
         "{table}"
     );
-    assert!(lines[row("addressVerificationServiceResponse.responseCode")].ends_with('N'));
-    for absent in ["processorResponse.", "amountDetails.", "isFullyRefunded"] {
-        assert!(
-            !table.contains(absent),
-            "a create reported {absent:?}:\n{table}"
-        );
-    }
+    assert_eq!(table.lines().count(), 5, "{table}");
 }
 
 /// `inspect` is a sectioned view: the fields that decide whether a payment
@@ -2784,94 +2695,7 @@ const ACH_SALE: &str = r#"
 }
 "#;
 
-async fn table_of(body: &str) -> String {
-    let server = support::mock_with_token().await;
-    let id = serde_json::from_str::<serde_json::Value>(body).unwrap()["transactionId"]
-        .as_str()
-        .unwrap()
-        .to_string();
-    Mock::given(method("GET"))
-        .and(path(format!("/v2/transactions/{id}")))
-        .respond_with(ResponseTemplate::new(200).set_body_raw(body.to_string(), "application/json"))
-        .mount(&server)
-        .await;
-    let out = support::bin(&server)
-        .args(["--output", "table", "transactions", "get", &id])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    String::from_utf8(out.stdout).unwrap()
-}
-
-/// A card transaction's table carries no bank-account rows: the response's
-/// `achDetails` is null, and a row of dashes per field says nothing.
-#[tokio::test]
-async fn a_card_table_shows_only_the_card_rows() {
-    let table = table_of(CARD_SALE).await;
-    assert!(!table.contains("achDetails"), "{table}");
-    for row in [
-        "cardDetails.maskedCardNumber:",
-        "processorDetails.authCode:",
-        "addressVerificationServiceResponse.responseCode:",
-    ] {
-        assert!(table.contains(row), "no {row}\n{table}");
-    }
-}
-
-/// The tax amount and each event's amount are money, and read to two places
-/// like every other amount in the table.
-#[tokio::test]
-async fn a_transaction_table_formats_the_tax_and_event_amounts() {
-    let table = table_of(CARD_SALE).await;
-    let row = |key: &str| {
-        table
-            .lines()
-            .find(|l| l.starts_with(&format!("{key}:")))
-            .unwrap_or_else(|| panic!("no {key} row\n{table}"))
-            .to_string()
-    };
-    assert!(
-        row("amountBreakdown.taxAmount").ends_with("0.00"),
-        "{table}"
-    );
-    assert!(
-        row("transactionEvents[0].amount").ends_with("7.50"),
-        "{table}"
-    );
-}
-
-/// An ACH transaction's table carries no card, authorization or
-/// address-verification rows: the response sends those containers empty.
-#[tokio::test]
-async fn an_ach_table_shows_only_the_bank_account_rows() {
-    let table = table_of(ACH_SALE).await;
-    for absent in [
-        "cardDetails",
-        "processorDetails",
-        "addressVerificationServiceResponse",
-    ] {
-        assert!(!table.contains(absent), "{absent}\n{table}");
-    }
-    for row in ["achDetails.maskedAccountNumber:", "achDetails.secCode:"] {
-        assert!(table.contains(row), "no {row}\n{table}");
-    }
-}
-
-/// A container the other instrument's descriptor omits still prints when it
-/// carries a value: the view hides empty rows, never data.
-#[tokio::test]
-async fn an_ach_table_keeps_a_processor_answer_that_carries_a_value() {
-    let table = table_of(&ACH_SALE.replace(r#""tid": null"#, r#""tid": "tid-7""#)).await;
-    assert!(
-        table
-            .lines()
-            .any(|l| l.starts_with("processorDetails.tid:") && l.ends_with("tid-7")),
-        "{table}"
-    );
-}
-
-/// The instrument chooses the table's rows and nothing else: `json` is the
-/// API's own document either way.
+/// `json` is the API's own document whichever instrument paid.
 #[tokio::test]
 async fn an_ach_transaction_envelope_is_the_response() {
     let server = support::mock_with_token().await;

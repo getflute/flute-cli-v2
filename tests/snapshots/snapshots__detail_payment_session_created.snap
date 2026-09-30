@@ -2,8 +2,4 @@
 source: tests/snapshots.rs
 expression: "render::detail_table(r.resource, &object_for(r))"
 ---
-id:                              9c1f7a3e-2b58-4d06-8e93-4a5b6c7d8e90
-paymentMethods.card.enabled:     true
-paymentMethods.card.processorId: —
-paymentMethods.ach.enabled:      true
-paymentMethods.ach.processorId:  —
+id: 9c1f7a3e-2b58-4d06-8e93-4a5b6c7d8e90

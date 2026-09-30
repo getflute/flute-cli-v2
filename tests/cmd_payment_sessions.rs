@@ -335,29 +335,6 @@ async fn quiet_prints_an_id_on_create_and_nothing_on_get() {
         .stdout("");
 }
 
-/// The read is a deep document, and the shared detail renderer has to reach
-/// the receipt nested three levels inside it.
-#[tokio::test]
-async fn the_session_table_reaches_the_metadata_and_the_nested_amounts() {
-    let server = support::mock_with_token().await;
-    support::mount(
-        &server,
-        "flute-v2-get-payment-sessions-paymentSessionId",
-        "default",
-    )
-    .await;
-    support::bin(&server)
-        .args(["--output", "table", "payment-sessions", "get", SESSION])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("status"))
-        .stdout(predicate::str::contains("Created"))
-        .stdout(predicate::str::contains("metadata.orderId"))
-        .stdout(predicate::str::contains("9921"))
-        .stdout(predicate::str::contains("surchargeAmount"))
-        .stdout(predicate::str::contains("1.95"));
-}
-
 /// A bodyless success has no resource to print, so the cancel confirms from
 /// the id the caller supplied.
 #[tokio::test]

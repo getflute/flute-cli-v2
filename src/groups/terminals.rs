@@ -121,14 +121,10 @@ pub static TERMINAL: Resource = Resource {
     detail: &[
         "/terminalId",
         "/serialNumber",
-        "/terminalManufacturer",
         "/terminalModel",
-        "/terminalMode",
         "/terminalStatus",
         "/connectionStatus",
         "/lastSeenOn",
-        "/merchantId",
-        "/merchantCompanyName",
     ],
     // A caller choosing a terminal to charge on needs the serial number they
     // can read off the case, the mode that decides whether it can take the
@@ -180,14 +176,10 @@ pub static TERMINAL_STATUS: Resource = Resource {
         "/terminalStatus",
         "/connectionStatus",
         "/connectionType",
-        "/wifiConnectionStrength",
-        "/mobileConnectionStrength",
         "/batteryLevel",
+        "/wifiConnectionStrength",
         "/printerStatus",
-        "/debitPinKey",
-        "/terminalAppVersion",
         "/lastSeenOn",
-        "/merchantId",
     ],
     // The endpoint answers one terminal, so there is no collection to name
     // columns for; the detail view is the whole point of the command.

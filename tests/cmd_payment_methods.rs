@@ -369,26 +369,6 @@ async fn list_table_shows_the_masked_number_for_either_instrument() {
         .stdout(predicate::str::contains("no"));
 }
 
-/// The detail view reaches into whichever instrument container is present,
-/// on a resource whose payload is entirely nested.
-#[tokio::test]
-async fn get_table_shows_the_nested_ach_fields() {
-    let server = support::mock_with_token().await;
-    support::mount(
-        &server,
-        "flute-v2-get-payment-methods-paymentMethodId",
-        "ach",
-    )
-    .await;
-    support::bin(&server)
-        .args(["--output", "table", "payment-methods", "get", ACH_PM])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("ach.routingNumber"))
-        .stdout(predicate::str::contains("021000021"))
-        .stdout(predicate::str::contains("ach.accountHolderType"));
-}
-
 /// `--name` sets the instrument's label. The API spells it
 /// `paymentName` on the card route and `name` on the ACH route, so one flag
 /// covers an inconsistency in the API rather than exposing it.
@@ -606,15 +586,13 @@ async fn a_card_s_table_shows_the_expiry_on_one_row() {
     assert_eq!(
         out,
         format!(
-            "paymentMethodId:    {PM}\n\
-             type:               Card\n\
-             name:               qa-doc\n\
-             isDefault:          no\n\
-             customerId:         {CUS}\n\
-             createdOn:          2026-09-16T18:57:50.022644Z\n\
-             card.cardMask:      411111******1111\n\
-             card.expiry:        12/30\n\
-             card.cardTokenType: Local\n"
+            "paymentMethodId: {PM}\n\
+             type:            Card\n\
+             name:            qa-doc\n\
+             card.cardMask:   411111******1111\n\
+             card.expiry:     12/30\n\
+             isDefault:       no\n\
+             customerId:      {CUS}\n"
         )
     );
 }
@@ -623,7 +601,7 @@ async fn a_card_s_table_shows_the_expiry_on_one_row() {
 #[tokio::test]
 async fn a_bank_account_s_table_shows_no_card_rows() {
     let out = get_table("ACH").await;
-    assert!(out.contains("ach.routingNumber:"), "{out}");
+    assert!(out.contains("ach.accountNumber:"), "{out}");
     assert!(!out.contains("card"), "{out}");
 }
 

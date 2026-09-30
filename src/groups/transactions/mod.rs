@@ -35,7 +35,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                 .request(Method::POST, "/v2/transactions", &[], Some(body))
                 .await?;
             let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
-            render_transaction(ctx, &data, resp.correlation_id)
+            render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
         }
         TransactionsCommand::Get { transaction_id } => {
             let resp = ctx
@@ -47,7 +47,12 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                     None,
                 )
                 .await?;
-            render_transaction(ctx, &common::body_of(resp.body)?, resp.correlation_id)
+            render::one(
+                ctx,
+                &TRANSACTION,
+                &common::body_of(resp.body)?,
+                resp.correlation_id,
+            )
         }
         // No endpoint of its own: the same read, curated.
         TransactionsCommand::Inspect { transaction_id } => {
@@ -155,7 +160,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                 .request(Method::POST, "/v2/transactions/credit", &[], Some(body))
                 .await?;
             let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
-            render_transaction(ctx, &data, resp.correlation_id)
+            render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
         }
         TransactionsCommand::CalculateAmount(args) => {
             money::note_fractional_rates(&[
@@ -205,7 +210,7 @@ async fn action(
         .await?;
     let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
     note_assigned_reference(verb, &data);
-    render_transaction(ctx, &data, resp.correlation_id)
+    render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
 }
 
 /// The stderr line an action earns when the API answers with a `referenceId`

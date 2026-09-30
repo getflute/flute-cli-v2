@@ -2,29 +2,10 @@
 source: tests/snapshots.rs
 expression: "render::detail_table(r.resource, &object_for(r))"
 ---
-status:                                                   Created
-mode:                                                     Payment
-transactionDetails.amount.baseAmount:                     —
-tipAmount:                                                14.50
-surchargeAmount:                                          1.95
-customerId:                                               588f57a5-fe6a-4844-851e-e98914e81980
-vaultedPaymentMethodId:                                   —
-referenceId:                                              ORDER-10001
-pageName:                                                 Analytical Engines checkout
-paymentNotes:                                             Repair deposit
-afterCompletionMessage:                                   Thank you.
-returnUrl:                                                https://example.com/done
-expiresAt:                                                2027-02-19T20:24:52.934Z
-skipAddressVerification:                                  false
-paymentLinkId:                                            —
-paymentMethods.card.enabled:                              true
-paymentMethods.card.processorId:                          —
-paymentMethods.ach.enabled:                               —
-paymentMethods.ach.processorId:                           —
-achAccountLast2:                                          —
-achRoutingLast2:                                          —
-transactionDetails.transactionReceiptUrl:                 —
-transactionDetails.transactionReceipt.transactionId:      —
-transactionDetails.transactionReceipt.status:             —
-transactionDetails.transactionReceipt.amount.totalAmount: —
-metadata.orderId:                                         9921
+status:                                              Created
+mode:                                                Payment
+transactionDetails.amount.baseAmount:                —
+referenceId:                                         ORDER-10001
+expiresAt:                                           2027-02-19T20:24:52.934Z
+transactionDetails.transactionReceipt.transactionId: —
+transactionDetails.transactionReceipt.status:        —

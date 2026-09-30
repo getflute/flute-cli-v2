@@ -170,15 +170,13 @@ pub static SETTLEMENT: Resource = Resource {
     id: "/batchId",
     detail: &[
         "/batchId",
-        "/externalBatchId",
-        "/batchStatus",
-        "/paymentProcessorId",
         "/paymentProcessorName",
         "/createdOn",
         "/transactionCount",
         "/totalSalesAmount",
         "/totalRefundsAmount",
         "/totalNetAmount",
+        "/batchStatus",
     ],
     columns: &[
         Column {

@@ -301,31 +301,11 @@ pub static PAYMENT_SESSION: Resource = Resource {
     detail: &[
         "/status",
         "/mode",
-        // The amount a session charges is reported on the transaction it
-        // produced; the request field of the same name is not echoed back.
         "/transactionDetails/amount/baseAmount",
-        "/tipAmount",
-        "/surchargeAmount",
-        "/customerId",
-        "/vaultedPaymentMethodId",
         "/referenceId",
-        "/pageName",
-        "/paymentNotes",
-        "/afterCompletionMessage",
-        "/returnUrl",
         "/expiresAt",
-        "/skipAddressVerification",
-        "/paymentLinkId",
-        "/paymentMethods/card/enabled",
-        "/paymentMethods/card/processorId",
-        "/paymentMethods/ach/enabled",
-        "/paymentMethods/ach/processorId",
-        "/achAccountLast2",
-        "/achRoutingLast2",
-        "/transactionDetails/transactionReceiptUrl",
         "/transactionDetails/transactionReceipt/transactionId",
         "/transactionDetails/transactionReceipt/status",
-        "/transactionDetails/transactionReceipt/amount/totalAmount",
     ],
     // No list endpoint, so these columns are never reached today. They name
     // what a collection of sessions would be worth showing if one arrives.
@@ -355,8 +335,7 @@ pub static PAYMENT_SESSION: Resource = Resource {
     yes_no: &[],
 };
 
-/// A payment session as `create` answers for it: the identifier and the
-/// payment methods the session offers.
+/// A payment session as `create` answers for it: the identifier.
 ///
 /// The create response carries `id` and `paymentMethods` and nothing else, so
 /// the read's rows would all be dashes; `payment-sessions get` reads the
@@ -366,24 +345,10 @@ pub static PAYMENT_SESSION_CREATED: Resource = Resource {
     object: "payment_session",
     object_list: "payment_session_list",
     id: "/id",
-    detail: &[
-        "/id",
-        "/paymentMethods/card/enabled",
-        "/paymentMethods/card/processorId",
-        "/paymentMethods/ach/enabled",
-        "/paymentMethods/ach/processorId",
-    ],
+    detail: &["/id"],
     columns: &[],
     amounts: &[],
     yes_no: &[],
-};
-
-/// A save-method session as `create` answers for it. The mode takes no
-/// payment methods, so the create response carries `id` and a null
-/// `paymentMethods`, and the four method rows could never fill.
-pub static PAYMENT_SESSION_SAVE_METHOD_CREATED: Resource = Resource {
-    detail: &["/id"],
-    ..PAYMENT_SESSION_CREATED
 };
 
 pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> {
@@ -394,14 +359,9 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
                 .api
                 .request(Method::POST, "/v2/payment-sessions", &[], Some(body))
                 .await?;
-            let resource = if args.mode.unwrap_or_default().charges() {
-                &PAYMENT_SESSION_CREATED
-            } else {
-                &PAYMENT_SESSION_SAVE_METHOD_CREATED
-            };
             render::one(
                 ctx,
-                resource,
+                &PAYMENT_SESSION_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )
