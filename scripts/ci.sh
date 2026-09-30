@@ -65,7 +65,7 @@ case "${1:-all}" in
   check) check ;;
   msrv) msrv ;;
   msrv-toolchain) msrv_toolchain ;;
-  all) check && msrv ;;
+  all) check; msrv ;;
   *)
     echo "usage: scripts/ci.sh [check|msrv|msrv-toolchain]" >&2
     exit 2
