@@ -299,7 +299,7 @@ async fn payment_method_delete_without_yes_issues_no_request() {
     assert_eq!(
         String::from_utf8_lossy(&out.stderr).trim_end(),
         format!(
-            "Error: removal requires --yes to confirm \
+            "Error: deletion requires --yes to confirm \
              (e.g. `payment-methods delete {PM} --yes`)"
         )
     );
@@ -550,5 +550,122 @@ async fn the_confirmation_lines_are_sentences() {
         .args(["payment-methods", "delete", PM, "--yes"])
         .assert()
         .success()
-        .stdout(format!("Removed payment method {PM}.\n"));
+        .stdout(format!("Deleted payment method {PM}.\n"));
+}
+
+/// A payment method read as the sandbox answers for it: both containers
+/// present, the one that does not apply null.
+fn read_back(kind: &str) -> serde_json::Value {
+    let card = serde_json::json!({
+        "cardMask": "411111******1111", "cardTokenType": "Local",
+        "expirationMonth": 12, "expirationYear": 30});
+    let ach = serde_json::json!({
+        "accountHolderType": "Personal", "accountNumber": "****9012",
+        "accountType": "Checking", "companyName": null,
+        "routingNumber": "021000021", "taxId": null});
+    let (card, ach) = match kind {
+        "Card" => (card, serde_json::Value::Null),
+        _ => (serde_json::Value::Null, ach),
+    };
+    serde_json::json!({
+        "ach": ach, "card": card, "createdOn": "2026-09-16T18:57:50.022644Z",
+        "customerId": CUS, "isDefault": false, "name": "qa-doc",
+        "paymentMethodId": PM, "type": kind})
+}
+
+async fn get_table(kind: &str) -> String {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/payment-methods/{PM}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(read_back(kind)))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "payment-methods", "get", PM])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    String::from_utf8(out).unwrap()
+}
+
+/// A card's read carries a null `ach`, and the table reports none of it.
+#[tokio::test]
+async fn a_card_s_table_shows_no_bank_account_rows() {
+    let out = get_table("Card").await;
+    assert!(out.contains("card.cardMask:"), "{out}");
+    assert!(!out.contains("ach"), "{out}");
+}
+
+/// One expiry row in the EXP column's spelling, rather than a month row and
+/// a year row.
+#[tokio::test]
+async fn a_card_s_table_shows_the_expiry_on_one_row() {
+    let out = get_table("Card").await;
+    assert_eq!(
+        out,
+        format!(
+            "paymentMethodId:    {PM}\n\
+             type:               Card\n\
+             name:               qa-doc\n\
+             isDefault:          no\n\
+             customerId:         {CUS}\n\
+             createdOn:          2026-09-16T18:57:50.022644Z\n\
+             card.cardMask:      411111******1111\n\
+             card.expiry:        12/30\n\
+             card.cardTokenType: Local\n"
+        )
+    );
+}
+
+/// An ACH read carries a null `card`, and the table reports none of it.
+#[tokio::test]
+async fn a_bank_account_s_table_shows_no_card_rows() {
+    let out = get_table("ACH").await;
+    assert!(out.contains("ach.routingNumber:"), "{out}");
+    assert!(!out.contains("card"), "{out}");
+}
+
+/// The table is the only view the instrument picks: JSON keeps the null
+/// container the API sent.
+#[tokio::test]
+async fn a_card_s_json_keeps_the_null_ach_container() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/payment-methods/{PM}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(read_back("Card")))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json", "payment-methods", "get", PM])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let env: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(env["data"]["ach"], serde_json::Value::Null);
+    assert_eq!(env["data"]["card"]["expirationMonth"], 12);
+}
+
+/// A delete that finds nothing says so in the verb `customers delete` uses.
+#[tokio::test]
+async fn a_delete_that_finds_nothing_says_nothing_was_deleted() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("/v2/payment-methods/{PM}")))
+        .respond_with(
+            ResponseTemplate::new(404)
+                .set_body_json(serde_json::json!({"Title": "Not found", "CorrelationId": "c-1"})),
+        )
+        .mount(&server)
+        .await;
+    support::bin(&server)
+        .args(["payment-methods", "delete", PM, "--yes"])
+        .assert()
+        .success()
+        .stdout(format!(
+            "No payment method {PM} was found; nothing was deleted.\n"
+        ));
 }

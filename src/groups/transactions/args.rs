@@ -160,9 +160,10 @@ pub enum TransactionsCommand {
     /// Show rich details for a single transaction
     /// (GET /v2/transactions/{transactionId}).
     ///
-    /// Displays all key fields including the amount breakdown, the decline
-    /// details and the processor response. `transactions get` prints the whole
-    /// response instead.
+    /// Displays the transaction and payment method types, the decline details,
+    /// the instrument — a card with its authorization code and address check,
+    /// or a bank account — and the amount breakdown. `transactions get` prints
+    /// the whole response instead.
     Inspect {
         /// Transaction UUID to inspect (positional).
         transaction_id: String,
@@ -192,11 +193,11 @@ pub struct ListTransactionsArgs {
         ]
     )]
     pub sort_by: Option<String>,
-    /// Sort ascending. With neither `--asc` nor `--desc`, results come back
-    /// newest first.
+    /// Sort ascending, by `--sort-by` or else by transaction date. With
+    /// neither `--asc` nor `--desc`, results come back newest first.
     #[arg(long, id = "txn_asc", conflicts_with = "txn_desc")]
     pub asc: bool,
-    /// Sort descending.
+    /// Sort descending, by `--sort-by` or else by transaction date.
     #[arg(long, id = "txn_desc")]
     pub desc: bool,
     /// Filter results from this date-time inclusive (ISO 8601).
@@ -289,7 +290,7 @@ pub struct ShareReceiptArgs {
     /// Customer mobile number in E.164 form, for an SMS receipt.
     #[arg(long)]
     pub recipient: String,
-    /// The customer has consented to receive the receipt (required for SMS).
+    /// The customer has consented to receive the receipt (required).
     #[arg(long = "consent")]
     pub has_customer_consent: bool,
 }

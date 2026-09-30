@@ -1,0 +1,5 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+paymentMethodId: 6e22f0f3-f3ed-407c-a46f-ec9cffde5d5b

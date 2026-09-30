@@ -241,7 +241,7 @@ fn every_destructive_command_is_refused_without_yes() {
         ),
         (
             vec!["flute2", "payment-methods", "delete", "pm_1"],
-            "removal requires --yes to confirm (e.g. `payment-methods delete pm_1 --yes`)",
+            "deletion requires --yes to confirm (e.g. `payment-methods delete pm_1 --yes`)",
         ),
         (
             vec!["flute2", "payment-links", "delete", "pl_1"],
@@ -356,15 +356,42 @@ fn a_clap_error_message_is_one_unstyled_sentence() {
     assert_eq!(message, message.trim());
 }
 
-/// An error with no `Usage:` block keeps all of itself.
+/// An error with no `Usage:` block keeps its sentence, without the label.
 #[test]
-fn a_clap_error_with_no_usage_block_survives_whole() {
+fn a_clap_error_with_no_usage_block_keeps_its_sentence() {
     assert_eq!(
         clap_error_message(&clap::Error::raw(
             clap::error::ErrorKind::ValueValidation,
             "\u{1b}[31mbad value\u{1b}[0m\n"
         )),
-        "error: bad value"
+        "bad value"
+    );
+}
+
+/// An unknown flag's message is the sentence alone: no label, no tip, no
+/// pointer to `--help`.
+#[test]
+fn a_clap_error_message_drops_the_tip_and_the_footer() {
+    let err = Cli::try_parse_from(["flute2", "ping", "--bogus"]).unwrap_err();
+    assert_eq!(
+        clap_error_message(&err),
+        "unexpected argument '--bogus' found"
+    );
+}
+
+/// The list clap attaches to the complaint stays with it, on one line.
+#[test]
+fn a_clap_error_message_keeps_the_list_it_names() {
+    let err = Cli::try_parse_from(["flute2", "customers", "create"]).unwrap_err();
+    assert_eq!(
+        clap_error_message(&err),
+        "the following required arguments were not provided: \
+         --first-name <FIRST_NAME> --last-name <LAST_NAME>"
+    );
+    let err = Cli::try_parse_from(["flute2", "--output", "xml", "ping"]).unwrap_err();
+    assert_eq!(
+        clap_error_message(&err),
+        "invalid value 'xml' for '--output <OUTPUT>' [possible values: table, json, quiet]"
     );
 }
 

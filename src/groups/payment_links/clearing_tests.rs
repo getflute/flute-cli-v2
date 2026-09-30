@@ -60,6 +60,21 @@ fn setting_and_clearing_one_field_is_refused() {
     assert!(err.contains("description"), "{err}");
 }
 
+/// The refusal names the flag the caller typed, not the wire key it sets.
+#[test]
+fn a_contradicting_clear_is_named_by_its_flag() {
+    let args = UpdatePaymentLinkArgs {
+        expires_on: Some("2027-01-01T00:00:00Z".into()),
+        clear: vec![Clearable::ExpiresOn],
+        ..update_args()
+    };
+    let err = build_update_payment_link_body(&args)
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("--clear expires-on "), "{err}");
+    assert!(!err.contains("expiresOn"), "{err}");
+}
+
 /// An empty value clears a nullable field, the same spelling every other
 /// update uses.
 #[test]

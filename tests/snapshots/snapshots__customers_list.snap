@@ -11,7 +11,7 @@ Options:
       --page-size <PAGE_SIZE>         Maximum results per page (1-100). Omit it to use the server's default
       --all                           Fetch every page until the collection is exhausted
       --sort-by <SORT_BY>             Sort results by this field name
-      --desc                          Sort descending. The default is ascending
+      --desc                          Sort descending. Without it, results come back newest first
       --full-name <FULL_NAME>         Filter by full name
       --email <EMAIL>                 Filter by email address
       --company-name <COMPANY_NAME>   Filter by company name

@@ -435,3 +435,76 @@ async fn payment_config_quiet_prints_every_processor_id() {
              8db2ff47-b143-4adb-ab58-a11111111111\n",
         );
 }
+
+/// `update-autofill` answers with the settings the API stored, and the CLI
+/// reports them in the same envelope as `autofill`. The body is the one
+/// sandbox answered a `--product-code W1` update with.
+#[tokio::test]
+async fn update_autofill_reports_the_settings_the_api_stored() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("PATCH"))
+        .and(path("/v2/settings/transaction-autofill"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "level2Settings": {"taxRate": 0},
+            "level3Settings": {
+                "dutyChargeRate": null,
+                "product": {
+                    "code": "W1",
+                    "discountPercentage": null,
+                    "measurementUnit": null,
+                    "productName": null,
+                    "quantity": null,
+                    "unitPrice": null},
+                "shippingChargeRate": null}})))
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "settings",
+            "update-autofill",
+            "--product-code",
+            "W1",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["object"], "transaction_autofill");
+    assert_eq!(v["data"]["level3Settings"]["product"]["code"], "W1", "{v}");
+    assert!(v["data"].get("updated").is_none(), "{v}");
+}
+
+/// Whether a processor is the default is a question, so its flag reads as
+/// `yes` or `no` in the table, as `payment-methods` renders its own.
+#[tokio::test]
+async fn payment_config_table_reads_is_default_as_yes_or_no() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/settings/payment-config"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "availablePaymentProcessors": [
+                {"paymentProcessorId": "6bbfbe3e-04dd-41cd-82bf-1466e0159007", "isDefault": true},
+                {"paymentProcessorId": "8db2ff47-b143-4adb-ab58-a11111111111", "isDefault": false}]})))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "settings", "payment-config"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let out = String::from_utf8(out).unwrap();
+    let flag = |i: usize| {
+        out.lines()
+            .find(|l| l.starts_with(&format!("availablePaymentProcessors[{i}].isDefault:")))
+            .map(|l| l.split_whitespace().last().unwrap_or("").to_string())
+    };
+    assert_eq!(flag(0).as_deref(), Some("yes"), "{out}");
+    assert_eq!(flag(1).as_deref(), Some("no"), "{out}");
+}

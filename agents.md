@@ -68,8 +68,9 @@ CI log stays quiet.
   **sorted order** at every depth rather than the order the API sent them.
   **On a collection read `data` is the array itself**, not a `{items, total}`
   wrapper: the count is `meta.page_info.totalItems`.
-- `meta.correlation_id` is present when the API returned one. It is what
-  support asks for. Observed present on a 4xx and absent on ordinary reads, so
+- `meta.correlation_id` is the id the API stamped on the response, and what
+  support asks for. Observed on successes and failures alike; a response that
+  never reached the API's tracing, such as a bodyless 401, carries none, so
   treat it as optional.
 - `meta.page_info` reproduces the API's `pageInfo` field for field on a
   collection read, and is **absent** — not null — on a write, on a single-object
@@ -110,7 +111,10 @@ Envelope object names, by group:
 ```
 
 `status` and `correlation_id` appear only for `kind: "api"`. Branch on `kind`
-first, then on `status`.
+first, then on `status`. A failure's `correlation_id` is the body's own
+`CorrelationId`, else the response header's, else a ProblemDetails `traceId`
+— the last is the server's activity id, a different value from the header's,
+and appears only when no header arrived.
 
 | `kind` | Meaning | Retry? |
 |---|---|---|
@@ -131,6 +135,10 @@ shape follows `FLUTE2_OUTPUT` and the config file's `output` as well as the
 flag, with one exception: an **unparseable `--output` value** is itself the
 usage error, so there is no mode to render it in and stdout stays empty. `--help`
 and `--version` are not failures: they print to stdout and exit 0.
+
+A usage error's `message` is clap's complaint alone — no `error:` label, tip,
+`Usage:` block or `--help` pointer — with any list clap attaches to it
+(missing arguments, possible values) on the same line.
 
 ### Exit codes
 
@@ -210,7 +218,7 @@ Every other 404 is exit 4, on a write as much as on a read: a `capture`, an
 
 ### Writes that answer with a confirmation
 
-Twelve commands answer every success with a confirmation built from the
+Eleven commands answer every success with a confirmation built from the
 identifier in the *request* rather than from the response, so no caller has to
 read exit 0 plus an empty stdout as success:
 
@@ -236,12 +244,14 @@ returned is not readable from the write — issue a `get` to read one back.
 | `payment-sessions cancel` | `id`, `cancelled: true` — spelled `id`, not `paymentSessionId` |
 | `pos print-receipt` | `posTransactionId`, `sent: true` — the API accepted the request; it does not report whether paper came out |
 | `transactions share-receipt` | `transactionId`, `shared: true` |
-| `settings update-autofill` | `updated: true`, and no identifier |
 | `api-keys revoke` | `clientId`, `revoked: true` |
 
 Every other operation declares a body, and a success carrying none is
 `kind: "decode"`, exit 1 — never an envelope with `"data": null`. `pos cancel`
 is one of those, which is why its success reports the transaction instead.
+`settings update-autofill` is the one exception: it reports the settings the
+API stored, and a 200 with no body confirms with `updated: true` rather than
+failing.
 
 ### Commands with no identifier
 
@@ -254,9 +264,10 @@ shape rather than a choice:
 - **`settings autofill`** — the read of a singleton. The response carries the
   level 2 and level 3 rates and a product template, and nothing that names the
   resource, so `quiet` prints nothing.
-- **`settings update-autofill`** — a bodyless write on a singleton. There is no
-  identifier in the request either, so the envelope carries the verb alone,
-  `quiet` prints nothing, and the table line names the resource.
+- **`settings update-autofill`** — the write on that singleton answers with
+  the settings it stored, in the same envelope as `autofill`, so it has no
+  identifier either and `quiet` prints nothing. A 200 with no body answers
+  with `updated: true` instead.
 - **`transactions calculate-amount`** — totals calculated from an amount the
   caller supplied. Nothing is created, so the response names no resource and
   `quiet` prints nothing. The currency code it echoes is not an identifier:
@@ -365,7 +376,9 @@ All amounts are plain decimals — `--amount 10.50` — validated to two decimal
 places and sent as exact JSON numbers. **No amount passes through a float.**
 A negative amount or rate is refused, and the refusal names the flag and the
 rule it broke, as every other malformed value does. `--exp` is `MM/YY` or
-`MM/YYYY`.
+`MM/YYYY`. `--expires-on` and `--expires-at` take a UTC date-time
+ending in `Z`, e.g. `2026-09-15T00:00:00Z`; an offset, `+00:00` included, is
+refused before the wire, exit 3, because the API refuses it.
 
 `--payment-processor-id` is required on `transactions create`, `transactions
 credit` and `settlements close`. `capture`, `reversal`, `tip-adjust` and the
@@ -434,9 +447,13 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   attached to a customer, the API reads the address and phone off the customer
   record, and a customer missing them is rejected server-side with a message
   naming the field. The CLI cannot see that half. `--requester-ip` is required
-  on the wire too, and defaults to `127.0.0.1`.
+  on the wire too, and defaults to `127.0.0.1`. For a US address the server
+  also requires `--billing-city` and `--billing-state`, and answers `400`
+  naming the field without them.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
-  `sortOrder`; with neither, results come back newest first. `--sort-by`
+  `sortOrder`, and without `--sort-by` they also send
+  `sortBy=transactionDateTime`, because the server ignores a direction that
+  names no field. With neither, results come back newest first. `--sort-by`
   takes only the field names `--help` lists.
 - **`reversal` is the one endpoint for a void and for a refund.** The payment
   method and the settled state are detected server-side. Without `--amount` it
@@ -463,12 +480,19 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
 - **`capture` sends `captureAmount`**, not `amount` — the operation's own
   example is wrong about its own schema, and an unknown field is rejected
   rather than ignored.
+- **`share-receipt` requires `--consent`.** SMS is the only channel, and the
+  API refuses an SMS receipt without the customer's consent, so one without
+  the flag is refused before the wire: `client`, exit 3, nothing sent.
+- **A single transaction's table shows its own instrument.** A card
+  transaction's rows are the card's, authorization and address check; a bank
+  account's are `achDetails`. `json` and `quiet` are unchanged.
 - **`inspect` curates the `table` view, and only that.** It reads the same
   endpoint as `get` and lays out the fields that matter when a payment goes
   wrong, decline reason first, while `get`'s table hides nothing — including
-  fields this CLI does not know about. Under `--output json` the two are
-  byte-identical, so an agent gains nothing from `inspect` and spends a second
-  round trip on it. Neither has an endpoint of its own beyond the read.
+  fields this CLI does not know about. Under `--output json` the two carry the
+  same `data` — only `meta.correlation_id`, which names the request, differs —
+  so an agent gains nothing from `inspect` and spends a second round trip on
+  it. Neither has an endpoint of its own beyond the read.
 - `list` filters are all **server-side**. There is no client-side filtering
   anywhere in this CLI: a filter applied locally reports a wrong answer on any
   collection larger than one page.
@@ -503,6 +527,9 @@ flute2 customers delete [OPTIONS] <CUSTOMER_ID>
 - The two booleans **take a value on `update`** — `--sms-consent false` — and
   are bare switches on `create`. A patch has to be able to clear a flag.
 - `delete` requires `--yes`.
+- `list` returns newest first. Observed on the sandbox: the order is the same
+  with `--desc` or `--sort-by`, and `--created-from`/`--created-to` do not
+  narrow the result — the server applies neither.
 
 ### `payment-methods`
 
@@ -519,6 +546,11 @@ flute2 payment-methods set-default [OPTIONS] --customer-id <CUSTOMER_ID> <PAYMEN
 - `update` changes the label and nothing else — that is all the endpoint takes.
   `--name ""` or `--clear name` removes it; see
   [Clearing a field](#clearing-a-field).
+- `list --search` matches the label (`--name`) as a case-sensitive substring;
+  it does not match the mask, brand or type.
+- `add-ach --company-name` is not stored when `--customer-id` is given: a
+  business account reads the company from the customer, and a customer
+  without one is a 400, exit 3.
 - `delete` requires `--yes`.
 
 ### `payment-links`
@@ -539,7 +571,8 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
 - `update` is an RFC 7396 merge patch: an empty value or `--clear <field>`
   removes a value — see [Clearing a field](#clearing-a-field). Clearing
   `--amount` makes a fixed-price link one the payer fills in.
-- `share` sends a real message. `--consent` is required by the API.
+- `share` sends a real message. `--consent` is required: a share without it
+  is refused before the wire, exit 3.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
   `sortOrder`; with neither, results come back newest first. `terminals list`
   and `pos list` take the same pair.
@@ -558,7 +591,14 @@ flute2 payment-sessions cancel [OPTIONS] <PAYMENT_SESSION_ID>
   zero** for `--mode save-method`, which the CLI sends for you; **absent** for a
   flexible session the payer sets at checkout. All three are enforced before the
   wire, because OpenAPI can express none of them.
-  A save-method session refuses `--tip-amount` too, since it charges nothing.
+  A save-method session refuses `--tip-amount` too, since it charges nothing,
+  and every flag that configures a checkout page: `--card-enabled`,
+  `--ach-enabled`, either processor id, `--return-url`, `--page-name`,
+  `--payment-notes`, `--after-completion-message`, `--expires-at` and
+  `--metadata`. Each is refused before the wire, exit 3.
+- **Omitting both `--card-enabled` and `--ach-enabled` offers every payment
+  method** the account has an active processor for; the session then reads
+  back `paymentMethods: null`.
 - `--metadata key=value` is repeatable and splits on the **first** `=`, so a URL
   or a query string survives as a value.
 - `cancel` requires `--yes`. A second cancel is a 400, exit 3, and a 404 is exit 4.
@@ -610,10 +650,11 @@ flute2 terminals list [OPTIONS]
 flute2 terminals status [OPTIONS] <TERMINAL_ID>
 ```
 
-`--status` filters on `ready`, `busy` or `offline`, which is what the query
-parameter declares. The response reports a *different* vocabulary for the same
-field, and the two cannot both be right. Do not assume a value you read back is
-a value you can filter by.
+`--status` filters on `ready`, `busy` or `offline`, and `terminalStatus` reads
+back as `Ready`, `Busy` or `Offline`: the same three values. A terminal is
+`Busy` while a POS transaction is in progress on it and `Ready` once that
+transaction ends. The published response schema lists `Active` in place of
+`Ready`; the API does not send it.
 
 ### `settlements`
 
@@ -624,9 +665,14 @@ flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
 ```
 
 - **`get` has no endpoint of its own**: it is the list endpoint with the
-  documented `batchIds` filter applied **server-side**. An empty result is exit
-  4, and two matches for one id is a refusal rather than a guess.
+  documented `batchIds` filter applied **server-side**. An empty result is
+  `kind: "api"`, status 404, exit 4, although the API answered 200: the message
+  says the filtered list returned no batch. Two matches for one id is a
+  refusal rather than a guess. The open batch has a `null` `batchId`, so it
+  cannot be read by id.
 - **`--asc`, not `--desc`** — this list's `sortOrder` defaults to `desc`.
+  `--sort-by` takes only the field names `--help` lists, and `--status`
+  matches in any case, so `Settled` as the table prints it is accepted.
 - `close` settles the named processor's whole open batch, not one
   transaction.
 
@@ -778,7 +824,9 @@ processor.
 `false`. They are not clearable.
 
 **Address components are not individually clearable.** `--billing-*` flags build
-one nested object shared with `create`; an empty component is omitted from it.
+one nested object shared with `create`. On `create` an empty component is
+omitted from it; on `customers update` an empty `--billing-*` or `--shipping-*`
+value is refused — exit 3, nothing sent — whatever else the update carries.
 
 ## Idempotency
 

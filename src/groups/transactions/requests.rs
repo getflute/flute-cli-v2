@@ -14,7 +14,13 @@ pub fn build_list_transactions_query(
     args.pagination.validate()?;
     let mut query = args.pagination.query();
     query.extend(common::sort_order(args.asc, args.desc));
-    common::push_str(&mut query, "sortBy", &args.sort_by);
+    // The server ignores a `sortOrder` that has no `sortBy`, so a direction
+    // alone sorts by date — the field its default, newest-first order uses.
+    let sort_by = args
+        .sort_by
+        .clone()
+        .or_else(|| (args.asc || args.desc).then(|| "transactionDateTime".to_string()));
+    common::push_str(&mut query, "sortBy", &sort_by);
     common::push_str(&mut query, "fromDate", &args.from_date);
     common::push_str(&mut query, "toDate", &args.to_date);
     if let Some(source) = args.source_type {
@@ -144,9 +150,19 @@ pub fn build_tip_adjustment_body(
 }
 
 /// Build the `SendReceiptRequestDto` body. All three fields are required.
+///
+/// SMS is the only channel, and the API answers an SMS receipt without the
+/// customer's consent with a 400, so one without `--consent` is refused here
+/// with nothing sent.
 pub fn build_share_receipt_body(args: &ShareReceiptArgs) -> Result<Value> {
     if args.recipient.trim().is_empty() {
         anyhow::bail!("--recipient is required");
+    }
+    if !args.has_customer_consent {
+        anyhow::bail!(
+            "--consent is required: an SMS receipt needs the customer's consent, \
+             and the API refuses one sent without it"
+        );
     }
     Ok(Value::Object(Map::from_iter([
         ("shareBy".to_string(), serde_json::json!(args.share_by)),

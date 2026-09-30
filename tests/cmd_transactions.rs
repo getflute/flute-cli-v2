@@ -1712,14 +1712,10 @@ async fn the_envelope_sorts_object_keys_at_every_depth() {
     assert!(at("aa") < at("zz"), "{text}");
 }
 
-/// A detail view answers for the shape it was given, and a field belonging to
-/// the other shape is not a field this response left out.
-///
-/// `GET /v2/transactions/{id}` declares `amountBreakdown`, `processorDetails`
-/// and `declineDetails`; `processorResponse`, `amountDetails` and the
-/// `ach-hold` verb's `type` are the write responses' own, and a read that
-/// reported them as absent would describe a response the endpoint cannot
-/// send.
+/// A detail view reports the read shape's own fields, dashed where the
+/// response is silent, and no row for `processorResponse`, `amountDetails` or
+/// a top-level `type`: no transaction response carries them, so a row for one
+/// would describe a response the endpoint cannot send.
 #[tokio::test]
 async fn get_table_reports_no_field_belonging_to_a_write_response() {
     let server = support::mock_with_token().await;
@@ -1755,20 +1751,35 @@ async fn get_table_reports_no_field_belonging_to_a_write_response() {
     }
 }
 
-/// The same rule the other way round: a write response is not missing the
-/// containers only a read carries.
+/// Every transaction write answers with the read's shape, so its table leads
+/// with the same curated rows as `get`: the decline reason straight after the
+/// amount, and no row for a field no transaction response carries.
+///
+/// The body is a declined sandbox create, trimmed to the fields the table
+/// curates.
 #[tokio::test]
-async fn create_table_reports_no_field_belonging_to_a_read_response() {
+async fn a_declined_create_table_leads_with_the_decline_reason() {
     let server = support::mock_with_token().await;
     Mock::given(method("POST"))
         .and(path("/v2/transactions"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "transactionId": TXN,
-            "transactionStatus": "Approved",
-            "processedAmount": support::spec::amount("115.50"),
+            "transactionStatus": "Declined",
+            "transactionType": "Sale",
+            "transactionDateTime": "2026-09-29T16:59:29.166989Z",
+            "processedAmount": 1,
             "currencyCode": "USD",
-            "amountDetails": {"baseAmount": support::spec::amount("100.00")},
-            "processorResponse": {"responseCode": "00", "responseMessage": "Approved"}})))
+            "declineDetails": {"code": "AVS", "message": "Address verification failed"},
+            "amountBreakdown": {"baseAmount": 1, "tipAmount": 0, "tipRate": 0},
+            "processorDetails": {"authCode": null, "mid": null, "rrn": null, "tid": null},
+            "addressVerificationServiceResponse": {
+                "action": "Deny",
+                "responseCode": "N",
+                "description": "Neither the Street Address or ZIP Code match the information on file."
+            },
+            "refundDetails": {"availableRefundAmount": 0, "refundedAmount": 0},
+            "paymentMethodType": "Card",
+            "cardDetails": {"maskedCardNumber": "411111******1111", "cardBrand": "Visa"}})))
         .mount(&server)
         .await;
 
@@ -1781,7 +1792,7 @@ async fn create_table_reports_no_field_belonging_to_a_read_response() {
             "--payment-processor-id",
             "pp-1",
             "--amount",
-            "115.50",
+            "1.00",
             "--card",
             "4111111111111111",
             "--cvv",
@@ -1792,85 +1803,28 @@ async fn create_table_reports_no_field_belonging_to_a_read_response() {
         .output()
         .unwrap();
     let table = String::from_utf8(out.stdout).unwrap();
+    let lines: Vec<&str> = table.lines().collect();
+    let row = |key: &str| {
+        lines
+            .iter()
+            .position(|l| l.starts_with(&format!("{key}:")))
+            .unwrap_or_else(|| panic!("no {key} row:\n{table}"))
+    };
 
-    assert!(table.contains("amountDetails.tipAmount:"), "{table}");
+    assert_eq!(
+        row("declineDetails.message"),
+        row("declineDetails.code") + 1
+    );
+    assert!(row("declineDetails.code") < 8, "{table}");
     assert!(
-        table.contains("processorResponse.responseDefinition:"),
+        lines[row("amountBreakdown.baseAmount")].ends_with("1.00"),
         "{table}"
     );
-    for read_only in [
-        "amountBreakdown.",
-        "processorDetails.",
-        "declineDetails.",
-        "achDetails.",
-        "cardDetails.",
-        "refundDetails.",
-    ] {
+    assert!(lines[row("addressVerificationServiceResponse.responseCode")].ends_with('N'));
+    for absent in ["processorResponse.", "amountDetails.", "isFullyRefunded"] {
         assert!(
-            !table.contains(read_only),
-            "a write reported {read_only:?}:\n{table}"
-        );
-    }
-}
-
-/// The seven writes are three declared shapes, not one. A reversal's response
-/// declares the processor's answer and the amount and nothing else, so an
-/// `amountDetails` or `type` row would report a field this operation cannot
-/// send — the same rule that separates the reads from the writes, one level
-/// down.
-#[tokio::test]
-async fn reversal_and_ach_hold_report_only_their_own_declared_shapes() {
-    let server = support::mock_with_token().await;
-    support::mount(
-        &server,
-        "flute-v2-post-transactions-transactionId-reversal",
-        "full",
-    )
-    .await;
-    support::mount(
-        &server,
-        "flute-v2-post-transactions-transactionId-ach-hold",
-        "default",
-    )
-    .await;
-
-    let reversal = support::bin(&server)
-        .args([
-            "--output",
-            "table",
-            "transactions",
-            "reversal",
-            "--transaction-id",
-            TXN,
-        ])
-        .output()
-        .unwrap();
-    let reversal = String::from_utf8(reversal.stdout).unwrap();
-    assert!(
-        reversal.contains("processorResponse.responseCode:"),
-        "{reversal}"
-    );
-    assert!(reversal.contains("processedAmount:"), "{reversal}");
-    for absent in ["amountDetails.", "\ntype:", "addressVerificationService"] {
-        assert!(
-            !reversal.contains(absent),
-            "a reversal reported {absent:?}:\n{reversal}"
-        );
-    }
-
-    // The ACH action names the operation in `type` and carries no amount of
-    // its own at all.
-    let hold = support::bin(&server)
-        .args(["--output", "table", "transactions", "ach-hold", TXN])
-        .output()
-        .unwrap();
-    let hold = String::from_utf8(hold.stdout).unwrap();
-    assert!(hold.contains("type:"), "{hold}");
-    assert!(hold.contains("processorResponse.processorName:"), "{hold}");
-    for absent in ["amountDetails.", "processedAmount:", "currencyCode:"] {
-        assert!(
-            !hold.contains(absent),
-            "an ACH hold reported {absent:?}:\n{hold}"
+            !table.contains(absent),
+            "a create reported {absent:?}:\n{table}"
         );
     }
 }
@@ -2683,4 +2637,386 @@ async fn an_empty_reference_id_filter_is_refused_with_nothing_sent() {
             .all(|r| r.url.path() == "/oauth2/token"),
         "a client-side refusal must issue no request"
     );
+}
+
+// ── one instrument's rows ────────────────────────────────────────────────────
+
+/// A sandbox card sale, as `transactions create` received it.
+const CARD_SALE: &str = r#"
+{
+  "achDetails": null,
+  "addressVerificationServiceResponse": {
+    "action": "Allow",
+    "description": "Street Address and ZIP Code Match the information on file.",
+    "responseCode": "Y"
+  },
+  "amountBreakdown": {
+    "baseAmount": 7.50,
+    "discountAmount": 0.00,
+    "discountRate": 0,
+    "surchargeAmount": 0,
+    "surchargeRate": 0,
+    "taxAmount": 0,
+    "taxRate": 0,
+    "tipAmount": 0,
+    "tipRate": 0
+  },
+  "batchId": null,
+  "cardDetails": {
+    "cardBrand": "Visa",
+    "cardDataSource": "Internet",
+    "cardProcessedAsType": "Credit",
+    "cardType": "Debit",
+    "cardholderVerificationMethod": "NotAuthenticated",
+    "maskedCardNumber": "411111******1111",
+    "paymentMethodId": null
+  },
+  "cardTokenType": null,
+  "currencyCode": "USD",
+  "customerId": null,
+  "declineDetails": null,
+  "merchantId": "b10d6597-0b95-4949-8e4b-03187c812347",
+  "originalTransactionId": null,
+  "paymentMethodType": "Card",
+  "paymentProcessorId": "df8d5b37-42af-4207-a03e-069893816aef",
+  "pricingType": null,
+  "processedAmount": 7.50,
+  "processorDetails": {
+    "authCode": "873813",
+    "mid": null,
+    "rrn": null,
+    "tid": "775ae34e-3df9-442d-9dbd-d463a768a828"
+  },
+  "referenceId": "fixb-card-1790710516",
+  "refundDetails": {
+    "availableRefundAmount": 7.50,
+    "refundedAmount": 0
+  },
+  "source": {
+    "sourceId": "9edddfd9-b6a4-43f6-a371-db59d80c536e",
+    "sourceName": "payson-cli-v2",
+    "sourceType": "ApiKey"
+  },
+  "transactionDateTime": "2026-09-29T19:35:16.964695Z",
+  "transactionEvents": [
+    {
+      "amount": 7.50,
+      "dateTime": "2026-09-29T19:35:17.1300691Z",
+      "declineDetails": null,
+      "originalTransactionId": null,
+      "status": "Approved",
+      "type": "Sale"
+    }
+  ],
+  "transactionId": "56eced0b-47f4-485d-9c8d-4fafbbc352f4",
+  "transactionStatus": "Captured",
+  "transactionType": "Sale"
+}
+"#;
+
+/// A sandbox ACH sale, as `transactions create` received it.
+const ACH_SALE: &str = r#"
+{
+  "achDetails": {
+    "accountHolderType": "Personal",
+    "accountRoutingNumber": "021000021",
+    "accountType": "Checking",
+    "isSameDayProcessing": false,
+    "maskedAccountNumber": "****6789",
+    "paymentMethodId": null,
+    "requesterIpAddress": "127.0.0.1",
+    "secCode": "Web"
+  },
+  "addressVerificationServiceResponse": null,
+  "amountBreakdown": {
+    "baseAmount": 7.50,
+    "discountAmount": 0.00,
+    "discountRate": 0,
+    "surchargeAmount": 0,
+    "surchargeRate": 0,
+    "taxAmount": 0,
+    "taxRate": 0,
+    "tipAmount": 0,
+    "tipRate": 0
+  },
+  "batchId": null,
+  "cardDetails": null,
+  "cardTokenType": null,
+  "currencyCode": "USD",
+  "customerId": null,
+  "declineDetails": null,
+  "merchantId": "b10d6597-0b95-4949-8e4b-03187c812347",
+  "originalTransactionId": null,
+  "paymentMethodType": "ACH",
+  "paymentProcessorId": "b08e71a3-ee7e-4a51-a7ef-11cb377b4003",
+  "pricingType": null,
+  "processedAmount": 7.50,
+  "processorDetails": {
+    "authCode": null,
+    "mid": null,
+    "rrn": null,
+    "tid": null
+  },
+  "referenceId": "fixb-ach-1790710557",
+  "refundDetails": {
+    "availableRefundAmount": 0,
+    "refundedAmount": 0
+  },
+  "source": {
+    "sourceId": "9edddfd9-b6a4-43f6-a371-db59d80c536e",
+    "sourceName": "payson-cli-v2",
+    "sourceType": "ApiKey"
+  },
+  "transactionDateTime": "2026-09-29T19:35:57.4176093Z",
+  "transactionEvents": [
+    {
+      "amount": 7.50,
+      "dateTime": "2026-09-29T19:35:57.4181539Z",
+      "declineDetails": null,
+      "originalTransactionId": null,
+      "status": "Approved",
+      "type": "Sale"
+    }
+  ],
+  "transactionId": "910a681f-8067-4cbd-8122-fd097e21ad13",
+  "transactionStatus": "Scheduled",
+  "transactionType": "Sale"
+}
+"#;
+
+async fn table_of(body: &str) -> String {
+    let server = support::mock_with_token().await;
+    let id = serde_json::from_str::<serde_json::Value>(body).unwrap()["transactionId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/transactions/{id}")))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(body.to_string(), "application/json"))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "transactions", "get", &id])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    String::from_utf8(out.stdout).unwrap()
+}
+
+/// A card transaction's table carries no bank-account rows: the response's
+/// `achDetails` is null, and a row of dashes per field says nothing.
+#[tokio::test]
+async fn a_card_table_shows_only_the_card_rows() {
+    let table = table_of(CARD_SALE).await;
+    assert!(!table.contains("achDetails"), "{table}");
+    for row in [
+        "cardDetails.maskedCardNumber:",
+        "processorDetails.authCode:",
+        "addressVerificationServiceResponse.responseCode:",
+    ] {
+        assert!(table.contains(row), "no {row}\n{table}");
+    }
+}
+
+/// The tax amount and each event's amount are money, and read to two places
+/// like every other amount in the table.
+#[tokio::test]
+async fn a_transaction_table_formats_the_tax_and_event_amounts() {
+    let table = table_of(CARD_SALE).await;
+    let row = |key: &str| {
+        table
+            .lines()
+            .find(|l| l.starts_with(&format!("{key}:")))
+            .unwrap_or_else(|| panic!("no {key} row\n{table}"))
+            .to_string()
+    };
+    assert!(
+        row("amountBreakdown.taxAmount").ends_with("0.00"),
+        "{table}"
+    );
+    assert!(
+        row("transactionEvents[0].amount").ends_with("7.50"),
+        "{table}"
+    );
+}
+
+/// An ACH transaction's table carries no card, authorization or
+/// address-verification rows: the response sends those containers empty.
+#[tokio::test]
+async fn an_ach_table_shows_only_the_bank_account_rows() {
+    let table = table_of(ACH_SALE).await;
+    for absent in [
+        "cardDetails",
+        "processorDetails",
+        "addressVerificationServiceResponse",
+    ] {
+        assert!(!table.contains(absent), "{absent}\n{table}");
+    }
+    for row in ["achDetails.maskedAccountNumber:", "achDetails.secCode:"] {
+        assert!(table.contains(row), "no {row}\n{table}");
+    }
+}
+
+/// A container the other instrument's descriptor omits still prints when it
+/// carries a value: the view hides empty rows, never data.
+#[tokio::test]
+async fn an_ach_table_keeps_a_processor_answer_that_carries_a_value() {
+    let table = table_of(&ACH_SALE.replace(r#""tid": null"#, r#""tid": "tid-7""#)).await;
+    assert!(
+        table
+            .lines()
+            .any(|l| l.starts_with("processorDetails.tid:") && l.ends_with("tid-7")),
+        "{table}"
+    );
+}
+
+/// The instrument chooses the table's rows and nothing else: `json` is the
+/// API's own document either way.
+#[tokio::test]
+async fn an_ach_transaction_envelope_is_the_response() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path(
+            "/v2/transactions/910a681f-8067-4cbd-8122-fd097e21ad13",
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(ACH_SALE, "application/json"))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "transactions",
+            "get",
+            "910a681f-8067-4cbd-8122-fd097e21ad13",
+        ])
+        .output()
+        .unwrap();
+    let envelope: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(envelope["object"], "transaction");
+    assert_eq!(
+        envelope["data"],
+        serde_json::from_str::<serde_json::Value>(ACH_SALE).unwrap()
+    );
+}
+
+async fn inspect_of(body: &str) -> String {
+    let server = support::mock_with_token().await;
+    let id = serde_json::from_str::<serde_json::Value>(body).unwrap()["transactionId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/transactions/{id}")))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(body.to_string(), "application/json"))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "transactions", "inspect", &id])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    String::from_utf8(out.stdout).unwrap()
+}
+
+fn row_ends_with(table: &str, label: &str, value: &str) -> bool {
+    table
+        .lines()
+        .any(|l| l.starts_with(&format!("{label}:")) && l.ends_with(value))
+}
+
+/// `inspect` names what was paid and how, and an ACH transaction's view asks
+/// about the bank account rather than a card, an authorization code or an
+/// address check.
+#[tokio::test]
+async fn inspect_of_an_ach_transaction_shows_the_bank_account() {
+    let table = inspect_of(ACH_SALE).await;
+    assert!(row_ends_with(&table, "transactionType", "Sale"), "{table}");
+    assert!(row_ends_with(&table, "paymentMethodType", "ACH"), "{table}");
+    assert!(
+        row_ends_with(&table, "achDetails.maskedAccountNumber", "****6789"),
+        "{table}"
+    );
+    for absent in [
+        "cardDetails",
+        "processorDetails",
+        "addressVerificationServiceResponse",
+    ] {
+        assert!(!table.contains(absent), "{absent}\n{table}");
+    }
+}
+
+#[tokio::test]
+async fn inspect_of_a_card_transaction_shows_the_card_and_its_authorization() {
+    let table = inspect_of(CARD_SALE).await;
+    assert!(
+        row_ends_with(&table, "paymentMethodType", "Card"),
+        "{table}"
+    );
+    assert!(
+        row_ends_with(&table, "processorDetails.authCode", "873813"),
+        "{table}"
+    );
+    assert!(
+        row_ends_with(&table, "cardDetails.maskedCardNumber", "411111******1111"),
+        "{table}"
+    );
+    assert!(!table.contains("achDetails"), "{table}");
+}
+
+/// An SMS receipt without `--consent` is refused before the wire: exit 3, a
+/// `client` envelope naming the flag, and no request.
+#[tokio::test]
+async fn share_receipt_without_consent_is_refused_with_nothing_sent() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "--output",
+            "json",
+            "transactions",
+            "share-receipt",
+            TXN,
+            "--share-by",
+            "sms",
+            "--recipient",
+            "+14155552309",
+        ])
+        .assert()
+        .code(3)
+        .stdout(predicate::str::contains(r#""kind": "client""#))
+        .stdout(predicate::str::contains("--consent"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "a client-side refusal must issue no request"
+    );
+}
+
+/// `--asc` alone reaches the wire with a field to sort by, because the server
+/// ignores a `sortOrder` that has none.
+#[tokio::test]
+async fn list_asc_alone_sends_the_transaction_date_as_the_sort_field() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/transactions"))
+        .and(wiremock::matchers::query_param("sortOrder", "asc"))
+        .and(wiremock::matchers::query_param(
+            "sortBy",
+            "transactionDateTime",
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "items": [],
+            "pageInfo": {"hasMore": false, "pageIndex": 0, "pageSize": 20, "totalItems": 0}
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    support::bin(&server)
+        .args(["--output", "json", "transactions", "list", "--asc"])
+        .assert()
+        .success();
 }

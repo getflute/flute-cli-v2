@@ -22,7 +22,7 @@ Options:
       --name <NAME>
           Friendly label for this payment method
       --company-name <COMPANY_NAME>
-          Company name, for a business account
+          Company name, for a business account. With `--customer-id` the customer's company name is used instead and this value is not stored, so a business account needs a company name on the customer
   -h, --help
           Print help
 

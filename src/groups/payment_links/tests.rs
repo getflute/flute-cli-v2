@@ -293,8 +293,7 @@ fn share_args(consent: bool) -> SharePaymentLinkArgs {
     }
 }
 
-/// All three fields are required, so the consent flag is always sent —
-/// including when it is false, which is what lets the API refuse.
+/// All three fields are required and reach the body under their wire names.
 #[test]
 fn a_share_always_sends_all_three_required_fields() {
     let body = build_share_payment_link_body(&share_args(true)).unwrap();
@@ -305,8 +304,16 @@ fn a_share_always_sends_all_three_required_fields() {
             "recipient": "+14155552309",
             "hasCustomerConsent": true})
     );
-    let body = build_share_payment_link_body(&share_args(false)).unwrap();
-    assert_eq!(body["hasCustomerConsent"], false);
+}
+
+/// The API refuses an unconsented share, so the CLI refuses it first and
+/// names the flag.
+#[test]
+fn a_share_without_consent_is_refused() {
+    let err = build_share_payment_link_body(&share_args(false))
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("--consent is required"), "{err}");
 }
 
 #[test]
@@ -390,4 +397,34 @@ fn link_list_sends_the_sort_order_it_is_asked_for() {
     assert_eq!(order(true, false).as_deref(), Some("asc"));
     assert_eq!(order(false, true).as_deref(), Some("desc"));
     assert_eq!(order(false, false), None);
+}
+
+/// The API takes a UTC date-time ending in `Z` and nothing else: a word or a
+/// bare date gets a .NET conversion error, and an offset or a missing `Z`
+/// is refused as not UTC.
+#[test]
+fn an_expiry_is_a_utc_date_time_ending_in_z() {
+    for ok in [
+        "2026-10-15T00:00:00Z",
+        "2026-10-15T00:00:00.123Z",
+        "2028-02-29T23:59:59Z",
+        "",
+    ] {
+        assert_eq!(parse_utc_expiry(ok).unwrap(), ok, "{ok}");
+    }
+    for bad in [
+        "tomorrow",
+        "2026-10-15",
+        "2026-10-15T00:00:00",
+        "2026-10-15 00:00:00Z",
+        "2026-10-15T00:00:00+00:00",
+        "10/15/2026",
+        "2026-13-01T00:00:00Z",
+        "2027-02-29T00:00:00Z",
+        "2026-10-15T24:00:00Z",
+        "2026-10-15T00:00:00.Z",
+    ] {
+        let err = parse_utc_expiry(bad).unwrap_err().to_string();
+        assert!(err.contains("ending in Z"), "{bad}: {err}");
+    }
 }

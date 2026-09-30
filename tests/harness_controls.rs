@@ -414,16 +414,16 @@ fn the_response_shape_exemption_cannot_swallow_the_genuinely_paged_operation() {
         body: Some(json!({
             "items": [{"transactionId": "t"}], "pageInfo": {"hasMore": false}})),
     };
-    assert_rejects("the fixture is a page", || {
+    assert_rejects("Additional properties are not allowed", || {
         spec::assert_exchange_conforms("flute-v2-post-transactions", &req, &page);
     });
 }
 
-/// A response field no declared example carries is a shape the operation has
-/// never been observed to return, and the examples are the only oracle the
-/// response-shape exemption leaves.
+/// A response field the substitute schema does not declare is rejected: the
+/// exemption swaps one declared schema for another and keeps
+/// `additionalProperties: false`.
 #[test]
-fn the_example_oracle_rejects_a_field_no_example_declares() {
+fn the_substitute_schema_rejects_a_field_it_does_not_declare() {
     let (req, _) = transaction_create(json!({
         "paymentProcessorId": "pp-1", "baseAmount": amount("1.00"),
         "transactionDetails": {"cardData": {"paymentMethodId": "pm_1"}}}));
@@ -431,7 +431,27 @@ fn the_example_oracle_rejects_a_field_no_example_declares() {
         status: 200,
         body: Some(json!({"transactionId": "t", "inventedByTheFixture": true})),
     };
-    assert_rejects("no declared example carries", || {
+    assert_rejects("Additional properties are not allowed", || {
+        spec::assert_exchange_conforms("flute-v2-post-transactions", &req, &resp);
+    });
+}
+
+/// The published examples' write shape — `processorResponse` and
+/// `amountDetails` — is not what the API answers with, so a fixture carrying
+/// it is rejected rather than taken as the oracle.
+#[test]
+fn the_substitute_schema_rejects_the_example_write_shape() {
+    let (req, _) = transaction_create(json!({
+        "paymentProcessorId": "pp-1", "baseAmount": amount("1.00"),
+        "transactionDetails": {"cardData": {"paymentMethodId": "pm_1"}}}));
+    let resp = ResponseFixture {
+        status: 200,
+        body: Some(json!({
+            "transactionId": "t",
+            "processorResponse": {"responseCode": "00"},
+            "amountDetails": {"baseAmount": amount("1.00")}})),
+    };
+    assert_rejects("Additional properties are not allowed", || {
         spec::assert_exchange_conforms("flute-v2-post-transactions", &req, &resp);
     });
 }

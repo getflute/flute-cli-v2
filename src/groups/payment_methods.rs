@@ -7,22 +7,24 @@
 use crate::Ctx;
 use crate::api::ApiPath;
 use crate::cli::common::{self, AccountHolderType, AccountType, PaginationArgs, parse_exp};
+use crate::cli::output::OutputFormat;
 use crate::cli::render::{self, Cell, Column, Resource};
 use anyhow::Result;
 use reqwest::Method;
 use serde_json::{Map, Value};
 
-/// The one field `--clear` can null out, and the wire key it nulls.
+/// The one field `--clear` can null out: the label, `paymentName` on the wire.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
 pub enum Clearable {
     Name,
 }
 
 impl Clearable {
-    fn wire(self) -> &'static str {
-        match self {
-            Self::Name => "paymentName",
-        }
+    /// The value as `--clear` spells it on the command line.
+    fn flag(self) -> String {
+        clap::ValueEnum::to_possible_value(&self)
+            .map(|v| v.get_name().to_string())
+            .unwrap_or_default()
     }
 }
 
@@ -49,10 +51,10 @@ pub enum PaymentMethodsCommand {
     /// Rename a vaulted payment method
     /// (PATCH /v2/payment-methods/{paymentMethodId}).
     Update(UpdatePaymentMethodArgs),
-    /// Remove a payment method from the vault
+    /// Delete a payment method from the vault
     /// (DELETE /v2/payment-methods/{paymentMethodId}).
     ///
-    /// Requires `--yes` to prevent accidental removal.
+    /// Requires `--yes` to prevent accidental deletions.
     Delete {
         /// Payment method UUID to delete (positional).
         payment_method_id: String,
@@ -82,10 +84,11 @@ pub struct ListPaymentMethodsArgs {
     /// Sort results by this field name.
     #[arg(long, id = "pm_sort_by", value_name = "SORT_BY")]
     pub sort_by: Option<String>,
-    /// Sort descending. The default is ascending.
+    /// Sort descending.
     #[arg(long, id = "pm_desc")]
     pub desc: bool,
-    /// Server-side text search.
+    /// Match payment methods whose label (the `--name` they were given)
+    /// contains this text, case-sensitively.
     #[arg(long)]
     pub search: Option<String>,
     /// Filter by customer UUID.
@@ -147,7 +150,9 @@ pub struct AddAchArgs {
     /// Friendly label for this payment method.
     #[arg(long = "name", id = "pm_ach_name", value_name = "NAME")]
     pub name: Option<String>,
-    /// Company name, for a business account.
+    /// Company name, for a business account. With `--customer-id` the
+    /// customer's company name is used instead and this value is not stored,
+    /// so a business account needs a company name on the customer.
     #[arg(long, id = "pm_company_name", value_name = "COMPANY_NAME")]
     pub company_name: Option<String>,
 }
@@ -209,8 +214,13 @@ pub fn build_add_card_body(args: &AddCardArgs) -> Result<Value> {
 /// Four fields are required by schema, and the two enums are capitalised on
 /// the wire.
 pub fn build_add_ach_body(args: &AddAchArgs) -> Result<Value> {
-    if args.account_number.trim().is_empty() || args.routing_number.trim().is_empty() {
-        anyhow::bail!("--account and --routing are both required");
+    for (flag, value) in [
+        ("--account", &args.account_number),
+        ("--routing", &args.routing_number),
+    ] {
+        if value.trim().is_empty() {
+            anyhow::bail!("{flag} is required");
+        }
     }
     let mut body = Map::new();
     body.insert(
@@ -249,15 +259,31 @@ mod clearing_tests {
         let body = build_update_payment_method_body(&args).unwrap();
         assert_eq!(body["paymentName"], Value::Null);
     }
+
+    /// The refusal names the field as `--clear` spells it, not `paymentName`.
+    #[test]
+    fn a_contradicting_clear_is_named_as_the_caller_spelled_it() {
+        let args = UpdatePaymentMethodArgs {
+            payment_method_id: "pm_1".into(),
+            payment_name: Some("x".into()),
+            clear: vec![Clearable::Name],
+        };
+        let err = build_update_payment_method_body(&args)
+            .unwrap_err()
+            .to_string();
+        assert!(err.starts_with("--clear name "), "{err}");
+    }
 }
 
 /// Build the `UpdatePaymentMethodRequestDto` body — one property, so an
 /// absent `--name` leaves nothing to send.
 pub fn build_update_payment_method_body(args: &UpdatePaymentMethodArgs) -> Result<Value> {
-    let cleared = args.clear.first().map(|f| f.wire());
-    let name = match (common::patch_string(&args.payment_name), cleared) {
-        (Some(_), Some(key)) => {
-            anyhow::bail!("--clear {key} contradicts the value given for it; pass one or the other")
+    let name = match (common::patch_string(&args.payment_name), args.clear.first()) {
+        (Some(_), Some(field)) => {
+            anyhow::bail!(
+                "--clear {} contradicts the value given for it; pass one or the other",
+                field.flag()
+            )
         }
         (Some(v), None) => v,
         (None, Some(_)) => Value::Null,
@@ -326,6 +352,100 @@ pub static PAYMENT_METHOD: Resource = Resource {
     yes_no: &["/isDefault"],
 };
 
+/// A payment method as `add-card` and `add-ach` answer for it: the
+/// identifier and nothing else.
+///
+/// Both create responses carry `paymentMethodId` alone, so the read's rows
+/// would all be dashes; `payment-methods get` reads the record back. The same
+/// envelope name and identifier as [`PAYMENT_METHOD`].
+pub static PAYMENT_METHOD_CREATED: Resource = Resource {
+    object: "payment_method",
+    object_list: "payment_methods",
+    id: "/paymentMethodId",
+    detail: &["/paymentMethodId"],
+    columns: &[],
+    amounts: &[],
+    yes_no: &[],
+};
+
+/// `get`'s table for a card: the rows [`PAYMENT_METHOD`] declares, less the
+/// bank account's, with the expiry on one row. `/card/expiry` is not a field
+/// the API sends: [`detail_view`] puts it in the table's copy of the response.
+pub static CARD_VIEW: Resource = Resource {
+    object: "payment_method",
+    object_list: "payment_methods",
+    id: "/paymentMethodId",
+    detail: &[
+        "/paymentMethodId",
+        "/type",
+        "/name",
+        "/isDefault",
+        "/customerId",
+        "/createdOn",
+        "/card/cardMask",
+        "/card/expiry",
+        "/card/cardTokenType",
+    ],
+    columns: &[],
+    amounts: &[],
+    yes_no: &["/isDefault"],
+};
+
+/// `get`'s table for a bank account: the rows [`PAYMENT_METHOD`] declares,
+/// less the card's.
+pub static ACH_VIEW: Resource = Resource {
+    object: "payment_method",
+    object_list: "payment_methods",
+    id: "/paymentMethodId",
+    detail: &[
+        "/paymentMethodId",
+        "/type",
+        "/name",
+        "/isDefault",
+        "/customerId",
+        "/createdOn",
+        "/ach/accountNumber",
+        "/ach/routingNumber",
+        "/ach/accountType",
+        "/ach/accountHolderType",
+        "/ach/companyName",
+        "/ach/taxId",
+    ],
+    columns: &[],
+    amounts: &[],
+    yes_no: &["/isDefault"],
+};
+
+/// `get`'s table: the rows of the instrument the method is, and none of the
+/// other's. The response carries both containers and nulls the one that does
+/// not apply, so a card would otherwise report six bank-account fields as
+/// missing. Any other `type` keeps both. A card's month and year become one
+/// `card.expiry` row, spelt as `list`'s EXP column spells it.
+fn detail_view(data: &Value) -> String {
+    let (view, other) = match data.get("type").and_then(Value::as_str) {
+        Some("Card") => (&CARD_VIEW, "ach"),
+        Some("ACH") => (&ACH_VIEW, "card"),
+        _ => return render::detail_table(&PAYMENT_METHOD, data),
+    };
+    let mut shown = data.clone();
+    // A populated other container is data the view does not name, and still
+    // prints after the declared rows.
+    if let Some(map) = shown.as_object_mut() {
+        if map.get(other).is_some_and(Value::is_null) {
+            map.remove(other);
+        }
+    }
+    if let (Some(exp), Some(card)) = (
+        expiry(data),
+        shown.pointer_mut("/card").and_then(Value::as_object_mut),
+    ) {
+        card.remove("expirationMonth");
+        card.remove("expirationYear");
+        card.insert("expiry".into(), Value::String(exp));
+    }
+    render::detail_table(view, &shown)
+}
+
 /// A card and a bank account keep their masks in different containers, so one
 /// column has to reach both.
 fn masked_number(v: &Value) -> Option<String> {
@@ -365,12 +485,14 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
                     None,
                 )
                 .await?;
-            render::one(
-                ctx,
-                &PAYMENT_METHOD,
-                &common::body_of(resp.body)?,
-                resp.correlation_id,
-            )
+            let data = common::body_of(resp.body)?;
+            match ctx.output {
+                OutputFormat::Table => {
+                    println!("{}", detail_view(&data));
+                    Ok(())
+                }
+                _ => render::one(ctx, &PAYMENT_METHOD, &data, resp.correlation_id),
+            }
         }
         PaymentMethodsCommand::AddCard(args) => {
             let body = build_add_card_body(&args)?;
@@ -380,7 +502,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
                 .await?;
             render::one(
                 ctx,
-                &PAYMENT_METHOD,
+                &PAYMENT_METHOD_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )
@@ -393,7 +515,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
                 .await?;
             render::one(
                 ctx,
-                &PAYMENT_METHOD,
+                &PAYMENT_METHOD_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )
@@ -421,16 +543,16 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentMethodsCommand) -> Result<()> {
         PaymentMethodsCommand::Delete {
             payment_method_id, ..
         } => {
-            // A 404 here is exit 0 but not a removal: the server answers the
-            // same for "already removed" and "never existed".
+            // A 404 here is exit 0 but not a deletion: the server answers the
+            // same for "already deleted" and "never existed".
             common::delete(
                 ctx,
                 &PAYMENT_METHOD,
                 ApiPath::from("/v2/payment-methods").id(&payment_method_id)?,
                 &payment_method_id,
                 "deleted",
-                &format!("Removed payment method {payment_method_id}."),
-                &format!("No payment method {payment_method_id} was found; nothing was removed."),
+                &format!("Deleted payment method {payment_method_id}."),
+                &format!("No payment method {payment_method_id} was found; nothing was deleted."),
             )
             .await
         }
@@ -548,6 +670,19 @@ mod tests {
                 "accountHolderType": "Personal",
                 "accountType": "Checking"})
         );
+    }
+
+    /// The refusal names the one flag that is empty.
+    #[test]
+    fn an_empty_account_or_routing_number_is_named() {
+        let mut args = ach();
+        args.routing_number = " ".into();
+        let err = build_add_ach_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--routing is required");
+        let mut args = ach();
+        args.account_number = String::new();
+        let err = build_add_ach_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--account is required");
     }
 
     /// Capitalised on the wire; a lowercase near-miss is rejected rather than

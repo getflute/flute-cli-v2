@@ -48,19 +48,19 @@ Options:
           Message shown to the payer once the session completes
 
       --expires-at <EXPIRES_AT>
-          UTC expiry (ISO 8601). Omit for a session that never expires
+          UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`. Omit for a session that never expires
 
       --metadata <KEY=VALUE>
           Arbitrary `key=value` pair to attach, handed back on the read. Repeat the flag for several pairs
 
       --card-enabled
-          Accept card payments
+          Accept card payments. With neither `--card-enabled` nor `--ach-enabled`, nor a processor id for either, the session offers every payment method the account has an active processor for
 
       --card-processor-id <CARD_PROCESSOR_ID>
           Charge card payments through this processor
 
       --ach-enabled
-          Accept ACH payments
+          Accept ACH payments. With neither `--card-enabled` nor `--ach-enabled`, nor a processor id for either, the session offers every payment method the account has an active processor for
 
       --ach-processor-id <ACH_PROCESSOR_ID>
           Charge ACH payments through this processor

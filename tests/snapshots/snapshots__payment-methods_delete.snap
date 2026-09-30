@@ -2,9 +2,9 @@
 source: tests/snapshots.rs
 expression: help_for(&args)
 ---
-Remove a payment method from the vault (DELETE /v2/payment-methods/{paymentMethodId}).
+Delete a payment method from the vault (DELETE /v2/payment-methods/{paymentMethodId}).
 
-Requires `--yes` to prevent accidental removal.
+Requires `--yes` to prevent accidental deletions.
 
 Usage: flute2 payment-methods delete [OPTIONS] <PAYMENT_METHOD_ID>
 

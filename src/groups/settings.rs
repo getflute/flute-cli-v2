@@ -177,8 +177,11 @@ pub fn build_update_autofill_body(args: &UpdateAutofillArgs) -> Result<Value> {
         );
         if target.contains_key(key) {
             anyhow::bail!(
-                "--clear {key} contradicts the value given for it; pass one or \
-                 the other"
+                "--clear {} contradicts the value given for it; pass one or \
+                 the other",
+                clap::ValueEnum::to_possible_value(field)
+                    .expect("every variant is a possible value")
+                    .get_name()
             );
         }
         target.insert(key.to_string(), Value::Null);
@@ -262,7 +265,7 @@ pub static PAYMENT_CONFIG: Resource = Resource {
         cell: Cell::Path("/availablePaymentProcessors/0/paymentProcessorId"),
     }],
     amounts: &["/maxTransactionAmount"],
-    yes_no: &[],
+    yes_no: &["/availablePaymentProcessors/[]/isDefault"],
 };
 
 pub static CONTACT_INFO: Resource = Resource {
@@ -292,8 +295,9 @@ pub static CONTACT_INFO: Resource = Resource {
     yes_no: &[],
 };
 
-/// A settings document with no identifier of any kind, which is why a
-/// bodyless write against it confirms without one.
+/// A settings document with no identifier of any kind, as `autofill` reads it
+/// and `update-autofill` answers with it. The product template carries no
+/// description.
 pub static TRANSACTION_AUTOFILL: Resource = Resource {
     object: "transaction_autofill",
     object_list: "transaction_autofills",
@@ -304,7 +308,6 @@ pub static TRANSACTION_AUTOFILL: Resource = Resource {
         "/level3Settings/dutyChargeRate",
         "/level3Settings/product/productName",
         "/level3Settings/product/code",
-        "/level3Settings/product/description",
         "/level3Settings/product/measurementUnit",
         "/level3Settings/product/unitPrice",
         "/level3Settings/product/quantity",
@@ -395,15 +398,22 @@ pub async fn dispatch(ctx: &Ctx, command: SettingsCommand) -> Result<()> {
                     Some(body),
                 )
                 .await?;
-            // 200 with no body, and a singleton has no id to confirm from.
-            render::confirmed(
-                ctx,
-                &TRANSACTION_AUTOFILL,
-                "",
-                "updated",
-                "Updated transaction autofill settings.",
-                resp.correlation_id,
-            )
+            // The API answers with the settings it stored, though the
+            // published operation declares no body. A singleton has no id to
+            // confirm from, so a bodyless 200 confirms with the verb alone.
+            match resp.body {
+                Some(stored) => {
+                    render::one(ctx, &TRANSACTION_AUTOFILL, &stored, resp.correlation_id)
+                }
+                None => render::confirmed(
+                    ctx,
+                    &TRANSACTION_AUTOFILL,
+                    "",
+                    "updated",
+                    "Updated transaction autofill settings.",
+                    resp.correlation_id,
+                ),
+            }
         }
     }
 }
@@ -537,6 +547,19 @@ mod tests {
         };
         let err = build_update_autofill_body(&args).unwrap_err().to_string();
         assert!(err.contains("cannot be cleared"), "{err}");
+    }
+
+    /// The refusal names the flag the caller typed, not the wire key it sets.
+    #[test]
+    fn a_contradicting_clear_is_named_by_its_flag() {
+        let args = UpdateAutofillArgs {
+            product_name: Some("Widget".into()),
+            clear: vec![Clearable::ProductName],
+            ..Default::default()
+        };
+        let err = build_update_autofill_body(&args).unwrap_err().to_string();
+        assert!(err.contains("--clear product-name "), "{err}");
+        assert!(!err.contains("productName"), "{err}");
     }
 
     /// An empty value clears the stored default: the body carries an explicit

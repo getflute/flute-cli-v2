@@ -4,8 +4,8 @@ expression: "render::detail_table(r.resource, &object_for(r))"
 ---
 transactionId:                                   90d084d6-55b8-4fb8-b658-861534d07f9a
 transactionStatus:                               Captured
-transactionType:                                 Sale
-transactionDateTime:                             2026-05-29T22:04:31.771Z
+transactionType:                                 —
+transactionDateTime:                             —
 processedAmount:                                 10.50
 currencyCode:                                    USD
 declineDetails.code:                             —
@@ -23,13 +23,8 @@ cardDetails.cardBrand:                           —
 cardDetails.cardType:                            —
 cardDetails.cardDataSource:                      —
 cardDetails.paymentMethodId:                     —
-achDetails.maskedAccountNumber:                  —
-achDetails.accountRoutingNumber:                 —
-achDetails.accountType:                          —
-achDetails.secCode:                              —
-achDetails.paymentMethodId:                      —
 referenceId:                                     —
-customerId:                                      588f57a5-fe6a-4844-851e-e98914e81980
+customerId:                                      —
 paymentProcessorId:                              —
 merchantId:                                      —
 batchId:                                         —

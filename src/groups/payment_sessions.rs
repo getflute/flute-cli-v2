@@ -114,14 +114,17 @@ pub struct CreatePaymentSessionArgs {
     /// Message shown to the payer once the session completes.
     #[arg(long)]
     pub after_completion_message: Option<String>,
-    /// UTC expiry (ISO 8601). Omit for a session that never expires.
-    #[arg(long)]
+    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`.
+    /// Omit for a session that never expires.
+    #[arg(long, value_parser = crate::groups::payment_links::parse_utc_expiry)]
     pub expires_at: Option<String>,
     /// Arbitrary `key=value` pair to attach, handed back on the read. Repeat
     /// the flag for several pairs.
     #[arg(long = "metadata", value_name = "KEY=VALUE")]
     pub metadata: Vec<String>,
-    /// Accept card payments.
+    /// Accept card payments. With neither `--card-enabled` nor
+    /// `--ach-enabled`, nor a processor id for either, the session offers
+    /// every payment method the account has an active processor for.
     #[arg(long = "card-enabled", id = "session_card_enabled")]
     pub card_enabled: bool,
     /// Charge card payments through this processor.
@@ -131,7 +134,9 @@ pub struct CreatePaymentSessionArgs {
         value_name = "CARD_PROCESSOR_ID"
     )]
     pub card_processor_id: Option<String>,
-    /// Accept ACH payments.
+    /// Accept ACH payments. With neither `--card-enabled` nor
+    /// `--ach-enabled`, nor a processor id for either, the session offers
+    /// every payment method the account has an active processor for.
     #[arg(long = "ach-enabled", id = "session_ach_enabled")]
     pub ach_enabled: bool,
     /// Charge ACH payments through this processor.
@@ -243,7 +248,42 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
     if !methods.is_empty() {
         body.insert("paymentMethods".into(), Value::Object(methods));
     }
+    if !args.mode.unwrap_or_default().charges() {
+        refuse_checkout_flags(args)?;
+    }
     Ok(Value::Object(body))
+}
+
+/// A save-method session has no checkout page, and the API refuses every
+/// field that configures one — the payment methods, the page's text, its
+/// expiry, the return URL and the metadata — with a 400.
+fn refuse_checkout_flags(args: &CreatePaymentSessionArgs) -> Result<()> {
+    let set = |v: &Option<String>| v.as_deref().is_some_and(|s| !s.is_empty());
+    let given: Vec<&str> = [
+        ("--card-enabled", args.card_enabled),
+        ("--card-processor-id", args.card_processor_id.is_some()),
+        ("--ach-enabled", args.ach_enabled),
+        ("--ach-processor-id", args.ach_processor_id.is_some()),
+        ("--return-url", set(&args.return_url)),
+        ("--page-name", set(&args.page_name)),
+        ("--payment-notes", set(&args.payment_notes)),
+        (
+            "--after-completion-message",
+            set(&args.after_completion_message),
+        ),
+        ("--expires-at", set(&args.expires_at)),
+        ("--metadata", !args.metadata.is_empty()),
+    ]
+    .into_iter()
+    .filter_map(|(flag, given)| given.then_some(flag))
+    .collect();
+    if !given.is_empty() {
+        anyhow::bail!(
+            "a save-method session has no checkout page, so it takes no {}",
+            given.join(", ")
+        );
+    }
+    Ok(())
 }
 
 /// What a payment session is worth saying: what it is for, then what it
@@ -252,13 +292,13 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
 /// **The identifier is on `create` only.**
 /// `CreatePaymentSessionResponseDto` declares `id` and
 /// `GetPaymentSessionResponseDto` declares no identifier at all, so a read
-/// has nothing for `quiet` to print.
+/// has nothing for `quiet` to print and no identifier row. The `id` pointer
+/// still names the key `cancel`'s confirmation carries.
 pub static PAYMENT_SESSION: Resource = Resource {
     object: "payment_session",
     object_list: "payment_session_list",
     id: "/id",
     detail: &[
-        "/id",
         "/status",
         "/mode",
         // The amount a session charges is reported on the transaction it
@@ -315,6 +355,37 @@ pub static PAYMENT_SESSION: Resource = Resource {
     yes_no: &[],
 };
 
+/// A payment session as `create` answers for it: the identifier and the
+/// payment methods the session offers.
+///
+/// The create response carries `id` and `paymentMethods` and nothing else, so
+/// the read's rows would all be dashes; `payment-sessions get` reads the
+/// session back. The same envelope name and identifier as
+/// [`PAYMENT_SESSION`].
+pub static PAYMENT_SESSION_CREATED: Resource = Resource {
+    object: "payment_session",
+    object_list: "payment_session_list",
+    id: "/id",
+    detail: &[
+        "/id",
+        "/paymentMethods/card/enabled",
+        "/paymentMethods/card/processorId",
+        "/paymentMethods/ach/enabled",
+        "/paymentMethods/ach/processorId",
+    ],
+    columns: &[],
+    amounts: &[],
+    yes_no: &[],
+};
+
+/// A save-method session as `create` answers for it. The mode takes no
+/// payment methods, so the create response carries `id` and a null
+/// `paymentMethods`, and the four method rows could never fill.
+pub static PAYMENT_SESSION_SAVE_METHOD_CREATED: Resource = Resource {
+    detail: &["/id"],
+    ..PAYMENT_SESSION_CREATED
+};
+
 pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> {
     match command {
         PaymentSessionsCommand::Create(args) => {
@@ -323,9 +394,14 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
                 .api
                 .request(Method::POST, "/v2/payment-sessions", &[], Some(body))
                 .await?;
+            let resource = if args.mode.unwrap_or_default().charges() {
+                &PAYMENT_SESSION_CREATED
+            } else {
+                &PAYMENT_SESSION_SAVE_METHOD_CREATED
+            };
             render::one(
                 ctx,
-                &PAYMENT_SESSION,
+                resource,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )
@@ -513,6 +589,113 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("--tip-amount"), "{err}");
+    }
+
+    /// The API refuses every checkout-page field on a save-method session,
+    /// so each is refused here and named by its flag.
+    #[test]
+    fn a_vault_only_session_refuses_every_checkout_flag() {
+        let s = |v: &str| Some(v.to_string());
+        for (flag, args) in [
+            (
+                "--card-enabled",
+                CreatePaymentSessionArgs {
+                    card_enabled: true,
+                    ..Default::default()
+                },
+            ),
+            (
+                "--card-processor-id",
+                CreatePaymentSessionArgs {
+                    card_processor_id: s("pp"),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--ach-enabled",
+                CreatePaymentSessionArgs {
+                    ach_enabled: true,
+                    ..Default::default()
+                },
+            ),
+            (
+                "--ach-processor-id",
+                CreatePaymentSessionArgs {
+                    ach_processor_id: s("pp"),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--return-url",
+                CreatePaymentSessionArgs {
+                    return_url: s("https://example.com"),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--page-name",
+                CreatePaymentSessionArgs {
+                    page_name: s("P"),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--payment-notes",
+                CreatePaymentSessionArgs {
+                    payment_notes: s("N"),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--after-completion-message",
+                CreatePaymentSessionArgs {
+                    after_completion_message: s("M"),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--expires-at",
+                CreatePaymentSessionArgs {
+                    expires_at: s("2027-01-01T00:00:00Z"),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--metadata",
+                CreatePaymentSessionArgs {
+                    metadata: vec!["a=b".into()],
+                    ..Default::default()
+                },
+            ),
+        ] {
+            let args = CreatePaymentSessionArgs {
+                mode: Some(SessionMode::SaveMethod),
+                ..args
+            };
+            let err = build_create_payment_session_body(&args)
+                .unwrap_err()
+                .to_string();
+            assert!(
+                err.contains("save-method") && err.contains(flag),
+                "{flag}: {err}"
+            );
+        }
+    }
+
+    /// The fields a save-method session does take still reach the body.
+    #[test]
+    fn a_vault_only_session_keeps_the_fields_it_takes() {
+        let args = CreatePaymentSessionArgs {
+            mode: Some(SessionMode::SaveMethod),
+            customer_id: Some("cus-1".into()),
+            customer_handling: Some(CustomerHandling::CreateCustomer),
+            reference_id: Some("ORDER-1".into()),
+            skip_address_verification: true,
+            ..Default::default()
+        };
+        let body = build_create_payment_session_body(&args).unwrap();
+        assert_eq!(body["customerId"], "cus-1");
+        assert_eq!(body["referenceId"], "ORDER-1");
     }
 
     /// A paying session's zero is the other half of the same rule, and the

@@ -9,7 +9,9 @@ async fn ping_sends_bearer_to_v2_ping_and_reports_reachable() {
     Mock::given(method("GET"))
         .and(path("/v2/ping"))
         .and(header("authorization", "Bearer tok-xyz"))
-        .respond_with(ResponseTemplate::new(200).insert_header("x-correlation-id", "corr-ping"))
+        .respond_with(
+            ResponseTemplate::new(200).insert_header("x-arise-trace-correlationid", "corr-ping"),
+        )
         .mount(&server)
         .await;
 

@@ -29,6 +29,13 @@ impl Clearable {
             Self::Mobile => "mobilePhoneNumber",
         }
     }
+
+    /// The value as `--clear` spells it on the command line.
+    fn flag(self) -> String {
+        clap::ValueEnum::to_possible_value(&self)
+            .map(|v| v.get_name().to_string())
+            .unwrap_or_default()
+    }
 }
 
 /// One variant per command, and the arg-bearing ones are large.
@@ -72,7 +79,7 @@ pub struct ListCustomersArgs {
     /// Sort results by this field name.
     #[arg(long)]
     pub sort_by: Option<String>,
-    /// Sort descending. The default is ascending.
+    /// Sort descending. Without it, results come back newest first.
     #[arg(long)]
     pub desc: bool,
     /// Filter by full name.
@@ -177,6 +184,14 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
     ] {
         common::reject_unclearable(flag, value.as_deref())?;
     }
+    // An empty component would be omitted from the address it builds, so the
+    // update would succeed without the change it names.
+    if let Some(flag) = empty_address_flag(args) {
+        anyhow::bail!(
+            "{flag} is empty, and address components cannot be cleared \
+             individually; pass a value for it"
+        );
+    }
 
     let mut body = Map::new();
     common::put_patch(&mut body, "firstName", &args.first_name);
@@ -200,8 +215,9 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
         let key = field.wire();
         if body.contains_key(key) {
             anyhow::bail!(
-                "--clear {key} contradicts the value given for it; pass one or \
-                 the other"
+                "--clear {} contradicts the value given for it; pass one or \
+                 the other",
+                field.flag()
             );
         }
         body.insert(key.to_string(), Value::Null);
@@ -211,6 +227,43 @@ pub fn build_update_customer_body(args: &UpdateCustomerArgs) -> Result<Value> {
         anyhow::bail!("nothing to update: pass at least one field, e.g. --email or --company");
     }
     Ok(Value::Object(body))
+}
+
+/// The first address flag given an empty value.
+fn empty_address_flag(args: &UpdateCustomerArgs) -> Option<String> {
+    let (b, s) = (&args.billing, &args.shipping);
+    [
+        (
+            "billing",
+            [
+                &b.line1,
+                &b.line2,
+                &b.city,
+                &b.state,
+                &b.postal_code,
+                &b.country,
+            ],
+        ),
+        (
+            "shipping",
+            [
+                &s.line1,
+                &s.line2,
+                &s.city,
+                &s.state,
+                &s.postal_code,
+                &s.country,
+            ],
+        ),
+    ]
+    .into_iter()
+    .find_map(|(prefix, values)| {
+        ["line1", "line2", "city", "state", "postal-code", "country"]
+            .into_iter()
+            .zip(values)
+            .find(|(_, v)| v.as_deref() == Some(""))
+            .map(|(name, _)| format!("--{prefix}-{name}"))
+    })
 }
 
 #[cfg(test)]
@@ -246,6 +299,33 @@ mod clearing_tests {
             ..Default::default()
         };
         assert!(build_update_customer_body(&args).is_err());
+    }
+
+    /// The refusal names the field as `--clear` spells it, which is what the
+    /// caller typed, rather than the wire key.
+    #[test]
+    fn a_contradicting_clear_is_named_as_the_caller_spelled_it() {
+        for (args, flag) in [
+            (
+                UpdateCustomerArgs {
+                    company_name: Some("X".into()),
+                    clear: vec![Clearable::Company],
+                    ..Default::default()
+                },
+                "--clear company ",
+            ),
+            (
+                UpdateCustomerArgs {
+                    mobile_phone_number: Some("+14155552309".into()),
+                    clear: vec![Clearable::Mobile],
+                    ..Default::default()
+                },
+                "--clear mobile ",
+            ),
+        ] {
+            let err = build_update_customer_body(&args).unwrap_err().to_string();
+            assert!(err.starts_with(flag), "{err}");
+        }
     }
 
     /// The non-nullable columns are offered by neither spelling.
@@ -363,8 +443,13 @@ pub struct CreateCustomerArgs {
 /// sets `additionalProperties: false` and the API distinguishes an absent key
 /// from a null one.
 pub fn build_create_customer_body(args: &CreateCustomerArgs) -> Result<Value> {
-    if args.first_name.is_empty() || args.last_name.is_empty() {
-        anyhow::bail!("--first-name and --last-name are both required");
+    for (flag, value) in [
+        ("--first-name", &args.first_name),
+        ("--last-name", &args.last_name),
+    ] {
+        if value.is_empty() {
+            anyhow::bail!("{flag} is required");
+        }
     }
     let mut body = Map::new();
     body.insert("firstName".into(), Value::String(args.first_name.clone()));
@@ -406,7 +491,6 @@ pub static CUSTOMER: Resource = Resource {
     id: "/customerId",
     detail: &[
         "/customerId",
-        "/externalId",
         "/firstName",
         "/lastName",
         "/companyName",
@@ -430,17 +514,22 @@ pub static CUSTOMER: Resource = Resource {
         "/transactionsVolume",
         "/lastTransactionAmount",
         "/lastTransactionDate",
-        "/numberOfSubscriptions",
         "/cards/[]/paymentMethodId",
+        "/cards/[]/paymentName",
         "/cards/[]/cardMask",
         "/cards/[]/cardType",
+        "/cards/[]/creditDebitType",
         "/cards/[]/expirationMonth",
         "/cards/[]/expirationYear",
+        "/cards/[]/cardTokenType",
         "/cards/[]/isDefault",
         "/achAccounts/[]/paymentMethodId",
+        "/achAccounts/[]/paymentName",
         "/achAccounts/[]/accountNumber",
         "/achAccounts/[]/routingNumber",
         "/achAccounts/[]/accountType",
+        "/achAccounts/[]/accountHolderType",
+        "/achAccounts/[]/taxId",
         "/achAccounts/[]/isDefault",
     ],
     // The list item carries no creation timestamp, so the last column
@@ -473,6 +562,27 @@ pub static CUSTOMER: Resource = Resource {
         },
     ],
     amounts: &["/transactionsVolume", "/lastTransactionAmount"],
+    yes_no: &[
+        "/hasSmsConsent",
+        "/shouldUseBillingAsShippingAddress",
+        "/cards/[]/isDefault",
+        "/achAccounts/[]/isDefault",
+    ],
+};
+
+/// A customer as `create` answers for it: the identifier and nothing else.
+///
+/// The create response carries `customerId` alone, so the read's rows would
+/// all be dashes; `customers get` reads the record back. The same envelope
+/// name and identifier as [`CUSTOMER`], so `--output json` and `quiet` cannot
+/// tell them apart.
+pub static CUSTOMER_CREATED: Resource = Resource {
+    object: "customer",
+    object_list: "customer_list",
+    id: "/customerId",
+    detail: &["/customerId"],
+    columns: &[],
+    amounts: &[],
     yes_no: &[],
 };
 
@@ -506,7 +616,7 @@ pub async fn dispatch(ctx: &Ctx, command: CustomersCommand) -> Result<()> {
                 .await?;
             render::one(
                 ctx,
-                &CUSTOMER,
+                &CUSTOMER_CREATED,
                 &common::body_of(resp.body)?,
                 resp.correlation_id,
             )
@@ -636,11 +746,17 @@ mod tests {
         assert_eq!(body["shouldUseBillingAsShippingAddress"], true);
     }
 
+    /// The refusal names the one flag that is empty.
     #[test]
     fn rejects_an_empty_required_name() {
         let mut args = minimal();
         args.first_name = String::new();
-        assert!(build_create_customer_body(&args).is_err());
+        let err = build_create_customer_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--first-name is required");
+        let mut args = minimal();
+        args.last_name = String::new();
+        let err = build_create_customer_body(&args).unwrap_err().to_string();
+        assert_eq!(err, "--last-name is required");
     }
 
     fn list_args() -> ListCustomersArgs {
@@ -779,6 +895,17 @@ mod tests {
         args.has_sms_consent = Some(false);
         let body = build_update_customer_body(&args).unwrap();
         assert_eq!(body["hasSmsConsent"], false);
+    }
+
+    /// An empty address component sends nothing, and the refusal says why
+    /// rather than asking for a field the caller did pass.
+    #[test]
+    fn an_empty_address_component_says_it_cannot_be_cleared() {
+        let mut args = update_args();
+        args.shipping.postal_code = Some(String::new());
+        let err = build_update_customer_body(&args).unwrap_err().to_string();
+        assert!(err.contains("--shipping-postal-code is empty"), "{err}");
+        assert!(err.contains("cannot be cleared individually"), "{err}");
     }
 
     /// An empty PATCH is a round trip that cannot change anything.

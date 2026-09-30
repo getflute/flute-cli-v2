@@ -489,21 +489,11 @@ async fn share_by_offers_only_the_two_values_this_schema_declares() {
         .stderr(predicate::str::contains("sms"));
 }
 
-/// `hasCustomerConsent` is required, so it is always sent — `false` when the
-/// switch is absent, which is what lets the API refuse an unconsented share
-/// rather than the CLI hiding the field.
+/// The API refuses a share without the customer's consent, so a share
+/// without `--consent` is refused before the wire, exit 3, naming the flag.
 #[tokio::test]
-async fn share_always_sends_the_consent_field() {
+async fn share_without_consent_is_refused_before_the_wire() {
     let server = support::mock_with_token().await;
-    Mock::given(method("POST"))
-        .and(path(format!("/v2/payment-links/{LINK}/share")))
-        .and(body_json(serde_json::json!({
-            "shareBy": "Email",
-            "recipient": "ada@example.com",
-            "hasCustomerConsent": false})))
-        .respond_with(ResponseTemplate::new(204))
-        .mount(&server)
-        .await;
     support::bin(&server)
         .args([
             "payment-links",
@@ -515,7 +505,16 @@ async fn share_always_sends_the_consent_field() {
             "ada@example.com",
         ])
         .assert()
-        .success();
+        .code(3)
+        .stderr(predicate::str::contains("--consent is required"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
 }
 
 /// Both bodyless verbs say what they did, in a sentence.
@@ -555,4 +554,64 @@ async fn the_confirmation_lines_are_sentences() {
         .assert()
         .success()
         .stdout(format!("Deleted payment link {LINK}.\n"));
+}
+
+/// An expiry the API cannot read is refused before the wire, naming the
+/// flag, on create and on update alike.
+#[tokio::test]
+async fn an_expiry_that_is_not_a_utc_date_time_is_refused_before_the_wire() {
+    let server = support::mock_with_token().await;
+    for args in [
+        vec![
+            "payment-links",
+            "create",
+            "--card-enabled",
+            "--currency-code",
+            "USD",
+            "--expires-on",
+            "tomorrow",
+        ],
+        vec![
+            "payment-links",
+            "update",
+            "8f0e1d2c-3b4a-4c5d-9e6f-7a8b9c0d1e2f",
+            "--expires-on",
+            "2026-10-15",
+        ],
+    ] {
+        support::bin(&server)
+            .args(&args)
+            .assert()
+            .code(3)
+            .stderr(predicate::str::contains("--expires-on"))
+            .stderr(predicate::str::contains("ending in Z"));
+    }
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
+
+/// `--sort-by` offers the fields the API sorts on, so any other is a usage
+/// error that lists them rather than a 400 after a round trip.
+#[tokio::test]
+async fn sort_by_offers_only_the_fields_the_api_sorts_on() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["payment-links", "list", "--sort-by", "bogus"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("paymentLinkStatus"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
 }

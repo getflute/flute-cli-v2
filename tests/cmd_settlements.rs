@@ -1,7 +1,7 @@
 mod support;
 
 use predicates::prelude::*;
-use wiremock::matchers::{method, path};
+use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, ResponseTemplate};
 
 const BATCH: &str = "21c75430-a316-456f-9126-365760dca33a";
@@ -111,6 +111,43 @@ async fn settlement_get_of_an_unknown_batch_exits_four() {
         .assert()
         .code(4)
         .stderr(predicate::str::contains(BATCH));
+}
+
+/// The not-found envelope keeps `kind: "api"` and status 404, its message
+/// says the filtered list came back empty, and it carries that list
+/// response's correlation id.
+#[tokio::test]
+async fn settlement_get_of_an_unknown_batch_says_the_filtered_list_was_empty() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/settlements/batches"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("x-arise-trace-correlationid", "corr-list")
+                .set_body_json(serde_json::json!({
+                    "items": [],
+                    "pageInfo": {"hasMore": false}})),
+        )
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json", "settlements", "get", BATCH])
+        .assert()
+        .code(4)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "api", "{v}");
+    assert_eq!(v["status"], 404, "{v}");
+    assert_eq!(v["correlation_id"], "corr-list", "{v}");
+    assert_eq!(
+        v["message"],
+        format!(
+            "no settlement batch {BATCH}: the settlements list filtered by that \
+             batch id returned no batch"
+        )
+    );
 }
 
 /// More than one match for a single batch id would mean the filter is not the
@@ -240,4 +277,44 @@ async fn settlement_get_carries_the_singular_envelope_name() {
     assert_eq!(v["data"]["batchId"], BATCH);
     // One resource, so there is no page to describe.
     assert!(v["meta"].get("page_info").is_none(), "{v}");
+}
+
+/// `--sort-by` offers the fields the API sorts on, so any other is a usage
+/// error that lists them rather than a 400 after a round trip.
+#[tokio::test]
+async fn sort_by_offers_only_the_fields_the_api_sorts_on() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["settlements", "list", "--sort-by", "bogus"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("totalNetAmount"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
+
+/// The table prints a batch's status as the API spells it, `Settled`, so
+/// `--status` takes that spelling as well as the lowercase one.
+#[tokio::test]
+async fn status_takes_the_spelling_the_table_prints() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/settlements/batches"))
+        .and(query_param("batchStatus", "Settled"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"items": []})))
+        .expect(2)
+        .mount(&server)
+        .await;
+    for spelling in ["Settled", "settled"] {
+        support::bin(&server)
+            .args(["settlements", "list", "--status", spelling])
+            .assert()
+            .success();
+    }
 }

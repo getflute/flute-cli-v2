@@ -587,7 +587,7 @@ pub static CONTRACTS: &[Contract] = &[
                     },
                     response: ok(Some(json!({
                         "transactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
-                        "transactionStatus": "Pending",
+                        "transactionStatus": "Authorized",
                         "processedAmount": amount("10.50"),
                         "currencyCode": "USD"}))),
                 },
@@ -927,7 +927,7 @@ pub static CONTRACTS: &[Contract] = &[
                     },
                     response: ok(Some(json!({
                         "transactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
-                        "transactionStatus": "Captured",
+                        "transactionStatus": "Voided",
                         "processedAmount": amount("10.50"),
                         "currencyCode": "USD"}))),
                 },
@@ -1026,19 +1026,15 @@ pub static CONTRACTS: &[Contract] = &[
                         "/v2/transactions/90d084d6-55b8-4fb8-b658-861534d07f9a/ach-hold",
                     )
                 },
-                // These two declare a **different** example shape from the
-                // other four single-transaction writes: no amount, no
-                // currency, and a `type` key that appears in no response
-                // schema at all. Each fixture matches its own operation's
-                // example rather than the family's.
+                // The addressed transaction, in the read's shape, like every
+                // other single-transaction write.
                 response: ok(Some(json!({
                         "transactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
-                        "type": "Hold",
-                        "transactionStatus": "Approved",
-                        "processorResponse": {
-                            "processorName": "ACH",
-                            "responseCode": "00",
-                            "responseMessage": "Approved"}}))),
+                        "transactionStatus": "Held",
+                        "transactionType": "Sale",
+                        "paymentMethodType": "ACH",
+                        "processedAmount": amount("10.50"),
+                        "currencyCode": "USD"}))),
             },
             live: Live::Skip(
                 "the action answers with the processor's reference in place of \
@@ -1066,12 +1062,11 @@ pub static CONTRACTS: &[Contract] = &[
                 },
                 response: ok(Some(json!({
                         "transactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
-                        "type": "Release",
-                        "transactionStatus": "Approved",
-                        "processorResponse": {
-                            "processorName": "ACH",
-                            "responseCode": "00",
-                            "responseMessage": "Approved"}}))),
+                        "transactionStatus": "Pending",
+                        "transactionType": "Sale",
+                        "paymentMethodType": "ACH",
+                        "processedAmount": amount("10.50"),
+                        "currencyCode": "USD"}))),
             },
             live: Live::Skip(
                 "the action answers with the processor's reference in place of \
@@ -1214,7 +1209,7 @@ pub static CONTRACTS: &[Contract] = &[
                     },
                     response: ok(Some(json!({
                         "transactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
-                        "transactionStatus": "Approved",
+                        "transactionStatus": "Pending",
                         "processedAmount": amount("10.50"),
                         "currencyCode": "USD"}))),
                 },
@@ -1775,8 +1770,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "unitPrice": amount("25.00"),
                             "measurementUnit": "pcs",
                             "quantity": amount("10"),
-                            "discountPercentage": amount("5"),
-                            "description": "Standard office supplies"},
+                            "discountPercentage": amount("5")},
                         "shippingChargeRate": amount("5"),
                         "dutyChargeRate": amount("2.5")}}))),
             },

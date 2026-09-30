@@ -14,7 +14,7 @@ Options:
       --all
           Fetch every page until the collection is exhausted
       --sort-by <SORT_BY>
-          Sort results by this field name
+          Sort results by this field [possible values: createdOn, totalNetAmount, transactionCount, batchStatus]
       --asc
           Sort ascending. The default here is descending
       --from <FROM_DATE>

@@ -115,17 +115,18 @@ impl ErrorEnvelope {
     ///
     /// This is where the actionable detail lives — the generic `Title` says
     /// only that validation failed. The empty-string key holds form-level
-    /// messages, which carry no prefix.
-    fn flatten_errors(&self) -> Option<String> {
+    /// messages, which carry no prefix, and one that repeats a part in `said`
+    /// is dropped rather than said twice.
+    fn flatten_errors(&self, said: &[&str]) -> Option<String> {
         let map = self.errors.as_ref()?;
         let parts: Vec<String> = map
             .iter()
             .flat_map(|(field, msgs)| {
-                msgs.iter().map(move |m| {
+                msgs.iter().filter_map(move |m| {
                     if field.is_empty() {
-                        m.clone()
+                        (!said.contains(&m.as_str())).then(|| m.clone())
                     } else {
-                        format!("{field}: {m}")
+                        Some(format!("{field}: {m}"))
                     }
                 })
             })
@@ -172,7 +173,24 @@ fn join_prose(parts: &[&str]) -> String {
 ///
 /// `www_authenticate` is the last resort: some 401s carry no body at all, and
 /// the header is then the only statement of what went wrong.
+///
+/// The correlation id is the body's `CorrelationId`, else its `traceId`.
 pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>) -> ApiError {
+    let (error, trace_id) = parse_error_envelope(status, body, www_authenticate);
+    error.or_correlation_id(trace_id)
+}
+
+/// [`parse_error_body`] with the body's `traceId` handed back beside the
+/// error instead of folded into it.
+///
+/// A ProblemDetails `traceId` is the ASP.NET activity id, a different value
+/// from the correlation id the response header carries, so a caller holding
+/// that header ranks it between the body's `CorrelationId` and the trace id.
+pub fn parse_error_envelope(
+    status: u16,
+    body: &str,
+    www_authenticate: Option<&str>,
+) -> (ApiError, Option<String>) {
     // **Redact while the body is still structured.** A CVV is three digits and
     // an ACH account number nine, so neither is distinguishable by shape —
     // only the field name says they are sensitive, and flattening the envelope
@@ -190,11 +208,14 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
             Some(h) if !h.trim().is_empty() => h.trim().to_string(),
             _ => format!("HTTP {status} with no response body"),
         };
-        return ApiError::Api {
-            status,
-            correlation_id: None,
-            message: redact_message(&message),
-        };
+        return (
+            ApiError::Api {
+                status,
+                correlation_id: None,
+                message: redact_message(&message),
+            },
+            None,
+        );
     }
 
     // OpenIddict first: `error` as a string appears in no other shape, so the
@@ -207,11 +228,14 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
         if let Some(uri) = e.error_uri.as_deref().filter(|s| !s.is_empty()) {
             message = format!("{message} ({uri})");
         }
-        return ApiError::Api {
-            status,
-            correlation_id: None,
-            message: redact_message(&message),
-        };
+        return (
+            ApiError::Api {
+                status,
+                correlation_id: None,
+                message: redact_message(&message),
+            },
+            None,
+        );
     }
 
     match serde_json::from_str::<ErrorEnvelope>(&safe_text) {
@@ -221,7 +245,6 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
             let cause = e.cause.as_deref().filter(|s| !s.is_empty());
             let exception = e.exception_type.as_deref().filter(|s| !s.is_empty());
             let error_code = e.error_code.as_deref().filter(|s| !s.is_empty());
-            let fields = e.flatten_errors();
 
             // `Title` is often generic, so `Cause` has to survive alongside it,
             // and `Details` alongside both — it is the one field that varies
@@ -234,6 +257,7 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
                     parts.push(part);
                 }
             }
+            let fields = e.flatten_errors(&parts);
             let core = match parts.is_empty() {
                 true if fields.is_none() => safe_text.clone(),
                 true => String::new(),
@@ -265,22 +289,27 @@ pub fn parse_error_body(status: u16, body: &str, www_authenticate: Option<&str>)
             if let Some(r) = e.resolution.as_deref().filter(|s| !s.is_empty()) {
                 message = format!("{message} Resolution: {r}");
             }
+            (
+                ApiError::Api {
+                    status,
+                    correlation_id: e.correlation_id,
+                    // The message reaches stderr and the JSON envelope, and an
+                    // error body routinely quotes the value that caused the
+                    // failure — so a PAN can arrive here even though nothing
+                    // in this module put it there.
+                    message: redact_message(&message),
+                },
+                e.trace_id,
+            )
+        }
+        Err(_) => (
             ApiError::Api {
                 status,
-                // ProblemDetails carries no correlation id, only a trace id.
-                correlation_id: e.correlation_id.or(e.trace_id),
-                // The message reaches stderr and the JSON envelope, and an
-                // error body routinely quotes the value that caused the
-                // failure — so a PAN can arrive here even though nothing in
-                // this module put it there.
-                message: redact_message(&message),
-            }
-        }
-        Err(_) => ApiError::Api {
-            status,
-            correlation_id: None,
-            message: redact_message(&safe_text),
-        },
+                correlation_id: None,
+                message: redact_message(&safe_text),
+            },
+            None,
+        ),
     }
 }
 
@@ -322,6 +351,42 @@ mod tests {
             panic!("expected an Api error")
         };
         assert!(!message.contains("123456789"), "{message}");
+    }
+
+    /// A form-level field error that repeats `Details` is said once.
+    #[test]
+    fn a_form_level_error_repeating_the_details_is_said_once() {
+        let body = r#"{"Title":"Bad Request",
+                       "Details":"Only active payment links can be shared.",
+                       "Errors":{"":["Only active payment links can be shared."]}}"#;
+        let ApiError::Api { message, .. } = parse_error_body(400, body, None) else {
+            panic!("expected an Api error")
+        };
+        assert_eq!(
+            message,
+            "Bad Request: Only active payment links can be shared."
+        );
+    }
+
+    /// A form-level field error that says something new is kept.
+    #[test]
+    fn a_form_level_error_with_its_own_text_is_kept() {
+        let body = r#"{"Details":"Validation failed.","Errors":{"":["Link has expired."]}}"#;
+        let ApiError::Api { message, .. } = parse_error_body(400, body, None) else {
+            panic!("expected an Api error")
+        };
+        assert!(message.contains("Validation failed."), "{message}");
+        assert!(message.contains("Link has expired."), "{message}");
+    }
+
+    /// A rule the API states under an account field keeps its digit count.
+    #[test]
+    fn a_routing_number_rule_keeps_its_digit_count() {
+        let body = r#"{"Errors":{"routingNumber":["Routing number must be 9 digits."]}}"#;
+        let ApiError::Api { message, .. } = parse_error_body(400, body, None) else {
+            panic!("expected an Api error")
+        };
+        assert_eq!(message, "routingNumber: Routing number must be 9 digits.");
     }
 
     /// The long-run rule still catches what the key-based one cannot: a PAN

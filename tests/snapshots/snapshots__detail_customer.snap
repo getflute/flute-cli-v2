@@ -3,7 +3,6 @@ source: tests/snapshots.rs
 expression: "render::detail_table(r.resource, &object_for(r))"
 ---
 customerId:                        8db2ff47-b143-4adb-ab58-a11111111111
-externalId:                        —
 firstName:                         Ada
 lastName:                          Lovelace
 companyName:                       —
@@ -27,5 +26,4 @@ transactionsCount:                 —
 transactionsVolume:                —
 lastTransactionAmount:             —
 lastTransactionDate:               2026-05-29T22:04:31.771Z
-numberOfSubscriptions:             —
 paymentMethodsCount:               1

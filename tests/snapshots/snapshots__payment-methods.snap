@@ -12,7 +12,7 @@ Commands:
   add-card     Vault a card (POST /v2/payment-methods/cards)
   add-ach      Vault an ACH account (POST /v2/payment-methods/ach)
   update       Rename a vaulted payment method (PATCH /v2/payment-methods/{paymentMethodId})
-  delete       Remove a payment method from the vault (DELETE /v2/payment-methods/{paymentMethodId})
+  delete       Delete a payment method from the vault (DELETE /v2/payment-methods/{paymentMethodId})
   set-default  Make a payment method the customer's default (POST /v2/payment-methods/{paymentMethodId}/set-default)
   help         Print this message or the help of the given subcommand(s)
 

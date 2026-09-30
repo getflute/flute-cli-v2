@@ -86,6 +86,30 @@ fn live_card_sale_auto_capture() {
          delete the transitional arm and this assertion together: {v}"
     );
     assert!(v["meta"].get("page_info").is_none());
+    // In the read's shape, which is the schema the divergence validates
+    // against: the containers the published examples show are absent, and
+    // the read's own are present.
+    for absent in ["processorResponse", "amountDetails", "type"] {
+        assert!(
+            v["data"].get(absent).is_none(),
+            "the create answered with the example shape's {absent}: {v}"
+        );
+    }
+    for present in ["amountBreakdown", "declineDetails", "processorDetails"] {
+        assert!(
+            v["data"].get(present).is_some(),
+            "the create answered without the read shape's {present}: {v}"
+        );
+    }
+    // Two fields the schema omits and the table formats as money.
+    assert!(
+        v["data"]["amountBreakdown"].get("taxAmount").is_some(),
+        "no amountBreakdown.taxAmount: {v}"
+    );
+    assert!(
+        v["data"]["transactionEvents"][0].get("amount").is_some(),
+        "no transactionEvents[0].amount: {v}"
+    );
 
     // And the transaction is readable back by id.
     let id = v["data"]["transactionId"].as_str().unwrap();

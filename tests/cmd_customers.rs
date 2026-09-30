@@ -1253,3 +1253,205 @@ async fn a_list_with_more_pages_says_so_on_stderr_in_table_mode() {
     let stderr = String::from_utf8_lossy(&json.get_output().stderr).to_string();
     assert!(!stderr.contains("--all"), "{stderr}");
 }
+
+/// `create` answers with the identifier alone, so its table is that one row,
+/// not the read's rows dashed out. The body is a sandbox create response.
+#[tokio::test]
+async fn create_table_shows_only_what_the_create_returns() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/customers"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "customerId": "01a0ee2f-ea24-7734-a50b-b3988a38dfee"})))
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args([
+            "--output",
+            "table",
+            "customers",
+            "create",
+            "--first-name",
+            "Demo",
+            "--last-name",
+            "Customer",
+        ])
+        .output()
+        .unwrap();
+    let table = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(
+        table.trim_end(),
+        "customerId: 01a0ee2f-ea24-7734-a50b-b3988a38dfee",
+        "{table}"
+    );
+}
+
+/// A customer read as the sandbox answers for one with a vaulted card and a
+/// vaulted bank account.
+fn vaulted_customer() -> serde_json::Value {
+    serde_json::json!({
+        "achAccounts": [{
+            "accountHolderType": "Personal", "accountNumber": "****9012",
+            "accountType": "Checking", "isDefault": false,
+            "paymentMethodId": "7d3377a1-4482-4fe8-930c-317bd9b906aa",
+            "paymentName": "qa-doc-ach", "routingNumber": "021000021",
+            "taxId": null}],
+        "billingAddress": {
+            "addressLine1": "123 Test St", "addressLine2": null, "city": "Austin",
+            "countryCode": "US", "postalCode": "10001", "stateCode": "TX"},
+        "cards": [{
+            "cardMask": "411111******1111", "cardTokenType": "Local",
+            "cardType": "Visa", "creditDebitType": "Debit",
+            "expirationMonth": 12, "expirationYear": 28, "isDefault": false,
+            "paymentMethodId": "7b6d83de-ee92-41e1-a450-92b915d6cfc0",
+            "paymentName": "qa-doc-card"}],
+        "companyName": null,
+        "customerId": "cus_1",
+        "email": "qa-doc@example.com",
+        "externalId": null,
+        "firstName": "Qa",
+        "hasSmsConsent": false,
+        "lastName": "Doc",
+        "lastTransactionAmount": 2.00,
+        "lastTransactionDate": "2026-09-17T09:01:14.990383Z",
+        "mobilePhoneNumber": null,
+        "numberOfSubscriptions": 0,
+        "shippingAddress": null,
+        "shouldUseBillingAsShippingAddress": false,
+        "transactionsCount": 1,
+        "transactionsVolume": 2.00
+    })
+}
+
+async fn vaulted_customer_table() -> String {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/customers/cus_1"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(vaulted_customer()))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "table", "customers", "get", "cus_1"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    String::from_utf8(out).unwrap()
+}
+
+/// Each instrument's fields sit together, card then bank account, and none
+/// of them trails after the other instrument's.
+#[tokio::test]
+async fn get_table_keeps_each_instrument_s_fields_together() {
+    let text = vaulted_customer_table().await;
+    let labels: Vec<&str> = text
+        .lines()
+        .filter_map(|l| l.split(':').next())
+        .filter(|l| l.starts_with("cards[") || l.starts_with("achAccounts["))
+        .collect();
+    assert_eq!(
+        labels,
+        [
+            "cards[0].paymentMethodId",
+            "cards[0].paymentName",
+            "cards[0].cardMask",
+            "cards[0].cardType",
+            "cards[0].creditDebitType",
+            "cards[0].expirationMonth",
+            "cards[0].expirationYear",
+            "cards[0].cardTokenType",
+            "cards[0].isDefault",
+            "achAccounts[0].paymentMethodId",
+            "achAccounts[0].paymentName",
+            "achAccounts[0].accountNumber",
+            "achAccounts[0].routingNumber",
+            "achAccounts[0].accountType",
+            "achAccounts[0].accountHolderType",
+            "achAccounts[0].taxId",
+            "achAccounts[0].isDefault",
+        ]
+    );
+}
+
+/// The customer's flags and each instrument's default read `yes`/`no`, as
+/// `payment-methods get` reads its own `isDefault`.
+#[tokio::test]
+async fn get_table_reads_the_flags_as_yes_or_no() {
+    let text = vaulted_customer_table().await;
+    for label in [
+        "hasSmsConsent:",
+        "shouldUseBillingAsShippingAddress:",
+        "cards[0].isDefault:",
+        "achAccounts[0].isDefault:",
+    ] {
+        let line = text.lines().find(|l| l.starts_with(label)).unwrap();
+        assert!(line.ends_with(" no"), "{line}");
+    }
+    assert!(!text.contains("false"), "{text}");
+}
+
+/// `externalId` and `numberOfSubscriptions` hold no row of their own: no
+/// flag sets the one and v2 has no subscriptions. Sent, they print after the
+/// declared rows; absent, they print nothing.
+#[tokio::test]
+async fn get_table_prints_the_unset_fields_only_when_sent() {
+    let text = vaulted_customer_table().await;
+    let tail: Vec<&str> = text.lines().rev().take(2).collect();
+    assert!(tail[1].starts_with("externalId:"), "{text}");
+    assert!(tail[0].starts_with("numberOfSubscriptions:"), "{text}");
+}
+
+/// An empty address component beside another field is refused too: the
+/// update would otherwise succeed with the component silently left out.
+#[tokio::test]
+async fn an_empty_address_component_beside_another_field_is_refused() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "customers",
+            "update",
+            "cus_1",
+            "--email",
+            "ada@example.com",
+            "--billing-line1",
+            "",
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains(
+            "--billing-line1 is empty, and address components cannot be cleared individually",
+        ));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "nothing may reach the API"
+    );
+}
+
+/// `--billing-line1 ""` sends nothing, because an address component cannot
+/// be cleared on its own, and the refusal says so.
+#[tokio::test]
+async fn an_update_with_only_an_empty_address_component_is_refused_with_the_reason() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["customers", "update", "cus_1", "--billing-line1", ""])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains(
+            "--billing-line1 is empty, and address components cannot be cleared individually",
+        ));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}

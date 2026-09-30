@@ -207,22 +207,34 @@ fn a_tip_adjustment_with_a_zero_half_is_refused_as_a_pair() {
     }
 }
 
-/// All three fields are required by schema, so all three are always sent
-/// — `hasCustomerConsent` false included, because omitting it would fail
-/// the required check rather than mean "no consent".
+/// All three fields are required by schema, so all three are always sent.
 #[test]
 fn a_share_receipt_body_always_carries_all_three_required_fields() {
     let args = ShareReceiptArgs {
         transaction_id: "txn_1".into(),
         share_by: ShareBy::Sms,
         recipient: "+14155552309".into(),
-        has_customer_consent: false,
+        has_customer_consent: true,
     };
     let body = build_share_receipt_body(&args).unwrap();
     assert_eq!(body["shareBy"], "Sms");
     assert_eq!(body["recipient"], "+14155552309");
-    assert_eq!(body["hasCustomerConsent"], false);
+    assert_eq!(body["hasCustomerConsent"], true);
     assert_eq!(body.as_object().unwrap().len(), 3);
+}
+
+/// The API refuses an SMS receipt without consent, so the refusal is local
+/// and names the flag.
+#[test]
+fn a_share_receipt_without_consent_is_refused() {
+    let args = ShareReceiptArgs {
+        transaction_id: "txn_1".into(),
+        share_by: ShareBy::Sms,
+        recipient: "+14155552309".into(),
+        has_customer_consent: false,
+    };
+    let err = build_share_receipt_body(&args).unwrap_err().to_string();
+    assert!(err.contains("--consent"), "{err}");
 }
 
 #[test]
@@ -555,6 +567,38 @@ fn a_transaction_list_sends_the_sort_order_it_is_asked_for() {
     assert_eq!(order(true, false).as_deref(), Some("asc"));
     assert_eq!(order(false, true).as_deref(), Some("desc"));
     assert_eq!(order(false, false), None);
+}
+
+/// The server ignores `sortOrder` without `sortBy`, so a direction alone
+/// sends the date as the field; a named field wins, and no direction sends
+/// neither.
+#[test]
+fn a_sort_direction_without_a_field_sorts_by_transaction_date() {
+    let sort_by = |sort_by: Option<&str>, asc, desc| {
+        let q = build_list_transactions_query(&ListTransactionsArgs {
+            sort_by: sort_by.map(str::to_string),
+            asc,
+            desc,
+            ..Default::default()
+        })
+        .unwrap();
+        q.iter()
+            .find(|(k, _)| *k == "sortBy")
+            .map(|(_, v)| v.clone())
+    };
+    assert_eq!(
+        sort_by(None, true, false).as_deref(),
+        Some("transactionDateTime")
+    );
+    assert_eq!(
+        sort_by(None, false, true).as_deref(),
+        Some("transactionDateTime")
+    );
+    assert_eq!(
+        sort_by(Some("processedAmount"), true, false).as_deref(),
+        Some("processedAmount")
+    );
+    assert_eq!(sort_by(None, false, false), None);
 }
 
 /// The API voids an unsettled card transaction in full and reverses an ACH

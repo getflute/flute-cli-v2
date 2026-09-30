@@ -465,11 +465,10 @@ pub static POS_TRANSACTION: Resource = Resource {
         "/referenceId",
         "/baseAmount",
         "/currencyCode",
+        // A POS transaction's `extraAmounts` carries the tip alone; the
+        // discount and surcharge members of the shared schema are not sent.
         "/extraAmounts/tipAmount",
         "/extraAmounts/tipRate",
-        "/extraAmounts/discountAmount",
-        "/extraAmounts/discountRate",
-        "/extraAmounts/surchargeRate",
         "/processedAmount",
         "/transactionId",
         "/createdOn",
@@ -516,7 +515,6 @@ pub static POS_TRANSACTION: Resource = Resource {
         "/baseAmount",
         "/processedAmount",
         "/extraAmounts/tipAmount",
-        "/extraAmounts/discountAmount",
         "/linkedTransaction/processedAmount",
     ],
     yes_no: &[],
