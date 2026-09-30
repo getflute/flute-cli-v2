@@ -247,30 +247,6 @@ async fn customer_get_exchange_matches_the_contract() {
     support::assert_exchange_observed(&server, &ex).await;
 }
 
-/// The detail view reaches into a nested object, so a customer's address is
-/// visible in table mode.
-#[tokio::test]
-async fn get_table_shows_the_nested_billing_address() {
-    let server = support::mock_with_token().await;
-    Mock::given(method("GET"))
-        .and(path("/v2/customers/cus_1"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "customerId": "cus_1",
-            "firstName": "Ada",
-            "billingAddress": {"city": "Austin", "stateCode": "TX", "countryCode": "US"}
-        })))
-        .mount(&server)
-        .await;
-
-    support::bin(&server)
-        .args(["--output", "table", "customers", "get", "cus_1"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("billingAddress.city"))
-        .stdout(predicate::str::contains("Austin"))
-        .stdout(predicate::str::contains("billingAddress.stateCode"));
-}
-
 /// The declared order is the resource's, not the JSON map's: `customerId`
 /// prints first even though `companyName` sorts before it.
 #[tokio::test]
@@ -1355,52 +1331,25 @@ async fn get_table_keeps_each_instrument_s_fields_together() {
         labels,
         [
             "cards[0].paymentMethodId",
-            "cards[0].paymentName",
             "cards[0].cardMask",
-            "cards[0].cardType",
-            "cards[0].creditDebitType",
-            "cards[0].expirationMonth",
-            "cards[0].expirationYear",
-            "cards[0].cardTokenType",
             "cards[0].isDefault",
             "achAccounts[0].paymentMethodId",
-            "achAccounts[0].paymentName",
             "achAccounts[0].accountNumber",
-            "achAccounts[0].routingNumber",
-            "achAccounts[0].accountType",
-            "achAccounts[0].accountHolderType",
-            "achAccounts[0].taxId",
             "achAccounts[0].isDefault",
         ]
     );
 }
 
-/// The customer's flags and each instrument's default read `yes`/`no`, as
-/// `payment-methods get` reads its own `isDefault`.
+/// Each instrument's default reads `yes`/`no`, as `payment-methods get` reads
+/// its own `isDefault`.
 #[tokio::test]
 async fn get_table_reads_the_flags_as_yes_or_no() {
     let text = vaulted_customer_table().await;
-    for label in [
-        "hasSmsConsent:",
-        "shouldUseBillingAsShippingAddress:",
-        "cards[0].isDefault:",
-        "achAccounts[0].isDefault:",
-    ] {
+    for label in ["cards[0].isDefault:", "achAccounts[0].isDefault:"] {
         let line = text.lines().find(|l| l.starts_with(label)).unwrap();
         assert!(line.ends_with(" no"), "{line}");
     }
     assert!(!text.contains("false"), "{text}");
-}
-
-/// `externalId` and `numberOfSubscriptions` hold no row of their own: no
-/// flag sets the one and v2 has no subscriptions. Sent, they print after the
-/// declared rows; absent, they print nothing.
-#[tokio::test]
-async fn get_table_prints_the_unset_fields_only_when_sent() {
-    let text = vaulted_customer_table().await;
-    let tail: Vec<&str> = text.lines().rev().take(2).collect();
-    assert!(tail[1].starts_with("externalId:"), "{text}");
-    assert!(tail[0].starts_with("numberOfSubscriptions:"), "{text}");
 }
 
 /// An empty address component beside another field is refused too: the

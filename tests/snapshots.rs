@@ -386,17 +386,10 @@ const RENDERED: &[Rendered] = &[
         at: "",
     },
     Rendered {
-        resource: &flute_cli2::groups::transactions::TRANSACTION_CARD,
-        ident: "TRANSACTION_CARD",
+        resource: &flute_cli2::groups::transactions::TRANSACTION,
+        ident: "TRANSACTION_CREATED",
         operation_id: "flute-v2-post-transactions",
         variant: "new card, automatic capture",
-        at: "",
-    },
-    Rendered {
-        resource: &flute_cli2::groups::transactions::TRANSACTION_ACH,
-        ident: "TRANSACTION_ACH",
-        operation_id: "flute-v2-post-transactions",
-        variant: "new ACH",
         at: "",
     },
     Rendered {
@@ -404,13 +397,6 @@ const RENDERED: &[Rendered] = &[
         ident: "PAYMENT_SESSION_CREATED",
         operation_id: "flute-v2-post-payment-sessions",
         variant: "fully specified",
-        at: "",
-    },
-    Rendered {
-        resource: &flute_cli2::groups::payment_sessions::PAYMENT_SESSION_SAVE_METHOD_CREATED,
-        ident: "PAYMENT_SESSION_SAVE_METHOD_CREATED",
-        operation_id: "flute-v2-post-payment-sessions",
-        variant: "vault only",
         at: "",
     },
 ];

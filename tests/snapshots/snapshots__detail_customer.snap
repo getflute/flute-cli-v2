@@ -2,28 +2,9 @@
 source: tests/snapshots.rs
 expression: "render::detail_table(r.resource, &object_for(r))"
 ---
-customerId:                        8db2ff47-b143-4adb-ab58-a11111111111
-firstName:                         Ada
-lastName:                          Lovelace
-companyName:                       —
-email:                             ada@example.com
-mobilePhoneNumber:                 +14155552309
-hasSmsConsent:                     —
-billingAddress.addressLine1:       —
-billingAddress.addressLine2:       —
-billingAddress.city:               Austin
-billingAddress.stateCode:          TX
-billingAddress.postalCode:         —
-billingAddress.countryCode:        —
-shouldUseBillingAsShippingAddress: —
-shippingAddress.addressLine1:      —
-shippingAddress.addressLine2:      —
-shippingAddress.city:              —
-shippingAddress.stateCode:         —
-shippingAddress.postalCode:        —
-shippingAddress.countryCode:       —
-transactionsCount:                 —
-transactionsVolume:                —
-lastTransactionAmount:             —
-lastTransactionDate:               2026-05-29T22:04:31.771Z
-paymentMethodsCount:               1
+customerId:        8db2ff47-b143-4adb-ab58-a11111111111
+firstName:         Ada
+lastName:          Lovelace
+companyName:       —
+email:             ada@example.com
+mobilePhoneNumber: +14155552309

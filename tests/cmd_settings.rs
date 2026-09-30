@@ -192,27 +192,6 @@ async fn payment_config_table_shows_the_processor_ids_first() {
     assert!(out.contains("isDefault"), "{out}");
 }
 
-/// A settings read is a nested document, and the shared detail renderer has
-/// to reach all of it — the tip options are an array of scalars and the batch
-/// time slots an array of objects.
-#[tokio::test]
-async fn payment_config_table_reaches_the_nested_and_repeated_fields() {
-    let server = support::mock_with_token().await;
-    support::mount(&server, "flute-v2-get-settings-payment-config", "default").await;
-    support::bin(&server)
-        .args(["--output", "table", "settings", "payment-config"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("10, 15, 20"))
-        .stdout(predicate::str::contains(
-            "availablePaymentProcessors[0].settlementBatchTimeSlots[0].timezoneName",
-        ))
-        .stdout(predicate::str::contains("America/New_York"))
-        .stdout(predicate::str::contains(
-            "addressVerificationServiceOptions.profile",
-        ));
-}
-
 #[tokio::test]
 async fn contact_info_table_reaches_into_the_repeated_addresses() {
     let server = support::mock_with_token().await;

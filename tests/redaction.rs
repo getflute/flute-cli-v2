@@ -47,7 +47,7 @@ async fn debug_traces_never_leak_pan_cvv_token_or_secret() {
     );
 
     assert!(!combined.contains("4111111111111111"), "PAN leaked");
-    assert!(!combined.contains("8371"), "CVV leaked");
+    assert!(!contains_number(&combined, "8371"), "CVV leaked");
     assert!(
         !combined.contains("securityCode\":\"8371"),
         "CVV survived redaction"
@@ -295,7 +295,7 @@ async fn a_short_sensitive_value_is_redacted_from_an_error_response() {
     let envelope = String::from_utf8(out).unwrap();
 
     // None reaches the user-facing envelope...
-    assert!(!envelope.contains("837"), "{envelope}");
+    assert!(!contains_number(&envelope, "837"), "{envelope}");
     assert!(!envelope.contains("123456789"), "{envelope}");
     assert!(!envelope.contains("4111-1111-1111"), "{envelope}");
     // ...and the message still says which fields failed.
@@ -315,7 +315,7 @@ async fn a_short_sensitive_value_is_redacted_from_an_error_response() {
         trace.contains("HTTP response"),
         "no response was traced:\n{trace}"
     );
-    assert!(!trace.contains("837"), "{trace}");
+    assert!(!contains_number(&trace, "837"), "{trace}");
     assert!(!trace.contains("123456789"), "{trace}");
     assert!(!trace.contains("4111-1111-1111"), "{trace}");
 }
@@ -512,4 +512,23 @@ async fn a_card_number_in_a_filter_value_is_masked_in_the_trace() {
         combined.contains("fullName="),
         "no query in the trace to inspect, so the assertion above is vacuous:\n{combined}"
     );
+}
+
+/// Whether `digits` appears in `text` as a number of its own, with no digit
+/// on either side. A timestamp's microseconds or a port can contain a short
+/// value by chance, as `44.108373Z` contains `837`; a leaked one stands alone.
+fn contains_number(text: &str, digits: &str) -> bool {
+    text.match_indices(digits).any(|(at, _)| {
+        let before = text[..at].chars().next_back();
+        let after = text[at + digits.len()..].chars().next();
+        !before.is_some_and(|c| c.is_ascii_digit()) && !after.is_some_and(|c| c.is_ascii_digit())
+    })
+}
+
+#[test]
+fn a_number_inside_a_timestamp_or_port_is_not_a_leak() {
+    assert!(!contains_number("2026-09-30T19:50:44.108373Z", "837"));
+    assert!(!contains_number("http://127.0.0.1:18371/", "8371"));
+    assert!(contains_number(r#""securityCode":"837""#, "837"));
+    assert!(contains_number("837 is invalid", "837"));
 }

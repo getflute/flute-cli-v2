@@ -480,11 +480,10 @@ pub fn build_create_customer_body(args: &CreateCustomerArgs) -> Result<Value> {
 }
 
 /// What a customer is worth saying, in the order it is worth saying it:
-/// identity, then contact, then addresses, then activity, then instruments.
+/// identity, then contact, then the saved instruments.
 ///
 /// The **view's fixed shape** — a pointer the response does not carry still
-/// holds its row, with a dash — and anything the API sends that is not named
-/// here still prints, after these.
+/// holds its row, with a dash.
 pub static CUSTOMER: Resource = Resource {
     object: "customer",
     object_list: "customer_list",
@@ -496,40 +495,11 @@ pub static CUSTOMER: Resource = Resource {
         "/companyName",
         "/email",
         "/mobilePhoneNumber",
-        "/hasSmsConsent",
-        "/billingAddress/addressLine1",
-        "/billingAddress/addressLine2",
-        "/billingAddress/city",
-        "/billingAddress/stateCode",
-        "/billingAddress/postalCode",
-        "/billingAddress/countryCode",
-        "/shouldUseBillingAsShippingAddress",
-        "/shippingAddress/addressLine1",
-        "/shippingAddress/addressLine2",
-        "/shippingAddress/city",
-        "/shippingAddress/stateCode",
-        "/shippingAddress/postalCode",
-        "/shippingAddress/countryCode",
-        "/transactionsCount",
-        "/transactionsVolume",
-        "/lastTransactionAmount",
-        "/lastTransactionDate",
         "/cards/[]/paymentMethodId",
-        "/cards/[]/paymentName",
         "/cards/[]/cardMask",
-        "/cards/[]/cardType",
-        "/cards/[]/creditDebitType",
-        "/cards/[]/expirationMonth",
-        "/cards/[]/expirationYear",
-        "/cards/[]/cardTokenType",
         "/cards/[]/isDefault",
         "/achAccounts/[]/paymentMethodId",
-        "/achAccounts/[]/paymentName",
         "/achAccounts/[]/accountNumber",
-        "/achAccounts/[]/routingNumber",
-        "/achAccounts/[]/accountType",
-        "/achAccounts/[]/accountHolderType",
-        "/achAccounts/[]/taxId",
         "/achAccounts/[]/isDefault",
     ],
     // The list item carries no creation timestamp, so the last column

@@ -446,12 +446,11 @@ async fn wait_for_a_terminal_status(
 }
 
 /// What a POS transaction is worth saying, in the order it is worth saying
-/// it: identity and state, then the device, then amounts, then the
-/// transaction it became.
+/// it: identity and state, the terminal, the amounts, then the transaction it
+/// became.
 ///
 /// The **view's fixed shape** — a pointer the response does not carry still
-/// holds its row, with a dash — and anything the API sends that is not named
-/// here still prints, after these.
+/// holds its row, with a dash.
 pub static POS_TRANSACTION: Resource = Resource {
     object: "pos_transaction",
     object_list: "pos_transaction_list",
@@ -459,27 +458,10 @@ pub static POS_TRANSACTION: Resource = Resource {
     detail: &[
         "/posTransactionId",
         "/posTransactionStatus",
-        "/captureMethod",
         "/terminalId",
-        "/posDeviceId",
-        "/referenceId",
         "/baseAmount",
-        "/currencyCode",
-        // A POS transaction's `extraAmounts` carries the tip alone; the
-        // discount and surcharge members of the shared schema are not sent.
-        "/extraAmounts/tipAmount",
-        "/extraAmounts/tipRate",
         "/processedAmount",
         "/transactionId",
-        "/createdOn",
-        "/modifiedOn",
-        "/merchantId",
-        "/customerId",
-        "/paymentProcessorId",
-        "/linkedTransaction/transactionId",
-        "/linkedTransaction/transactionStatus",
-        "/linkedTransaction/transactionType",
-        "/linkedTransaction/processedAmount",
     ],
     // The list item declares neither a transaction type nor an
     // `isCompleted`, so the table shows neither rather than inventing them,

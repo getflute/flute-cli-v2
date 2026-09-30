@@ -138,8 +138,8 @@ async fn terminal_list_table_shows_the_serial_the_mode_and_both_states() {
         .stdout(predicate::str::contains("2026-08-11T18:44:45.638Z"));
 }
 
-/// The status table is a detail view, so every field the API sent is present
-/// — including the ones a caller diagnoses a dead terminal with.
+/// The status table carries the fields a caller diagnoses a dead terminal
+/// with.
 #[tokio::test]
 async fn terminal_status_table_shows_the_diagnostic_fields() {
     let server = support::mock_with_token().await;
@@ -155,9 +155,8 @@ async fn terminal_status_table_shows_the_diagnostic_fields() {
         .success()
         .stdout(predicate::str::contains("batteryLevel"))
         .stdout(predicate::str::contains("90"))
-        .stdout(predicate::str::contains("debitPinKey"))
-        .stdout(predicate::str::contains("printerStatus"))
-        .stdout(predicate::str::contains("terminalAppVersion"));
+        .stdout(predicate::str::contains("connectionStatus"))
+        .stdout(predicate::str::contains("printerStatus"));
 }
 
 /// `quiet` prints the terminal ids, one per line, on both reads.

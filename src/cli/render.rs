@@ -7,10 +7,9 @@
 //! top level in map order.
 //!
 //! This is deliberately **not** a universal JSON-to-table guesser. The layout
-//! is shared; a resource declares the shape its own fields make and how they
-//! are read, and anything the descriptor does not name still prints — a beta
-//! API adds fields, and a dropped one is how a user misses a new decline
-//! reason.
+//! is shared; a resource declares the fields worth reading at a glance and
+//! how they are read. A detail view prints those and nothing else: the whole
+//! response is `--output json`.
 
 use crate::cli::output::{Envelope, OutputFormat};
 use anyhow::Result;
@@ -48,8 +47,8 @@ pub struct Resource {
     /// The detail view's **fixed shape**, in the order it is worth reading:
     /// each pointer holds a row whether or not the response carries it, so
     /// the same questions are answered about every record of the resource.
-    /// It is not a whitelist — everything not named here still renders, after
-    /// these. A pointer may carry a `/[]` step — the surface matrix's
+    /// It is the whole view — a field not named here is in `--output json`
+    /// only. A pointer may carry a `/[]` step — the surface matrix's
     /// spelling — which ranks every element of that array; those name
     /// elements rather than rows, and appear only for the ones that exist.
     pub detail: &'static [&'static str],
@@ -68,10 +67,9 @@ pub struct Resource {
     pub yes_no: &'static [&'static str],
 }
 
-/// One `label: value` line per leaf: declared pointers first in declared
-/// order, then everything else.
+/// One `label: value` line per declared pointer, in declared order.
 pub fn detail_table(resource: &Resource, data: &Value) -> String {
-    labelled(&detail_rows(resource, data)).join("\n")
+    labelled(&declared_rows(resource, &leaves_of(resource, data))).join("\n")
 }
 
 /// `label:` padded so every value starts in the same column, one space past
@@ -366,29 +364,6 @@ fn leaves_of(resource: &Resource, data: &Value) -> Vec<Leaf> {
         .collect()
 }
 
-/// The declared pointers first, in declared order, then everything else.
-///
-/// The flattening order decides among leaves of one pattern and among the
-/// undeclared ones — alphabetical, because `serde_json::Map` is a `BTreeMap`
-/// in this build. Deterministic either way, which is what a snapshot needs.
-fn detail_rows(resource: &Resource, data: &Value) -> Vec<(String, String)> {
-    let leaves = leaves_of(resource, data);
-    let mut rows = declared_rows(resource, &leaves);
-    rows.extend(
-        leaves
-            .iter()
-            .filter(|leaf| !resource.detail.contains(&leaf.pattern.as_str()))
-            // A null container's declared fields already print as dashes, so
-            // the container itself would say the same thing twice.
-            .filter(|leaf| {
-                let parent = format!("{}/", leaf.pattern);
-                leaf.value != MISSING || !resource.detail.iter().any(|d| d.starts_with(&parent))
-            })
-            .map(|leaf| (leaf.label.clone(), leaf.value.clone())),
-    );
-    rows
-}
-
 /// The declared set, in declared order, as rows.
 ///
 /// A declared pointer the response does not carry still holds its row, with a
@@ -583,6 +558,11 @@ mod tests {
             "/status",
             "/billingAddress/city",
             "/parts/[]/name",
+            "/codes",
+            "/price",
+            "/quantity",
+            "/processedAmount",
+            "/isDefault",
         ],
         columns: &[
             Column {
@@ -649,40 +629,32 @@ mod tests {
         let out = detail_table(&WIDGET, &v);
         assert!(out.contains("billingAddress.city"), "{out}");
         assert!(out.contains("Austin"), "{out}");
-        // Undeclared, and still present.
-        assert!(out.contains("billingAddress.countryCode"), "{out}");
+        assert!(!out.contains("countryCode"), "{out}");
     }
 
-    /// A beta API adds fields. Dropping one silently is how a user misses a
-    /// new decline reason, so an unnamed leaf prints after the named ones.
+    /// The view is the declared set: a field no descriptor names is read
+    /// from `--output json`.
     #[test]
-    fn detail_table_keeps_a_field_no_descriptor_names() {
-        let v = json!({"widgetId": "w_1", "brandNewField": "surprise"});
+    fn detail_table_prints_only_declared_fields() {
+        let v = json!({"widgetId": "w_1", "brandNewField": "surprise", "meta": {"a": 1}});
         let out = detail_table(&WIDGET, &v);
-        let labels = labels(&out);
-        assert_eq!(labels.first().unwrap(), "widgetId");
-        assert_eq!(labels.last().unwrap(), "brandNewField");
-        assert!(out.contains("surprise"), "{out}");
+        assert!(!out.contains("brandNewField"), "{out}");
+        assert!(!out.contains("meta"), "{out}");
     }
 
     /// A declared field is part of the view's shape, so it holds its row
-    /// whether the response omits it or sends an explicit null. A field the
-    /// descriptor does not name appears only when it is there.
+    /// whether the response omits it or sends an explicit null.
     #[test]
     fn detail_table_dashes_a_declared_field_that_is_missing_or_null() {
-        let v = json!({"widgetId": "w_1", "receipt": null});
+        let v = json!({"widgetId": "w_1", "billingAddress": {"city": null}});
         let out = detail_table(&WIDGET, &v);
-        assert!(
-            out.lines()
-                .any(|l| l.starts_with("status:") && l.ends_with('—')),
-            "{out}"
-        );
-        assert!(
-            out.lines()
-                .any(|l| l.starts_with("receipt:") && l.ends_with('—')),
-            "{out}"
-        );
-        assert!(!out.contains("brandNewField"), "{out}");
+        for label in ["status:", "billingAddress.city:"] {
+            assert!(
+                out.lines()
+                    .any(|l| l.starts_with(label) && l.ends_with('—')),
+                "{out}"
+            );
+        }
     }
 
     /// A null container whose fields the view declares is already shown by
@@ -726,20 +698,6 @@ mod tests {
         assert!(out.contains("WEB, PPD"), "{out}");
     }
 
-    /// One `/[]` pattern ranks every element of the array, so declared order
-    /// survives indexing.
-    #[test]
-    fn a_bracket_pattern_ranks_every_element_of_an_array() {
-        let v = json!({"parts": [{"name": "left"}], "aaaFirstAlphabetically": 1});
-        let labels = labels(&detail_table(&WIDGET, &v));
-        let declared = labels.iter().position(|l| l == "parts[0].name").unwrap();
-        let undeclared = labels
-            .iter()
-            .position(|l| l == "aaaFirstAlphabetically")
-            .unwrap();
-        assert!(declared < undeclared, "{labels:?}");
-    }
-
     /// Consecutive patterns into one array read element by element, so each
     /// element's fields sit together however many elements there are.
     #[test]
@@ -775,18 +733,6 @@ mod tests {
             ],
             "{out}"
         );
-    }
-
-    /// An empty container is not nothing. Rendering it as blank would read as
-    /// a field the API did not send.
-    #[test]
-    fn detail_table_shows_empty_containers_rather_than_dropping_them() {
-        let v = json!({"widgetId": "w_1", "parts": [], "meta": {}});
-        let out = detail_table(&WIDGET, &v);
-        assert!(out.contains("parts"), "{out}");
-        assert!(out.contains("[]"), "{out}");
-        assert!(out.contains("meta"), "{out}");
-        assert!(out.contains("{}"), "{out}");
     }
 
     /// A detail view is authoritative: truncating an id or a decline reason

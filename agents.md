@@ -76,6 +76,9 @@ CI log stays quiet.
   collection read, and is **absent** — not null — on a write, on a single-object
   read, and under `--all`. Under `--all` the data spans every page, so there is
   no one `pageInfo` to report.
+- `--output table` prints a summary: a fixed handful of fields per resource,
+  each holding its row with a dash when the response lacks it. Every other
+  field is in `--output json` only, so never parse `table`.
 - `--output quiet` prints the identifier alone, one per line for a collection.
   Ideal for chaining. Four commands have no identifier to print and print
   nothing at all: see
@@ -461,7 +464,13 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   it voids an unsettled card transaction in full and reverses an ACH one in
   full whatever amount is sent. So with `--amount` the CLI first reads the
   transaction and refuses (exit 3, no reversal sent) unless it is a card
-  transaction in `Settled` or `Refunded`. A partial amount on `capture` or `reversal` must be
+  transaction in `Settled` or `Refunded`. The response is the transaction
+  that was reversed, not a new one: `processedAmount` is the original charge.
+  A void reads `transactionStatus: "Voided"`; a refund of a settled card can
+  leave the status `Settled`, and says what it did in
+  `refundDetails.refundedAmount`, the total refunded so far. Observed on the
+  sandbox: after a void, `availableRefundAmount` still reports the full
+  amount, so do not read it as refundable. A partial amount on `capture` or `reversal` must be
   **greater than zero**: the whole of it is asked for by omitting the flag,
   not by naming nothing. `tip-adjust`'s `--tip-amount` and `--tip-rate` carry
   the same floor — zero moves no tip, so either is refused before the wire.
@@ -483,13 +492,10 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
 - **`share-receipt` requires `--consent`.** SMS is the only channel, and the
   API refuses an SMS receipt without the customer's consent, so one without
   the flag is refused before the wire: `client`, exit 3, nothing sent.
-- **A single transaction's table shows its own instrument.** A card
-  transaction's rows are the card's, authorization and address check; a bank
-  account's are `achDetails`. `json` and `quiet` are unchanged.
 - **`inspect` curates the `table` view, and only that.** It reads the same
   endpoint as `get` and lays out the fields that matter when a payment goes
-  wrong, decline reason first, while `get`'s table hides nothing — including
-  fields this CLI does not know about. Under `--output json` the two carry the
+  wrong — the address check and the amount breakdown among them — where
+  `get`'s table is the summary every command prints. Under `--output json` the two carry the
   same `data` — only `meta.correlation_id`, which names the request, differs —
   so an agent gains nothing from `inspect` and spends a second round trip on
   it. Neither has an endpoint of its own beyond the read.

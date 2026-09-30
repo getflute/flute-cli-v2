@@ -2,25 +2,10 @@
 source: tests/snapshots.rs
 expression: "render::detail_table(r.resource, &object_for(r))"
 ---
-paymentLinkId:                   3f8b2c1d-6e40-4a92-b7c5-1d2e3f4a5b60
-shortUrl:                        https://pay.example.com/l/abc123
-paymentLinkStatus:               Active
-linkType:                        SingleUse
-name:                            Spring campaign
-description:                     —
-baseAmount:                      25.00
-currencyCode:                    USD
-paymentMethods.card.enabled:     true
-paymentMethods.card.processorId: —
-paymentMethods.ach.enabled:      —
-paymentMethods.ach.processorId:  —
-customerId:                      —
-customerFirstName:               Ada
-customerLastName:                Lovelace
-referenceId:                     —
-paymentCount:                    3
-totalCollectedAmount:            75.00
-lastPaymentOn:                   2026-08-14T11:02:00.000Z
-expiresOn:                       —
-createdOn:                       2026-08-12T09:15:22.100Z
-modifiedOn:                      2026-08-14T11:02:00.000Z
+paymentLinkId:     3f8b2c1d-6e40-4a92-b7c5-1d2e3f4a5b60
+name:              Spring campaign
+shortUrl:          https://pay.example.com/l/abc123
+paymentLinkStatus: Active
+baseAmount:        25.00
+currencyCode:      USD
+expiresOn:         —
