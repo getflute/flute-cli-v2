@@ -173,6 +173,39 @@ pub fn push_id(
     Ok(())
 }
 
+/// Parse one `--metadata` value into a key and a value.
+///
+/// Only the **first** `=` separates them: metadata is arbitrary, and a query
+/// string or a URL as a value is ordinary rather than exotic.
+pub fn metadata_pair(raw: &str) -> Result<(String, String)> {
+    let Some((key, value)) = raw.split_once('=') else {
+        anyhow::bail!("--metadata takes key=value pairs; '{raw}' has no '='");
+    };
+    let key = key.trim();
+    if key.is_empty() {
+        anyhow::bail!("--metadata '{raw}' has an empty key");
+    }
+    Ok((key.to_string(), value.to_string()))
+}
+
+/// The `metadata` object from every `--metadata` value.
+pub fn metadata_map(raw: &[String]) -> Result<Map<String, Value>> {
+    raw.iter()
+        .map(|r| metadata_pair(r).map(|(k, v)| (k, Value::String(v))))
+        .collect()
+}
+
+/// Set `paymentMethods.ach.fasterProcessing`, adding the `ach` object when
+/// no other flag has named it.
+pub fn set_ach_faster_processing(methods: &mut Map<String, Value>, faster: bool) {
+    if let Value::Object(ach) = methods
+        .entry("ach")
+        .or_insert_with(|| Value::Object(Map::new()))
+    {
+        ach.insert("fasterProcessing".into(), Value::Bool(faster));
+    }
+}
+
 /// The `paymentMethods` object from the card and ACH `(enabled, processor id)`
 /// pairs, empty when neither method is named.
 ///

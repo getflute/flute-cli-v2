@@ -68,8 +68,21 @@ fn every_create_flag_reaches_the_body_under_its_wire_name() {
         name: Some("Spring campaign".into()),
         description: Some("notes".into()),
         expires_on: Some("2026-09-15T00:00:00.000Z".into()),
+        mode: Some(LinkMode::PaymentAndSave),
+        metadata: vec!["k=https://x.example/?a=b".into()],
+        tax_rate: Some("8.5".parse().unwrap()),
+        tax_amount: None,
+        tax_mode: Some(TaxMode::Exclusive),
+        ach_faster_processing: true,
     };
     let body = build_create_payment_link_body(&args).unwrap();
+    assert_eq!(body["mode"], "PaymentAndSave");
+    assert_eq!(body["metadata"]["k"], "https://x.example/?a=b");
+    assert_eq!(body["taxRate"].to_string(), "8.5");
+    assert_eq!(body["taxMode"], "Exclusive");
+    assert!(body.get("taxAmount").is_none());
+    assert_eq!(body["paymentMethods"]["ach"]["fasterProcessing"], true);
+    assert_eq!(body["paymentMethods"]["ach"]["processorId"], "pp-ach");
     assert_eq!(body["paymentMethods"]["card"]["processorId"], "pp-card");
     assert_eq!(body["paymentMethods"]["ach"]["processorId"], "pp-ach");
     assert_eq!(body["baseAmount"].to_string(), "25.00");
@@ -427,4 +440,44 @@ fn an_expiry_is_a_utc_date_time_ending_in_z() {
         let err = parse_utc_expiry(bad).unwrap_err().to_string();
         assert!(err.contains("ending in Z"), "{bad}: {err}");
     }
+}
+
+/// The faster-processing switch names the ach object by itself when no other
+/// ach flag does, and the server decides whether the account allows it.
+#[test]
+fn faster_processing_alone_still_sends_the_ach_object() {
+    let args = CreatePaymentLinkArgs {
+        ach_faster_processing: true,
+        ..card_only()
+    };
+    let body = build_create_payment_link_body(&args).unwrap();
+    assert_eq!(
+        body["paymentMethods"]["ach"],
+        serde_json::json!({"fasterProcessing": true})
+    );
+}
+
+/// A tax amount is an amount, so it keeps its two decimals.
+#[test]
+fn a_tax_amount_keeps_its_exact_digits() {
+    let args = CreatePaymentLinkArgs {
+        tax_amount: Some("1.00".parse().unwrap()),
+        tax_mode: Some(TaxMode::Inclusive),
+        ..card_only()
+    };
+    let body = build_create_payment_link_body(&args).unwrap();
+    assert_eq!(body["taxAmount"].to_string(), "1.00");
+    assert_eq!(body["taxMode"], "Inclusive");
+}
+
+#[test]
+fn a_metadata_value_without_an_equals_is_refused_on_create() {
+    let args = CreatePaymentLinkArgs {
+        metadata: vec!["orderId".into()],
+        ..card_only()
+    };
+    let err = build_create_payment_link_body(&args)
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("--metadata"), "{err}");
 }

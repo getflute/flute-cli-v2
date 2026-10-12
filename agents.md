@@ -508,12 +508,16 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   anywhere in this CLI: a filter applied locally reports a wrong answer on any
   collection larger than one page.
 - **Rate flags are percentages.** `--tip-rate`, `--discount-rate`,
-  `--surcharge-rate` and `--l2-tax-rate` take `18.5` for 18.5%. A fraction is
+  `--surcharge-rate`, `--l2-tax-rate`, `--l3-duty-rate` and `--tax-rate` take
+  `18.5` for 18.5%. A fraction is
   a valid rate, so `0.18` is accepted and means 0.18%, not 18% — and a value
   between 0 and 1 is noted on **stderr**, one line per flag, naming both
   readings. The note changes neither the request, the envelope, nor the exit
   code. `settings update-autofill`'s `--l2-tax-rate`, `--l3-shipping-rate`,
   `--l3-duty-rate` and `--product-discount` carry the same rule.
+- **`--l3-duty-rate` is accepted and not read back.** The transaction read
+  carries no duty or other enhanced-data field, so the value sent cannot be
+  confirmed from a `get`.
 - **`--l3-invoice` accepts only letters, digits and spaces.** Undocumented, not
   enforced locally, and the API's own message is clear — a hyphen, as in the
   schema's own example, is rejected.
@@ -583,6 +587,17 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
 - `update` is an RFC 7396 merge patch: an empty value or `--clear <field>`
   removes a value — see [Clearing a field](#clearing-a-field). Clearing
   `--amount` makes a fixed-price link one the payer fills in.
+- **Tax is `--tax-mode` plus exactly one of `--tax-rate` or `--tax-amount`.**
+  The server answers a 400 naming `taxMode` for any other combination, so the
+  CLI does not check the pairing. `--tax-rate` is a percentage; `--tax-amount`
+  is a plain amount. `payment-sessions create` takes the same three flags.
+- **`--mode payment|payment-and-save` is `create` only**; `update` rejects it.
+- `--metadata key=value` is repeatable and splits on the first `=`. On
+  `update` the pairs **replace the whole stored map**, they do not merge.
+- **`--ach-faster-processing` needs the merchant's ACH settings to allow it.**
+  Otherwise the server answers a 400 saying so. It names the `ach` method by
+  itself; pass `--ach-enabled` to offer ACH. On `update` it takes a value
+  (`--ach-faster-processing false`) and is not clearable.
 - `share` sends a real message. `--consent` is required: a share without it
   is refused before the wire, exit 3.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
@@ -610,8 +625,11 @@ flute2 payment-sessions cancel [OPTIONS] <PAYMENT_SESSION_ID>
   A save-method session refuses `--tip-amount` too, since it charges nothing,
   and every flag that configures a checkout page: `--card-enabled`,
   `--ach-enabled`, either processor id, `--return-url`, `--page-name`,
-  `--payment-notes`, `--after-completion-message`, `--expires-at` and
-  `--metadata`. Each is refused before the wire, exit 3.
+  `--payment-notes`, `--after-completion-message`, `--expires-at`,
+  `--metadata`, `--tax-amount`, `--tax-rate`, `--tax-mode` and
+  `--ach-faster-processing`. Each is refused before the wire, exit 3.
+- **Tax is `--tax-mode` plus exactly one of `--tax-rate` or `--tax-amount`**,
+  as on `payment-links`; the server refuses any other combination with a 400.
 - **Omitting both `--card-enabled` and `--ach-enabled` offers every payment
   method** the account has an active processor for; the session then reads
   back `paymentMethods: null`.
@@ -821,8 +839,12 @@ Error: --first-name cannot be cleared; pass a value.
 |---|---|---|
 | `customers update` | `company`, `email`, `mobile` | `first-name`, `last-name` |
 | `payment-methods update` | `name` | — |
-| `payment-links update` | `amount`, `customer-id`, `reference-id`, `description`, `expires-on` | `name`, `currency-code`, `card-processor-id`, `ach-processor-id` |
+| `payment-links update` | `amount`, `customer-id`, `reference-id`, `description`, `expires-on`, `tax-amount`, `tax-rate`, `tax-mode`, `metadata` | `name`, `currency-code`, `card-processor-id`, `ach-processor-id` |
 | `settings update-autofill` | the six product defaults, `l3-shipping-rate`, `l3-duty-rate` | `l2-tax-rate` |
+
+**`payment-links update` clears the tax fields together.** The server takes
+`taxMode` and one of `taxRate` or `taxAmount` set or cleared as a unit, so
+`--clear tax-rate --clear tax-mode` is one clear and either alone is a 400.
 
 **Numeric flags clear by both spellings too.** `--amount ""` and
 `--clear amount` each send the null. Clearing an amount is not the same as

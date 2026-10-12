@@ -88,6 +88,33 @@ async fn payment_session_full_exchange_matches_the_contract() {
 }
 
 #[tokio::test]
+async fn payment_session_create_tax_and_faster_ach_match_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(
+        &server,
+        "flute-v2-post-payment-sessions",
+        "tax and faster ACH",
+    )
+    .await;
+    support::bin(&server)
+        .args([
+            "payment-sessions",
+            "create",
+            "--amount",
+            "20.00",
+            "--tax-rate",
+            "5",
+            "--tax-mode",
+            "exclusive",
+            "--ach-enabled",
+            "--ach-faster-processing",
+        ])
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
 async fn payment_session_get_exchange_matches_the_contract() {
     let server = support::mock_with_token().await;
     let ex = support::mount(

@@ -63,6 +63,37 @@ async fn payment_link_create_full_exchange_matches_the_contract() {
 }
 
 #[tokio::test]
+async fn payment_link_create_tax_metadata_and_faster_ach_match_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(
+        &server,
+        "flute-v2-post-payment-links",
+        "tax, metadata and faster ACH",
+    )
+    .await;
+    support::bin(&server)
+        .args([
+            "payment-links",
+            "create",
+            "--ach-enabled",
+            "--ach-faster-processing",
+            "--currency-code",
+            "USD",
+            "--mode",
+            "payment-and-save",
+            "--metadata",
+            "k=https://x.example/?a=b",
+            "--tax-rate",
+            "8.5",
+            "--tax-mode",
+            "exclusive",
+        ])
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
 async fn payment_link_get_exchange_matches_the_contract() {
     let server = support::mock_with_token().await;
     let ex = support::mount(
