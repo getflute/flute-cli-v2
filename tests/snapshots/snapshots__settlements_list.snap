@@ -18,9 +18,9 @@ Options:
       --asc
           Sort ascending. The default here is descending
       --from <FROM_DATE>
-          Filter results created from this date-time inclusive (ISO 8601)
+          Filter results created from this date (ISO 8601). A time is accepted but the API ignores it: the filter starts at the beginning of that day
       --to <TO_DATE>
-          Filter results created up to this date-time inclusive (ISO 8601)
+          Filter results created up to this date (ISO 8601). A time is accepted but the API ignores it: the filter includes that whole day
       --batch-ids <BATCH_ID>
           Filter by settlement batch ID. Repeat the flag for several batches
       --processor-ids <PAYMENT_PROCESSOR_ID>

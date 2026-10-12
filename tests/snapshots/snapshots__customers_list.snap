@@ -17,8 +17,8 @@ Options:
       --email <EMAIL>                 Filter by email address
       --company-name <COMPANY_NAME>   Filter by company name
       --mobile <MOBILE_PHONE_NUMBER>  Filter by mobile number
-      --created-from <CREATED_FROM>   Filter results created from this date-time inclusive (ISO 8601)
-      --created-to <CREATED_TO>       Filter results created up to this date-time inclusive (ISO 8601)
+      --created-from <CREATED_FROM>   Filter results created from this date (ISO 8601). The API does not apply this filter
+      --created-to <CREATED_TO>       Filter results created up to this date (ISO 8601). The API does not apply this filter
   -h, --help                          Print help
 
 Global options:

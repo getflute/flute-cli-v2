@@ -102,10 +102,12 @@ pub struct ListPaymentMethodsArgs {
     /// Filter by customer UUID.
     #[arg(long, id = "pm_list_customer_id", value_name = "CUSTOMER_ID")]
     pub customer_id: Option<String>,
-    /// Filter results created from this date-time inclusive (ISO 8601).
+    /// Filter results created from this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter starts at the beginning of that day.
     #[arg(long, id = "pm_created_from", value_name = "CREATED_FROM")]
     pub created_from: Option<String>,
-    /// Filter results created up to this date-time inclusive (ISO 8601).
+    /// Filter results created up to this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter includes that whole day.
     #[arg(long, id = "pm_created_to", value_name = "CREATED_TO")]
     pub created_to: Option<String>,
 }

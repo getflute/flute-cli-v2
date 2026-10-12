@@ -240,7 +240,7 @@ pub fn build_credit_body(args: &CreditArgs) -> Result<Value> {
     let chosen = chosen_instrument(&args.instrument)?;
     if chosen == Chosen::SavedCard {
         anyhow::bail!(
-            "a card credit needs the card details (--card and --exp); a saved card \
+            "a card credit needs the card details (--card, --exp and --cvv); a saved card \
              cannot be credited by id. A saved bank account can: use \
              --payment-method-id with --instrument ach."
         );

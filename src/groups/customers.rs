@@ -116,10 +116,12 @@ pub struct ListCustomersArgs {
         value_name = "MOBILE_PHONE_NUMBER"
     )]
     pub mobile_phone_number: Option<String>,
-    /// Filter results created from this date-time inclusive (ISO 8601).
+    /// Filter results created from this date (ISO 8601). The API does not apply
+    /// this filter.
     #[arg(long)]
     pub created_from: Option<String>,
-    /// Filter results created up to this date-time inclusive (ISO 8601).
+    /// Filter results created up to this date (ISO 8601). The API does not apply
+    /// this filter.
     #[arg(long)]
     pub created_to: Option<String>,
 }
