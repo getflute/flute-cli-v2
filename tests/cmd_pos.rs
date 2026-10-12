@@ -1339,3 +1339,218 @@ async fn pos_create_wait_spends_one_budget_across_the_create_and_the_poll() {
         "a 4 s budget with a 3 s create took {elapsed:?}"
     );
 }
+
+const ORIGINAL: &str = "90d084d6-55b8-4fb8-b658-861534d07f9a";
+
+/// The flags every `pos reversal` names, followed by `extra`.
+fn reversal(extra: &[&str]) -> Vec<String> {
+    [
+        "pos",
+        "reversal",
+        "--terminal-id",
+        TERMINAL,
+        "--pos-device-id",
+        DEVICE,
+        "--reference-id",
+        "REF-POS-REV-1",
+    ]
+    .iter()
+    .chain(extra)
+    .map(|s| s.to_string())
+    .collect()
+}
+
+#[tokio::test]
+async fn pos_reversal_referenced_exchange_matches_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(
+        &server,
+        "flute-v2-post-pos-transactions-reversal",
+        "referenced",
+    )
+    .await;
+    let out = support::bin(&server)
+        .args(["--output", "json"])
+        .args(reversal(&["--original-transaction-id", ORIGINAL]))
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    support::assert_exchange_observed(&server, &ex).await;
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["object"], "pos_transaction", "{v}");
+    assert_eq!(v["data"]["posTransactionId"], POS_TXN, "{v}");
+}
+
+#[tokio::test]
+async fn pos_reversal_unreferenced_exchange_matches_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(
+        &server,
+        "flute-v2-post-pos-transactions-reversal",
+        "unreferenced, fully specified",
+    )
+    .await;
+    support::bin(&server)
+        .args(reversal(&[
+            "--amount",
+            "12.50",
+            "--currency-code",
+            "USD",
+            "--payment-processor-id",
+            PP,
+            "--customer-id",
+            CUS,
+            "--reading-method",
+            "regular",
+            "--initiation-channel",
+            "deeplink",
+        ]))
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+/// `--wait` on a reversal is `--wait` on a create: the acceptance control on
+/// the POST, then the long poll on the transaction it answered with.
+#[tokio::test]
+async fn pos_reversal_wait_sends_the_acceptance_control_and_polls() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(
+        &server,
+        "flute-v2-post-pos-transactions-reversal",
+        "waiting for terminal acceptance",
+    )
+    .await;
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/pos/transactions/{POS_TXN}")))
+        .and(query_param("waitForTransactionProcessing", "true"))
+        .respond_with(sequence(&[in_progress(), completed()]))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json"])
+        .args(reversal(&["--original-transaction-id", ORIGINAL, "--wait"]))
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    support::assert_exchange_observed(&server, &ex).await;
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["data"]["posTransactionStatus"], "Completed", "{v}");
+    let polls = server
+        .received_requests()
+        .await
+        .unwrap()
+        .iter()
+        .filter(|r| r.method.as_str().eq_ignore_ascii_case("GET"))
+        .count();
+    assert_eq!(polls, 2, "the loop stopped on the wrong condition");
+}
+
+#[tokio::test]
+async fn pos_reversal_wait_with_a_deeplink_channel_is_refused() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(reversal(&["--initiation-channel", "deeplink", "--wait"]))
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("Deeplink"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "a client-side refusal must not reach the API"
+    );
+}
+
+/// An expired `--wait-timeout` ends a reversal as it ends a create: the
+/// last-known envelope on stdout, a warning on stderr, exit 1.
+#[tokio::test]
+async fn pos_reversal_wait_timeout_prints_the_last_status_and_exits_one() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/pos/transactions/reversal"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(in_progress()))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/pos/transactions/{POS_TXN}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(in_progress()))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json"])
+        .args(reversal(&["--wait", "--wait-timeout", "0"]))
+        .assert()
+        .code(1)
+        .stderr(predicate::str::contains("--wait-timeout"))
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value =
+        serde_json::from_slice(&out).expect("stdout was not exactly one JSON document");
+    assert_eq!(v["object"], "pos_transaction", "{v}");
+    assert_eq!(v["data"]["posTransactionStatus"], "InProgress", "{v}");
+}
+
+/// A poll that fails after the reversal was accepted still names the
+/// transaction it created, and exits with the failure's code.
+#[tokio::test]
+async fn a_failed_reversal_poll_still_reports_the_created_transaction() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/pos/transactions/reversal"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(in_progress()))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!("/v2/pos/transactions/{POS_TXN}")))
+        .respond_with(ResponseTemplate::new(500).set_body_json(serde_json::json!({
+            "Title": "Internal Server Error", "CorrelationId": "c-500"})))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json"])
+        .args(reversal(&["--wait"]))
+        .assert()
+        .code(1)
+        .get_output()
+        .clone();
+    let v: serde_json::Value =
+        serde_json::from_slice(&out.stdout).expect("stdout was not exactly one JSON document");
+    assert_eq!(v["data"]["posTransactionId"], POS_TXN, "{v}");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains(POS_TXN), "{stderr}");
+}
+
+/// The three required strings, refused blank before the wire as
+/// `pos create`'s are.
+#[tokio::test]
+async fn pos_reversal_refuses_a_blank_required_field_before_the_wire() {
+    let server = support::mock_with_token().await;
+    for flag in ["--terminal-id", "--pos-device-id", "--reference-id"] {
+        let mut args = reversal(&[]);
+        let at = args.iter().position(|a| a == flag).unwrap();
+        args[at + 1] = " ".into();
+        support::bin(&server)
+            .args(&args)
+            .assert()
+            .code(3)
+            .stderr(predicate::str::contains(flag));
+    }
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "a client-side refusal must not reach the API"
+    );
+}

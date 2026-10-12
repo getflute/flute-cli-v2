@@ -1,8 +1,8 @@
-//! `pos`: create, get, list, cancel, print-receipt.
+//! `pos`: create, reversal, get, list, cancel, print-receipt.
 //!
 //! The group with the only long-poll in the CLI. `--wait` drives **two**
-//! independent API controls — `waitForAcceptanceByTerminal` on the create body
-//! and `waitForTransactionProcessing` on each get — because a caller waiting
+//! independent API controls — `waitForAcceptanceByTerminal` on the create or
+//! reversal body and `waitForTransactionProcessing` on each get — because a caller waiting
 //! for a terminal wants both halves: the first holds the create until the
 //! device answers, the second holds each poll open until the state moves.
 
@@ -74,6 +74,13 @@ pub enum PosCommand {
     /// transaction. Ctrl-C interrupts the create or the poll and exits 130;
     /// during the poll it prints the last-known status.
     Create(CreatePosTransactionArgs),
+    /// Reverse a POS transaction, or refund with no original transaction
+    /// (POST /v2/pos/transactions/reversal).
+    ///
+    /// A void or a referenced credit-card refund completes on the API; a
+    /// debit-card referenced refund or an unreferenced one waits for the card
+    /// on the terminal. `--wait` and Ctrl-C behave as on `pos create`.
+    Reversal(PosReversalArgs),
     /// Fetch a single POS transaction by ID
     /// (GET /v2/pos/transactions/{posTransactionId}).
     Get {
@@ -166,6 +173,54 @@ pub struct CreatePosTransactionArgs {
 }
 
 #[derive(clap::Args, Debug, Default)]
+pub struct PosReversalArgs {
+    /// Terminal UUID that handles the reversal (required).
+    #[arg(long)]
+    pub terminal_id: String,
+    /// POS device ID (required).
+    #[arg(long)]
+    pub pos_device_id: String,
+    /// Merchant-assigned reference ID, unique for the merchant (required).
+    #[arg(long)]
+    pub reference_id: String,
+    /// Transaction UUID to reverse. Omit for an unreferenced refund, which
+    /// needs `--amount` and `--currency-code`.
+    #[arg(long)]
+    pub original_transaction_id: Option<String>,
+    /// Amount to reverse. Plain decimal, e.g. `12.50`. Caps a refund of an
+    /// original transaction; omit to reverse the full amount. Ignored on a
+    /// void.
+    #[arg(long, value_parser = parse_amount, allow_negative_numbers = true)]
+    pub amount: Option<Decimal>,
+    /// Currency code, e.g. `USD`.
+    #[arg(long)]
+    pub currency_code: Option<String>,
+    /// Payment processor UUID. Defaults to the account's own.
+    #[arg(long)]
+    pub payment_processor_id: Option<String>,
+    /// Customer UUID.
+    #[arg(long)]
+    pub customer_id: Option<String>,
+    /// Reading method: `keyed-entry` or `regular`. Omit to let the server
+    /// decide.
+    #[arg(long, value_enum)]
+    pub reading_method: Option<ReadingMethod>,
+    /// Initiation channel: `cloud` or `deeplink`. `deeplink` cannot be
+    /// combined with `--wait`.
+    #[arg(long, value_enum)]
+    pub initiation_channel: Option<InitiationChannel>,
+    /// Long-poll for terminal acceptance, then poll
+    /// GET /v2/pos/transactions/{posTransactionId} every 2 seconds until the
+    /// transaction leaves `InProgress` or the timeout expires.
+    #[arg(long)]
+    pub wait: bool,
+    /// Seconds to wait for the reversal and the poll together before giving
+    /// up (default 120, at most 86400). Requires `--wait`.
+    #[arg(long, requires = "wait", default_value_t = DEFAULT_WAIT_TIMEOUT_SECS, value_parser = clap::value_parser!(u64).range(0..=86_400))]
+    pub wait_timeout: u64,
+}
+
+#[derive(clap::Args, Debug, Default)]
 pub struct ListPosTransactionsArgs {
     #[command(flatten)]
     pub pagination: PaginationArgs,
@@ -231,7 +286,11 @@ pub fn validate_pos_create(args: &CreatePosTransactionArgs) -> Result<()> {
             anyhow::bail!("--tip-amount must be at least 0.01 (got {tip})");
         }
     }
-    if args.wait && args.initiation_channel == Some(InitiationChannel::Deeplink) {
+    refuse_wait_on_a_deeplink(args.wait, args.initiation_channel)
+}
+
+fn refuse_wait_on_a_deeplink(wait: bool, channel: Option<InitiationChannel>) -> Result<()> {
+    if wait && channel == Some(InitiationChannel::Deeplink) {
         anyhow::bail!(
             "the API requires waitForAcceptanceByTerminal to be false when \
              initiationChannel is Deeplink, so --wait cannot be combined with \
@@ -304,6 +363,61 @@ fn extra_amounts(args: &CreatePosTransactionArgs) -> Result<Option<Value>> {
         }
     }
     Ok((!map.is_empty()).then_some(Value::Object(map)))
+}
+
+/// Build the `CreatePosTransactionReversalRequestDto` body.
+///
+/// The amount and currency an unreferenced refund needs are left to the
+/// server, which names both fields when either is missing.
+/// `waitForAcceptanceByTerminal` is always present, as on a create.
+pub fn build_pos_reversal_body(args: &PosReversalArgs) -> Result<Value> {
+    for (flag, value) in [
+        ("--terminal-id", &args.terminal_id),
+        ("--pos-device-id", &args.pos_device_id),
+        ("--reference-id", &args.reference_id),
+    ] {
+        if value.trim().is_empty() {
+            anyhow::bail!("{flag} is required");
+        }
+    }
+    if args.amount.is_some_and(|a| a <= Decimal::ZERO) {
+        anyhow::bail!("--amount must be greater than zero; omit it to reverse the full amount");
+    }
+    common::reject_empty_processor_id(
+        "--payment-processor-id",
+        args.payment_processor_id.as_deref(),
+    )?;
+    refuse_wait_on_a_deeplink(args.wait, args.initiation_channel)?;
+
+    let mut body = Map::new();
+    body.insert("terminalId".into(), Value::String(args.terminal_id.clone()));
+    body.insert(
+        "posDeviceId".into(),
+        Value::String(args.pos_device_id.clone()),
+    );
+    body.insert(
+        "referenceId".into(),
+        Value::String(args.reference_id.clone()),
+    );
+    body.insert("waitForAcceptanceByTerminal".into(), Value::Bool(args.wait));
+    common::put_str(
+        &mut body,
+        "originalTransactionId",
+        &args.original_transaction_id,
+    );
+    if let Some(v) = args.amount {
+        body.insert("reversalAmount".into(), to_amount_number(v)?);
+    }
+    common::put_str(&mut body, "currencyCode", &args.currency_code);
+    common::put_str(&mut body, "paymentProcessorId", &args.payment_processor_id);
+    common::put_str(&mut body, "customerId", &args.customer_id);
+    if let Some(v) = args.reading_method {
+        body.insert("readingMethod".into(), serde_json::json!(v));
+    }
+    if let Some(v) = args.initiation_channel {
+        body.insert("initiationChannel".into(), serde_json::json!(v));
+    }
+    Ok(Value::Object(body))
 }
 
 /// The `PrintTransactionReceiptRequestDto` body: one required field.
@@ -509,7 +623,29 @@ pub static POS_TRANSACTION: Resource = Resource {
 
 pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
     match command {
-        PosCommand::Create(args) => create(ctx, args).await,
+        PosCommand::Create(args) => {
+            let body = build_pos_create_body(&args)?;
+            money::note_fractional_rates(&[("--tip-rate", args.tip_rate)]);
+            submit(
+                ctx,
+                "/v2/pos/transactions",
+                body,
+                args.wait,
+                args.wait_timeout,
+            )
+            .await
+        }
+        PosCommand::Reversal(args) => {
+            let body = build_pos_reversal_body(&args)?;
+            submit(
+                ctx,
+                "/v2/pos/transactions/reversal",
+                body,
+                args.wait,
+                args.wait_timeout,
+            )
+            .await
+        }
         PosCommand::Get {
             pos_transaction_id,
             wait,
@@ -609,18 +745,23 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
     }
 }
 
-async fn create(ctx: &Ctx, args: CreatePosTransactionArgs) -> Result<()> {
-    let body = build_pos_create_body(&args)?;
-    money::note_fractional_rates(&[("--tip-rate", args.tip_rate)]);
+/// Send a body that creates a POS transaction — a sale or a reversal — and,
+/// under `--wait`, poll the transaction it answers with.
+async fn submit(
+    ctx: &Ctx,
+    route: &'static str,
+    body: Value,
+    wait: bool,
+    wait_timeout: u64,
+) -> Result<()> {
     // One deadline for the create and the poll together. The argument is
     // bounded, so this cannot overflow; a deadline the clock cannot represent
     // is an immediate timeout rather than a panic.
     let deadline = Instant::now()
-        .checked_add(Duration::from_secs(args.wait_timeout))
+        .checked_add(Duration::from_secs(wait_timeout))
         .unwrap_or_else(Instant::now);
-    let bound = args
-        .wait
-        .then(|| deadline.saturating_duration_since(Instant::now()) + POLL_TIMEOUT_MARGIN);
+    let bound =
+        wait.then(|| deadline.saturating_duration_since(Instant::now()) + POLL_TIMEOUT_MARGIN);
     // `waitForAcceptanceByTerminal` holds the create open until the terminal
     // answers, which can outlast the client-wide bound. The interrupt is
     // selected first so its handler is in place before the request is sent:
@@ -637,10 +778,10 @@ async fn create(ctx: &Ctx, args: CreatePosTransactionArgs) -> Result<()> {
         }
         r = ctx
             .api
-            .request_within(Method::POST, "/v2/pos/transactions", &[], Some(body), bound) => r?,
+            .request_within(Method::POST, route, &[], Some(body), bound) => r?,
     };
     let created = common::body_of(resp.body)?;
-    if !args.wait {
+    if !wait {
         return render::one(ctx, &POS_TRANSACTION, &created, resp.correlation_id);
     }
 
@@ -661,7 +802,7 @@ async fn create(ctx: &Ctx, args: CreatePosTransactionArgs) -> Result<()> {
             render::one(ctx, &POS_TRANSACTION, &waited.last, waited.correlation_id)?;
             eprintln!(
                 "Warning: --wait-timeout ({}s) expired; last status shown above.",
-                args.wait_timeout
+                wait_timeout
             );
             Err(Reported { code: 1 }.into())
         }
@@ -856,6 +997,52 @@ mod tests {
         // Either half alone is fine.
         args.wait = false;
         assert!(build_pos_create_body(&args).is_ok());
+    }
+
+    fn minimal_reversal() -> PosReversalArgs {
+        PosReversalArgs {
+            terminal_id: "term-1".into(),
+            pos_device_id: "POS-DEVICE-001".into(),
+            reference_id: "REF-1".into(),
+            wait_timeout: 120,
+            ..Default::default()
+        }
+    }
+
+    /// The three required fields and the wait control; every optional flag
+    /// absent is an absent key.
+    #[test]
+    fn builds_a_minimal_reversal_body() {
+        assert_eq!(
+            build_pos_reversal_body(&minimal_reversal()).unwrap(),
+            serde_json::json!({
+                "terminalId": "term-1",
+                "posDeviceId": "POS-DEVICE-001",
+                "referenceId": "REF-1",
+                "waitForAcceptanceByTerminal": false})
+        );
+    }
+
+    /// The schema's minimum is 0.01, and the full amount is asked for by
+    /// omitting the flag.
+    #[test]
+    fn a_zero_reversal_amount_is_refused() {
+        let args = PosReversalArgs {
+            amount: Some(Decimal::ZERO),
+            ..minimal_reversal()
+        };
+        let err = build_pos_reversal_body(&args).unwrap_err().to_string();
+        assert!(err.contains("--amount"), "{err}");
+    }
+
+    #[test]
+    fn an_empty_reversal_processor_id_is_refused() {
+        let args = PosReversalArgs {
+            payment_processor_id: Some(String::new()),
+            ..minimal_reversal()
+        };
+        let err = build_pos_reversal_body(&args).unwrap_err().to_string();
+        assert!(err.contains("--payment-processor-id"), "{err}");
     }
 
     fn list_args() -> ListPosTransactionsArgs {

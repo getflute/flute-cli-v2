@@ -148,11 +148,11 @@ A usage error's `message` is clap's complaint alone — no `error:` label, tip,
 | Code | Meaning |
 |---|---|
 | `0` | success — **including a declined payment**, and including a 404 on a delete or revoke |
-| `1` | general: transport, a body that could not be decoded — including a `pos create --wait` response carrying no `posTransactionStatus` — a server 5xx, and an expired `--wait-timeout` |
+| `1` | general: transport, a body that could not be decoded — including a `pos create --wait` or `pos reversal --wait` response carrying no `posTransactionStatus` — a server 5xx, and an expired `--wait-timeout` |
 | `2` | authorisation: 401, 403, or no credentials at all |
 | `3` | validation: server 400 or 422, client-side refusals, and CLI usage errors |
 | `4` | not found: a 404 that was not mapped to success |
-| `130` | interrupted — Ctrl-C during a `pos create` request or its `--wait` poll |
+| `130` | interrupted — Ctrl-C during a `pos create` or `pos reversal` request or its `--wait` poll |
 | `141` | the consumer of stdout stopped reading before the output was complete |
 
 `130` and `141` are in the table rather than in prose alone, so an agent that
@@ -304,8 +304,8 @@ agent should pass `--profile` on each command and leave the file alone.
 
 ### The non-zero exits that carry no error envelope
 
-Three are `pos create --wait`, and they are why you must not infer the shape
-of stdout from the exit code.
+Three are `pos create --wait`, and `pos reversal --wait` ends the same three
+ways. They are why you must not infer the shape of stdout from the exit code.
 
 - **`--wait-timeout` expired** — the last-known **success** envelope is on
   stdout (`object: "pos_transaction"`, *not* an error envelope), a warning is on
@@ -644,6 +644,7 @@ flute2 payment-sessions cancel [OPTIONS] <PAYMENT_SESSION_ID>
 
 ```
 flute2 pos create [OPTIONS] --terminal-id <TERMINAL_ID> --pos-device-id <POS_DEVICE_ID> --amount <AMOUNT> --currency-code <CURRENCY_CODE>
+flute2 pos reversal [OPTIONS] --terminal-id <TERMINAL_ID> --pos-device-id <POS_DEVICE_ID> --reference-id <REFERENCE_ID>
 flute2 pos get [OPTIONS] <POS_TRANSACTION_ID>
 flute2 pos list [OPTIONS]
 flute2 pos cancel [OPTIONS] <POS_TRANSACTION_ID>
@@ -676,6 +677,18 @@ flute2 pos print-receipt [OPTIONS] --terminal-id <TERMINAL_ID> <POS_TRANSACTION_
   rather than a state to wait out; a poll response without one ends the wait as
   a failed poll. Without the field the poll has no stop condition, so
   waiting on one could only end in the timeout.
+- **`reversal` reverses a transaction or refunds without one.** With
+  `--original-transaction-id` the API decides between a void, which reverses
+  the full amount, and a refund, which `--amount` caps; only a card
+  transaction can be reversed. Without it the reversal is an unreferenced
+  refund, and the API requires `--amount` and `--currency-code`, answering 400
+  naming each one missing. A void or a referenced credit-card refund completes
+  on the API; a debit-card referenced refund or any unreferenced refund waits
+  for the card on the terminal. The response is a POS transaction in the
+  `pos_transaction` envelope, and `--wait`, `--wait-timeout`, the deeplink
+  refusal, Ctrl-C and the endings above apply to it exactly as to `create`. A
+  reversal that ends in a `transport` failure, a 5xx or Ctrl-C may have been
+  carried out: reconcile with `pos list` before issuing another.
 - A terminal takes **one** in-progress transaction. Cancel or complete before
   starting another.
 - `cancel` requires `--yes`.
@@ -873,7 +886,7 @@ value is refused — exit 3, nothing sent — whatever else the update carries.
 
 | Safe to retry | Not safe to retry |
 |---|---|
-| every `get`, `list`, `status` and `inspect` | `transactions create`, `credit`, `capture`, `reversal`, `tip-adjust`; `pos create`; `customers create`; `payment-methods add-card`, `add-ach`; `payment-links create`; `payment-sessions create`; `api-keys create` |
+| every `get`, `list`, `status` and `inspect` | `transactions create`, `credit`, `capture`, `reversal`, `tip-adjust`; `pos create`, `reversal`; `customers create`; `payment-methods add-card`, `add-ach`; `payment-links create`; `payment-sessions create`; `api-keys create` |
 | `customers delete`, `payment-methods delete`, `payment-links delete`, `api-keys revoke` — a repeat 404 is exit 0 with `found: false` | `pos cancel`, `payment-sessions cancel` — a repeat answers 400, exit 3; reconcile with `get` |
 
 A `transport` failure or a 5xx on something not safe to retry is ambiguous:
@@ -884,7 +897,9 @@ re-issuing.**
 the same card and amount can be charged again when the reference ids differ,
 and cannot when they do not. The window is not documented. Five of the
 unsafe-to-retry commands take one — `transactions create`, `transactions
-credit`, `pos create`, `payment-links create` and `payment-sessions create`.
+credit`, `pos create`, `payment-links create` and `payment-sessions create` —
+and `pos reversal` requires one, which the schema declares unique for the
+merchant.
 
 The other seven have no de-duplication knob at all. `capture` and `reversal`
 take an `--amount`, but it is the operation's meaning rather than a key to vary;
@@ -911,6 +926,7 @@ never happened. `transactions get <id>` is the lookup that survives them.
 | Vault a card for a customer | `flute2 … customers create --first-name … --last-name … --billing-line1 … --billing-postal-code … --billing-country …`, then `payment-methods add-card --customer-id <id> --card … --exp …` |
 | Charge a vaulted card | `flute2 … transactions create --payment-method-id <id> --instrument card --customer-id <id> --payment-processor-id <id> --amount … --reference-id <unique>` |
 | Start a terminal sale | `flute2 --output json pos create --terminal-id <id> --pos-device-id <dev> --amount 10.50 --currency-code USD --wait` |
+| Reverse a terminal sale | `flute2 --output json pos reversal --terminal-id <id> --pos-device-id <dev> --reference-id <unique> --original-transaction-id <id> --wait` |
 | Take a payment on a hosted page | `flute2 --output json payment-sessions create --amount 10.50 --card-enabled` |
 | Issue a merchant API key | `flute2 --output json api-keys create --merchant-id <id> --name "<name>"` — save the one-shot secret; needs partner credentials |
 
@@ -931,7 +947,7 @@ refused as a duplicate.
   notice, the `--wait` warnings and a failed `--wait` poll, which leaves the
   created transaction's envelope on stdout.
 - **Don't infer stdout's shape from the exit code.** The `pos create --wait`
-  endings break that inference in both directions.
+  and `pos reversal --wait` endings break that inference in both directions.
 - **Don't parse stdout after exit 141.** It is a prefix of the document, and a
   prefix of valid JSON parses as nothing at all.
 - **Don't call `auth login`** from an agent. Use the environment variables.

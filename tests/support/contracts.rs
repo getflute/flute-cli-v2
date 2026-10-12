@@ -1229,8 +1229,82 @@ pub static CONTRACTS: &[Contract] = &[
     Contract {
         operation_id: "flute-v2-post-pos-transactions-reversal",
         route: "POST /v2/pos/transactions/reversal",
-        mapping: Mapping::Excluded("pos reversal"),
-        variants: &[],
+        mapping: Mapping::Command("pos reversal"),
+        variants: &[
+            Variant {
+                // `waitForAcceptanceByTerminal` is present for the reason it
+                // is on `pos create`: `false` is a decision.
+                name: "referenced",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                            "posDeviceId": "POS-DEVICE-001",
+                            "referenceId": "REF-POS-REV-1",
+                            "originalTransactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
+                            "waitForAcceptanceByTerminal": false})),
+                        ..req("POST", "/v2/pos/transactions/reversal")
+                    },
+                    response: ok(Some(json!({
+                        "posTransactionId": "7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05",
+                        "posTransactionStatus": "InProgress",
+                        "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                        "posDeviceId": "POS-DEVICE-001",
+                        "referenceId": "REF-POS-REV-1"}))),
+                },
+                live: Live::Skip("sandbox account has no terminals"),
+            },
+            Variant {
+                // No original transaction, so the amount and the currency
+                // are what the refund is.
+                name: "unreferenced, fully specified",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                            "posDeviceId": "POS-DEVICE-001",
+                            "referenceId": "REF-POS-REV-1",
+                            "reversalAmount": amount("12.50"),
+                            "currencyCode": "USD",
+                            "paymentProcessorId": "8db2ff47-b143-4adb-ab58-a11111111111",
+                            "customerId": "588f57a5-fe6a-4844-851e-e98914e81980",
+                            "readingMethod": "Regular",
+                            "initiationChannel": "Deeplink",
+                            "waitForAcceptanceByTerminal": false})),
+                        ..req("POST", "/v2/pos/transactions/reversal")
+                    },
+                    response: ok(Some(json!({
+                        "posTransactionId": "7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05",
+                        "posTransactionStatus": "InProgress",
+                        "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                        "posDeviceId": "POS-DEVICE-001",
+                        "referenceId": "REF-POS-REV-1"}))),
+                },
+                live: Live::Skip("sandbox account has no terminals"),
+            },
+            Variant {
+                // The create half of `--wait`, as on `pos create`.
+                name: "waiting for terminal acceptance",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                            "posDeviceId": "POS-DEVICE-001",
+                            "referenceId": "REF-POS-REV-1",
+                            "originalTransactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
+                            "waitForAcceptanceByTerminal": true})),
+                        ..req("POST", "/v2/pos/transactions/reversal")
+                    },
+                    response: ok(Some(json!({
+                        "posTransactionId": "7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05",
+                        "posTransactionStatus": "InProgress",
+                        "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                        "posDeviceId": "POS-DEVICE-001",
+                        "referenceId": "REF-POS-REV-1"}))),
+                },
+                live: Live::Skip("sandbox account has no terminals"),
+            },
+        ],
     },
     Contract {
         operation_id: "flute-v2-post-pos-transactions",

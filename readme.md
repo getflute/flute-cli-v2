@@ -199,7 +199,7 @@ No bare `FLUTE_` name is ever read: v1's variables, keychain entry and config fi
 | `payment-links` | `create`, `get`, `list`, `update`, `delete`, `share` — hosted links a payer opens and pays |
 | `payment-sessions` | `create`, `get`, `cancel` — hosted checkout sessions |
 | `terminals` | `list`, `status` — card-present terminal inventory and readiness |
-| `pos` | `create` (with `--wait` long-poll), `get`, `list`, `cancel`, `print-receipt` — card-present transactions |
+| `pos` | `create` and `reversal` (each with `--wait` long-poll), `get`, `list`, `cancel`, `print-receipt` — card-present transactions |
 | `settlements` | `list`, `get`, `close` — settlement batch queries, and closing a processor's open batch |
 | `settings` | `payment-config`, `contact-info`, `autofill`, `update-autofill` — account settings, including the processor ids |
 | `api-keys` | `create`, `list`, `revoke` — merchant API key management |
@@ -282,11 +282,11 @@ Errors (non-zero exit) are also written to **stdout** as structured JSON when `-
 | Code | Meaning |
 |---|---|
 | `0` | Success, **including a declined payment** and a 404 on a delete or revoke |
-| `1` | General: transport, an unreadable response — including a `pos create --wait` response with no `posTransactionStatus` — a server 5xx, an expired `--wait-timeout` |
+| `1` | General: transport, an unreadable response — including a `pos create --wait` or `pos reversal --wait` response with no `posTransactionStatus` — a server 5xx, an expired `--wait-timeout` |
 | `2` | Auth failure (401/403 or missing credentials) |
 | `3` | Validation / bad input — server 400/422, client-side refusals, or CLI usage/parse errors |
 | `4` | Not found: a 404 that was not mapped to success |
-| `130` | Interrupted — Ctrl-C during a `pos create --wait` poll |
+| `130` | Interrupted — Ctrl-C during a `pos create` or `pos reversal` request or its `--wait` poll |
 | `141` | The consumer of stdout stopped reading, so the output is a prefix — `128 + SIGPIPE`, what a `pipefail` pipeline expects when `jq -e` or `head` closes the pipe early |
 
 Under `--output json`, a failure is a JSON envelope on stdout, CLI usage/parse errors included, so a machine consumer never has to guess at an empty stdout. [`agents.md`](agents.md) has the retry table and the five exits that carry no error envelope.
