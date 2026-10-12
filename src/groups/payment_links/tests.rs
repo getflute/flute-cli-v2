@@ -193,7 +193,7 @@ fn every_update_flag_reaches_the_body_under_its_wire_name() {
         base_amount: Some(PatchNumber::Set("30.00".parse().unwrap())),
         currency_code: Some("USD".into()),
         link_type: Some(LinkType::SingleUse),
-        payment_link_status: Some(PaymentLinkStatus::Inactive),
+        payment_link_status: Some(UpdateLinkStatus::Inactive),
         customer_id: Some("cus-1".into()),
         reference_id: Some("ORDER-2".into()),
         name: Some("After".into()),

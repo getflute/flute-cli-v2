@@ -35,6 +35,13 @@ pub enum PaymentLinkStatus {
     Inactive,
 }
 
+/// The statuses an update accepts; the server answers 400 for the other two.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
+pub enum UpdateLinkStatus {
+    Active,
+    Inactive,
+}
+
 /// `SharePaymentLinkRequestDto.shareBy` declares exactly these two.
 ///
 /// Deliberately **not** `groups::transactions::ShareBy`, which carries `Sms`
@@ -291,7 +298,7 @@ pub struct UpdatePaymentLinkArgs {
         id = "update_link_status",
         value_name = "PAYMENT_LINK_STATUS"
     )]
-    pub payment_link_status: Option<PaymentLinkStatus>,
+    pub payment_link_status: Option<UpdateLinkStatus>,
     /// Customer UUID to attach the link to.
     #[arg(long, id = "update_link_customer_id", value_name = "CUSTOMER_ID")]
     pub customer_id: Option<String>,

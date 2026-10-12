@@ -43,7 +43,7 @@ Options:
       --status <PAYMENT_LINK_STATUS>
           Set the link's status, e.g. `inactive` to stop accepting payments
           
-          [possible values: active, completed, expired, inactive]
+          [possible values: active, inactive]
 
       --customer-id <CUSTOMER_ID>
           Customer UUID to attach the link to

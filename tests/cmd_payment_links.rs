@@ -296,6 +296,28 @@ async fn payment_link_share_exchange_matches_the_contract() {
     support::assert_exchange_observed(&server, &ex).await;
 }
 
+/// The server accepts only `Active` and `Inactive` on an update, so the
+/// other two list-filter values are refused before the wire.
+#[tokio::test]
+async fn payment_link_update_status_offers_only_active_and_inactive() {
+    for bad in ["completed", "expired"] {
+        let server = support::mock_with_token().await;
+        support::bin(&server)
+            .args(["payment-links", "update", LINK, "--status", bad])
+            .assert()
+            .code(3);
+        assert!(
+            server
+                .received_requests()
+                .await
+                .unwrap()
+                .iter()
+                .all(|r| r.url.path() == "/oauth2/token"),
+            "{bad}"
+        );
+    }
+}
+
 /// Destructive, so it is refused client-side with no request issued.
 #[tokio::test]
 async fn payment_link_delete_without_yes_issues_no_request() {
