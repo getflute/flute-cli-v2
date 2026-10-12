@@ -82,8 +82,8 @@ pub struct ListCustomersArgs {
         value_name = "SORT_BY",
         value_parser = [
             "companyName",
+            "createdOn",
             "email",
-            "externalId",
             "firstName",
             "lastName",
             "lastTransactionDate",

@@ -1262,3 +1262,17 @@ fn list_sort_by_rejects_a_field_the_api_does_not_sort_on() {
             .stderr(predicate::str::contains("possible values"));
     }
 }
+
+/// `customers list` sorts by its default field, `createdOn`, and refuses
+/// `externalId`, which the server accepts without sorting.
+#[test]
+fn customers_sort_by_offers_created_on_and_not_external_id() {
+    support::bin_without_credentials()
+        .args(["customers", "list", "--sort-by", "createdOn"])
+        .assert()
+        .code(2);
+    support::bin_without_credentials()
+        .args(["customers", "list", "--sort-by", "externalId"])
+        .assert()
+        .code(3);
+}
