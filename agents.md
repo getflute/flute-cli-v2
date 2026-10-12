@@ -446,7 +446,7 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   except that a saved card is refused: `--payment-method-id` with
   `--instrument card` is a `client` envelope, exit 3, nothing sent, because
   `creditDetails.cardData` declares no saved-card id and the API answers it
-  with a 400. A card credit takes `--card` and `--exp`; a saved bank account
+  with a 400. A card credit takes `--card`, `--exp` and `--cvv` together; a saved bank account
   (`--instrument ach`) is credited by id.
 - **`--capture-method manual` creates an authorization** to capture later;
   `auto`, the default, charges immediately. It applies to a card only: on an
@@ -507,8 +507,9 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   same `data` — only `meta.correlation_id`, which names the request, differs —
   so an agent gains nothing from `inspect` and spends a second round trip on
   it. Neither has an endpoint of its own beyond the read.
-- **`list --from` and `--to` accept a date without a time.** `--from` starts at
-  the beginning of that day and `--to` includes that whole day.
+- **`list --from` and `--to` filter by whole days.** The API ignores the time
+  part of a date-time. `--from` starts at the beginning of that day and `--to`
+  includes that whole day.
 - `list` filters are all **server-side**. There is no client-side filtering
   anywhere in this CLI: a filter applied locally reports a wrong answer on any
   collection larger than one page.
@@ -592,13 +593,16 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
 - `update` is an RFC 7396 merge patch: an empty value or `--clear <field>`
   removes a value — see [Clearing a field](#clearing-a-field). Clearing
   `--amount` makes a fixed-price link one the payer fills in.
-- **Tax is `--tax-mode` plus exactly one of `--tax-rate` or `--tax-amount`.**
-  The server answers a 400 naming `taxMode` for any other combination, so the
+- **The API requires `--tax-mode` with exactly one of `--tax-rate` or
+  `--tax-amount`.** The server answers a 400 naming `taxMode` for any other combination, so the
   CLI does not check the pairing. `--tax-rate` is a percentage; `--tax-amount`
   is a plain amount. `payment-sessions create` takes the same three flags.
 - **`--mode payment|payment-and-save` is `create` only**; `update` rejects it.
 - `--metadata key=value` is repeatable and splits on the first `=`. On
-  `update` the pairs **replace the whole stored map**, they do not merge.
+  `update` the pairs are **merged into the stored map**: a named key is added
+  or replaced and the other keys are kept. `--clear metadata` or
+  `--metadata ""` removes the whole map, and an empty value after `=` stores an
+  empty string.
 - **`--ach-faster-processing` needs the merchant's ACH settings to allow it.**
   Otherwise the server answers a 400 saying so. On `create` it requires
   `--ach-enabled` (a usage error, exit 3, without it), so it only refines an
@@ -614,7 +618,10 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
   list` send `asc=true` or `asc=false` instead, and without `--sort-by` they
   also send `orderBy=createdOn`, because the server ignores a direction that
   names no field. `--sort-by` takes only the field names `--help` lists, on
-  `payment-methods`, `terminals` and `pos` as on `customers`.
+  `payment-methods`, `terminals` and `pos` as on `customers`. The newest-first
+  default does not cover `payment-methods list`: with neither direction its
+  order is the API's default, not by creation date, and `--desc` gives newest
+  first. A bare `customers list` is newest first.
 - `delete` requires `--yes`, and it and `share` both answer **204**.
 
 ### `payment-sessions`

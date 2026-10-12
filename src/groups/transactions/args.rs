@@ -118,7 +118,7 @@ pub enum TransactionsCommand {
         amount: Option<Decimal>,
     },
     /// Card or ACH credit (POST /v2/transactions/credit). A card needs
-    /// `--card` and `--exp`; only a saved bank account can be credited by id.
+    /// `--card`, `--exp` and `--cvv`; only a saved bank account can be credited by id.
     Credit(CreditArgs),
     /// Adjust the tip on a transaction
     /// (POST /v2/transactions/{transactionId}/tip-adjustment).
@@ -201,12 +201,12 @@ pub struct ListTransactionsArgs {
     /// Sort descending, by `--sort-by` or else by transaction date.
     #[arg(long, id = "txn_desc")]
     pub desc: bool,
-    /// Filter results from this date-time inclusive (ISO 8601). A date
-    /// without a time starts at the beginning of that day.
+    /// Filter results from this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter starts at the beginning of that day.
     #[arg(long = "from", id = "txn_from", value_name = "FROM_DATE")]
     pub from_date: Option<String>,
-    /// Filter results up to this date-time inclusive (ISO 8601). A date
-    /// without a time includes that whole day.
+    /// Filter results up to this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter includes that whole day.
     #[arg(long = "to", id = "txn_to", value_name = "TO_DATE")]
     pub to_date: Option<String>,
     /// Filter by the transaction source.

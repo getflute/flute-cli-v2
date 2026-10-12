@@ -146,13 +146,13 @@ pub struct CreatePaymentSessionArgs {
         value_name = "ACH_PROCESSOR_ID"
     )]
     pub ach_processor_id: Option<String>,
-    /// Tax as a plain amount, e.g. `1.00`. Needs `--tax-mode`; not with
-    /// `--tax-rate`.
+    /// Tax as a plain amount, e.g. `1.00`. The API requires `--tax-mode` with
+    /// exactly one of `--tax-rate` or `--tax-amount`.
     #[arg(long, id = "session_tax_amount", value_parser = parse_amount,
           value_name = "TAX_AMOUNT", allow_negative_numbers = true)]
     pub tax_amount: Option<Decimal>,
-    /// Tax as a percentage, e.g. `8.5` for 8.5%. Needs `--tax-mode`; not
-    /// with `--tax-amount`.
+    /// Tax as a percentage, e.g. `8.5` for 8.5%. The API requires `--tax-mode`
+    /// with exactly one of `--tax-rate` or `--tax-amount`.
     #[arg(long, id = "session_tax_rate", value_parser = parse_rate,
           value_name = "TAX_RATE", allow_negative_numbers = true)]
     pub tax_rate: Option<Decimal>,

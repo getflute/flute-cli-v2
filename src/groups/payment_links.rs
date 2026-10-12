@@ -234,12 +234,12 @@ pub struct CreatePaymentLinkArgs {
     /// the flag for several pairs.
     #[arg(long = "metadata", value_name = "KEY=VALUE")]
     pub metadata: Vec<String>,
-    /// Tax as a plain amount, e.g. `1.00`. Needs `--tax-mode`; not with
-    /// `--tax-rate`.
+    /// Tax as a plain amount, e.g. `1.00`. The API requires `--tax-mode` with
+    /// exactly one of `--tax-rate` or `--tax-amount`.
     #[arg(long, value_parser = parse_amount, value_name = "TAX_AMOUNT", allow_negative_numbers = true)]
     pub tax_amount: Option<Decimal>,
-    /// Tax as a percentage, e.g. `8.5` for 8.5%. Needs `--tax-mode`; not
-    /// with `--tax-amount`.
+    /// Tax as a percentage, e.g. `8.5` for 8.5%. The API requires `--tax-mode`
+    /// with exactly one of `--tax-rate` or `--tax-amount`.
     #[arg(long, value_parser = parse_rate, value_name = "TAX_RATE", allow_negative_numbers = true)]
     pub tax_rate: Option<Decimal>,
     /// Whether the tax is added to the amount (`exclusive`) or included in it
@@ -316,8 +316,10 @@ pub struct UpdatePaymentLinkArgs {
     #[arg(long, id = "update_link_expires_on", value_name = "EXPIRES_ON",
           value_parser = parse_utc_expiry)]
     pub expires_on: Option<String>,
-    /// Replacement `key=value` metadata. Repeat the flag for several pairs.
-    /// The pairs replace the whole stored map; an empty value removes it.
+    /// `key=value` metadata to merge into the stored map. Repeat the flag for
+    /// several pairs. A named key is added or replaced and the other keys are
+    /// kept; `--clear metadata` or `--metadata ""` removes the whole map. An
+    /// empty value after `=` stores an empty string.
     #[arg(
         long = "metadata",
         id = "update_link_metadata",
@@ -565,7 +567,7 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
         }
         None => {}
     }
-    // An empty value is the removal; the pairs otherwise replace the map.
+    // An empty value is the removal; the pairs otherwise merge into the stored map.
     if args.metadata == [""] {
         body.insert("metadata".into(), Value::Null);
     } else if !args.metadata.is_empty() {

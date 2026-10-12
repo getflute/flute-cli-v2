@@ -61,7 +61,7 @@ Options:
           New UTC expiry (ISO 8601, ending in `Z`), e.g. `2030-09-15T00:00:00Z`. Must be in the future
 
       --metadata <KEY=VALUE>
-          Replacement `key=value` metadata. Repeat the flag for several pairs. The pairs replace the whole stored map; an empty value removes it
+          `key=value` metadata to merge into the stored map. Repeat the flag for several pairs. A named key is added or replaced and the other keys are kept; `--clear metadata` or `--metadata ""` removes the whole map. An empty value after `=` stores an empty string
 
       --tax-amount <TAX_AMOUNT>
           New tax as a plain amount, e.g. `1.00`. Sent with `--tax-mode`

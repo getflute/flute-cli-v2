@@ -66,10 +66,10 @@ Options:
           Charge ACH payments through this processor
 
       --tax-amount <TAX_AMOUNT>
-          Tax as a plain amount, e.g. `1.00`. Needs `--tax-mode`; not with `--tax-rate`
+          Tax as a plain amount, e.g. `1.00`. The API requires `--tax-mode` with exactly one of `--tax-rate` or `--tax-amount`
 
       --tax-rate <TAX_RATE>
-          Tax as a percentage, e.g. `8.5` for 8.5%. Needs `--tax-mode`; not with `--tax-amount`
+          Tax as a percentage, e.g. `8.5` for 8.5%. The API requires `--tax-mode` with exactly one of `--tax-rate` or `--tax-amount`
 
       --tax-mode <TAX_MODE>
           Whether the tax is added to the amount (`exclusive`) or included in it (`inclusive`). Sent with exactly one of `--tax-rate` or `--tax-amount`
