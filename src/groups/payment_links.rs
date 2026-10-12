@@ -109,7 +109,7 @@ impl Clearable {
 }
 
 /// Parse an expiry as the API takes one: a UTC date-time in ISO 8601 with a
-/// `Z` suffix, e.g. `2026-09-15T00:00:00Z`, with optional fractional seconds.
+/// `Z` suffix, e.g. `2030-09-15T00:00:00Z`, with optional fractional seconds.
 ///
 /// The API answers anything else with a 400: a word or a bare date with a
 /// .NET conversion error that names no flag, and a date-time without the `Z`
@@ -120,7 +120,7 @@ pub(crate) fn parse_utc_expiry(raw: &str) -> Result<String> {
     if raw.is_empty() || is_utc_date_time(raw) {
         return Ok(raw.to_string());
     }
-    anyhow::bail!("expected a UTC date-time in ISO 8601 ending in Z, e.g. 2026-09-15T00:00:00Z")
+    anyhow::bail!("expected a UTC date-time in ISO 8601 ending in Z, e.g. 2030-09-15T00:00:00Z")
 }
 
 fn is_utc_date_time(raw: &str) -> bool {
@@ -222,7 +222,7 @@ pub struct CreatePaymentLinkArgs {
     /// Merchant-internal notes. Never shown to customers.
     #[arg(long)]
     pub description: Option<String>,
-    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`.
+    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2030-09-15T00:00:00Z`.
     /// Omit for a link that never expires.
     #[arg(long, value_parser = parse_utc_expiry)]
     pub expires_on: Option<String>,
@@ -312,7 +312,7 @@ pub struct UpdatePaymentLinkArgs {
     #[arg(long, id = "update_link_description", value_name = "DESCRIPTION")]
     pub description: Option<String>,
     /// New UTC expiry (ISO 8601, ending in `Z`), e.g.
-    /// `2026-09-15T00:00:00Z`. Must be in the future.
+    /// `2030-09-15T00:00:00Z`. Must be in the future.
     #[arg(long, id = "update_link_expires_on", value_name = "EXPIRES_ON",
           value_parser = parse_utc_expiry)]
     pub expires_on: Option<String>,

@@ -114,7 +114,7 @@ pub struct CreatePaymentSessionArgs {
     /// Message shown to the payer once the session completes.
     #[arg(long)]
     pub after_completion_message: Option<String>,
-    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`.
+    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2030-09-15T00:00:00Z`.
     /// Omit for a session that never expires.
     #[arg(long, value_parser = crate::groups::payment_links::parse_utc_expiry)]
     pub expires_at: Option<String>,

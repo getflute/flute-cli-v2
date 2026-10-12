@@ -58,7 +58,7 @@ Options:
           New merchant-internal notes
 
       --expires-on <EXPIRES_ON>
-          New UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`. Must be in the future
+          New UTC expiry (ISO 8601, ending in `Z`), e.g. `2030-09-15T00:00:00Z`. Must be in the future
 
       --metadata <KEY=VALUE>
           Replacement `key=value` metadata. Repeat the flag for several pairs. The pairs replace the whole stored map; an empty value removes it

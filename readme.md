@@ -123,7 +123,8 @@ flute2 transactions create \
   --sec-code web --requester-ip 203.0.113.10 \
   --contact-first-name Ada --contact-last-name Lovelace \
   --contact-email ada@example.com --contact-phone +14155552309 \
-  --billing-line1 "123 Test St" --billing-postal-code 10001 --billing-country US
+  --billing-line1 "123 Test St" --billing-city "New York" --billing-state NY \
+  --billing-postal-code 10001 --billing-country US
 ```
 
 **A declined charge is not an error.** It exits 0, because the request succeeded — the payment did not. Read `transactionStatus`:

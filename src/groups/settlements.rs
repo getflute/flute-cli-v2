@@ -44,7 +44,8 @@ pub enum SettlementsCommand {
     ///
     /// This is a batch-level operation, not a per-transaction
     /// one. It closes and settles the processor's entire open batch. Use
-    /// `--payment-processor-id` to identify the processor.
+    /// `--payment-processor-id` to identify the processor. Batch close is for
+    /// card processors.
     Close {
         /// UUID of the payment processor whose open batch should be settled
         /// (required).

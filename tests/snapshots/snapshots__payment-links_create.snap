@@ -30,7 +30,7 @@ Options:
       --description <DESCRIPTION>
           Merchant-internal notes. Never shown to customers
       --expires-on <EXPIRES_ON>
-          UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`. Omit for a link that never expires
+          UTC expiry (ISO 8601, ending in `Z`), e.g. `2030-09-15T00:00:00Z`. Omit for a link that never expires
       --mode <MODE>
           What the link does with the payer's payment method: `payment` (default) or `payment-and-save` [possible values: payment, payment-and-save]
       --metadata <KEY=VALUE>

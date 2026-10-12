@@ -383,7 +383,7 @@ places and sent as exact JSON numbers. **No amount passes through a float.**
 A negative amount or rate is refused, and the refusal names the flag and the
 rule it broke, as every other malformed value does. `--exp` is `MM/YY` or
 `MM/YYYY`. `--expires-on` and `--expires-at` take a UTC date-time
-ending in `Z`, e.g. `2026-09-15T00:00:00Z`; an offset, `+00:00` included, is
+ending in `Z`, e.g. `2030-09-15T00:00:00Z`; an offset, `+00:00` included, is
 refused before the wire, exit 3, because the API refuses it.
 
 `--payment-processor-id` is required on `transactions create`, `transactions
@@ -507,6 +507,9 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   same `data` — only `meta.correlation_id`, which names the request, differs —
   so an agent gains nothing from `inspect` and spends a second round trip on
   it. Neither has an endpoint of its own beyond the read.
+- **`list --from` and `--to` read a date without a time as midnight at the start
+  of that day**, so `--to 2026-03-10` stops there. Pass a time, such as
+  `2026-03-10T23:59:59Z`, to take in the whole day.
 - `list` filters are all **server-side**. There is no client-side filtering
   anywhere in this CLI: a filter applied locally reports a wrong answer on any
   collection larger than one page.
@@ -730,7 +733,7 @@ flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
   `--sort-by` takes only the field names `--help` lists, and `--status`
   matches in any case, so `Settled` as the table prints it is accepted.
 - `close` settles the named processor's whole open batch, not one
-  transaction.
+  transaction. Batch close is for card processors.
 
 ### `settings`
 

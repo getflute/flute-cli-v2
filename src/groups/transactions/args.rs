@@ -201,10 +201,13 @@ pub struct ListTransactionsArgs {
     /// Sort descending, by `--sort-by` or else by transaction date.
     #[arg(long, id = "txn_desc")]
     pub desc: bool,
-    /// Filter results from this date-time inclusive (ISO 8601).
+    /// Filter results from this date-time inclusive (ISO 8601). A date
+    /// without a time is read as midnight at the start of that day.
     #[arg(long = "from", id = "txn_from", value_name = "FROM_DATE")]
     pub from_date: Option<String>,
-    /// Filter results up to this date-time inclusive (ISO 8601).
+    /// Filter results up to this date-time inclusive (ISO 8601). A date
+    /// without a time is read as midnight at the start of that day, so pass
+    /// a time such as `2026-03-10T23:59:59Z` to take in the whole day.
     #[arg(long = "to", id = "txn_to", value_name = "TO_DATE")]
     pub to_date: Option<String>,
     /// Filter by the transaction source.

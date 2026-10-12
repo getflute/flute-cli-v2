@@ -20,9 +20,9 @@ Options:
       --desc
           Sort descending, by `--sort-by` or else by transaction date
       --from <FROM_DATE>
-          Filter results from this date-time inclusive (ISO 8601)
+          Filter results from this date-time inclusive (ISO 8601). A date without a time is read as midnight at the start of that day
       --to <TO_DATE>
-          Filter results up to this date-time inclusive (ISO 8601)
+          Filter results up to this date-time inclusive (ISO 8601). A date without a time is read as midnight at the start of that day, so pass a time such as `2026-03-10T23:59:59Z` to take in the whole day
       --source-type <SOURCE_TYPE>
           Filter by the transaction source [possible values: api-key, invoice, mobile-app, portal, quick-payment, subscription, tap-to-pay, terminal, web-component]
       --source-id <SOURCE_ID>
