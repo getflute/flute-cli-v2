@@ -76,10 +76,28 @@ pub enum CustomersCommand {
 pub struct ListCustomersArgs {
     #[command(flatten)]
     pub pagination: PaginationArgs,
-    /// Sort results by this field name.
-    #[arg(long)]
+    /// Sort results by this field.
+    #[arg(
+        long,
+        value_name = "SORT_BY",
+        value_parser = [
+            "companyName",
+            "email",
+            "externalId",
+            "firstName",
+            "lastName",
+            "lastTransactionDate",
+            "mobilePhoneNumber",
+            "paymentMethodsCount",
+        ]
+    )]
     pub sort_by: Option<String>,
-    /// Sort descending. Without it, results come back newest first.
+    /// Sort ascending, by `--sort-by` or else by creation date. With neither
+    /// `--asc` nor `--desc`, results come back newest first.
+    #[arg(long, conflicts_with = "desc")]
+    pub asc: bool,
+    /// Sort descending, by `--sort-by` or else by creation date. This is the
+    /// order the server applies without a flag.
     #[arg(long)]
     pub desc: bool,
     /// Filter by full name.
@@ -157,9 +175,9 @@ pub struct UpdateCustomerArgs {
 pub fn build_list_customers_query(args: &ListCustomersArgs) -> Result<Vec<(&'static str, String)>> {
     args.pagination.validate()?;
     let mut query = args.pagination.query();
-    // Only the non-default direction is sent: the API's `asc` defaults to
-    // true, so sending it on every call would say nothing.
-    if args.desc {
+    if args.asc {
+        query.push(("asc", "true".into()));
+    } else if args.desc {
         query.push(("asc", "false".into()));
     }
     common::push_str(&mut query, "orderBy", &args.sort_by);
@@ -749,6 +767,7 @@ mod tests {
                 all: false,
             },
             sort_by: Some("lastName".into()),
+            asc: false,
             desc: true,
             full_name: Some("Ada Lovelace".into()),
             email: Some("ada@example.com".into()),
@@ -777,14 +796,20 @@ mod tests {
         assert_eq!(q.iter().find(|(k, _)| *k == "asc").unwrap().1, "false");
     }
 
-    /// `asc` defaults to true server-side, so sending it on every call would
-    /// say nothing. Only the reversed direction is expressed.
+    /// `--asc` and `--desc` each send their direction; with neither, `asc`
+    /// is left to the server.
     #[test]
-    fn ascending_is_the_default_and_sends_no_asc_parameter() {
-        let mut args = list_args();
-        args.desc = false;
-        let q = build_list_customers_query(&args).unwrap();
-        assert!(q.iter().all(|(k, _)| *k != "asc"), "{q:?}");
+    fn each_direction_flag_sends_asc_and_neither_sends_none() {
+        let asc = |asc, desc| {
+            let mut args = list_args();
+            args.asc = asc;
+            args.desc = desc;
+            let q = build_list_customers_query(&args).unwrap();
+            q.iter().find(|(k, _)| *k == "asc").map(|(_, v)| v.clone())
+        };
+        assert_eq!(asc(true, false).as_deref(), Some("true"));
+        assert_eq!(asc(false, true).as_deref(), Some("false"));
+        assert_eq!(asc(false, false), None);
     }
 
     /// An empty filter string is not a filter.

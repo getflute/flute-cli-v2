@@ -81,8 +81,13 @@ pub enum PaymentMethodsCommand {
 pub struct ListPaymentMethodsArgs {
     #[command(flatten)]
     pub pagination: PaginationArgs,
-    /// Sort results by this field name.
-    #[arg(long, id = "pm_sort_by", value_name = "SORT_BY")]
+    /// Sort results by this field.
+    #[arg(
+        long,
+        id = "pm_sort_by",
+        value_name = "SORT_BY",
+        value_parser = ["createdOn", "name"]
+    )]
     pub sort_by: Option<String>,
     /// Sort ascending.
     #[arg(long, id = "pm_asc", conflicts_with = "pm_desc")]

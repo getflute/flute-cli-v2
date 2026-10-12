@@ -147,8 +147,6 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-transactions-calculate-amount", "/surchargeRate", Flag("--surcharge-rate")),
     ("flute-v2-get-payment-methods", "?pageIndex", Flag("--page-index")),
     ("flute-v2-get-payment-methods", "?pageSize", Flag("--page-size")),
-    // As on `customers list`: the API defaults `asc` to true, so the
-    // flag names the non-default direction.
     ("flute-v2-get-payment-methods", "?asc", Flag("--asc/--desc")),
     ("flute-v2-get-payment-methods", "?orderBy", Flag("--sort-by")),
     ("flute-v2-get-payment-methods", "?search", Flag("--search")),
@@ -178,10 +176,7 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-payment-methods-paymentMethodId-set-default", "?customerId", Flag("--customer-id")),
     ("flute-v2-get-customers", "?pageIndex", Flag("--page-index")),
     ("flute-v2-get-customers", "?pageSize", Flag("--page-size")),
-    // The API defaults `asc` to true and a bare clap switch cannot
-    // express false, so the flag names the non-default direction and the
-    // parameter is sent only when it is asked for.
-    ("flute-v2-get-customers", "?asc", Flag("--desc")),
+    ("flute-v2-get-customers", "?asc", Flag("--asc/--desc")),
     ("flute-v2-get-customers", "?orderBy", Flag("--sort-by")),
     ("flute-v2-get-customers", "?fullName", Flag("--full-name")),
     ("flute-v2-get-customers", "?email", Flag("--email")),

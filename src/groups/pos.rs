@@ -169,8 +169,13 @@ pub struct CreatePosTransactionArgs {
 pub struct ListPosTransactionsArgs {
     #[command(flatten)]
     pub pagination: PaginationArgs,
-    /// Sort results by this field name.
-    #[arg(long)]
+    /// Sort results by this field.
+    #[arg(
+        long,
+        id = "pos_sort_by",
+        value_name = "SORT_BY",
+        value_parser = ["createdOn", "posTransactionStatus"]
+    )]
     pub sort_by: Option<String>,
     /// Sort ascending. With neither `--asc` nor `--desc`, the server's default
     /// order applies.

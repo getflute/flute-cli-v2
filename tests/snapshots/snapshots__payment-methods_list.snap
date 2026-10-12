@@ -10,7 +10,7 @@ Options:
       --page-index <PAGE_INDEX>      Page number to fetch. Zero-based
       --page-size <PAGE_SIZE>        Maximum results per page (1-100). Omit it to use the server's default
       --all                          Fetch every page until the collection is exhausted
-      --sort-by <SORT_BY>            Sort results by this field name
+      --sort-by <SORT_BY>            Sort results by this field [possible values: createdOn, name]
       --asc                          Sort ascending
       --desc                         Sort descending
       --search <SEARCH>              Match payment methods whose label (the `--name` they were given) contains this text, case-sensitively

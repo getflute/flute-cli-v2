@@ -1249,3 +1249,16 @@ async fn an_empty_query_or_body_identifier_is_refused_before_the_wire() {
         "a refused identifier still reached the network"
     );
 }
+
+/// `--sort-by` offers the fields the API sorts on, so any other is a usage
+/// error that sends nothing.
+#[test]
+fn list_sort_by_rejects_a_field_the_api_does_not_sort_on() {
+    for group in ["customers", "payment-methods", "terminals", "pos"] {
+        support::bin_without_credentials()
+            .args([group, "list", "--sort-by", "bogus"])
+            .assert()
+            .code(3)
+            .stderr(predicate::str::contains("possible values"));
+    }
+}

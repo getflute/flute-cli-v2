@@ -538,9 +538,10 @@ flute2 customers delete [OPTIONS] <CUSTOMER_ID>
 - The two booleans **take a value on `update`** — `--sms-consent false` — and
   are bare switches on `create`. A patch has to be able to clear a flag.
 - `delete` requires `--yes`.
-- `list` returns newest first. Observed on the sandbox: the order is the same
-  with `--desc` or `--sort-by`, and `--created-from`/`--created-to` do not
-  narrow the result — the server applies neither.
+- `list` returns newest first, and `--desc` asks for the order the server
+  applies anyway. `--asc` reverses it, and `--sort-by` takes only the field
+  names `--help` lists. Observed on the sandbox: `--created-from` and
+  `--created-to` do not narrow the result — the server applies neither.
 
 ### `payment-methods`
 
@@ -586,7 +587,8 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
   is refused before the wire, exit 3.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
   `sortOrder`; with neither, results come back newest first. `terminals list`
-  and `pos list` take the same pair.
+  and `pos list` take the same pair. `customers list` and `payment-methods
+  list` send `asc=true` or `asc=false` instead.
 - `delete` requires `--yes`, and it and `share` both answer **204**.
 
 ### `payment-sessions`
