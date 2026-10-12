@@ -77,7 +77,7 @@ Options:
           [possible values: exclusive, inclusive]
 
       --ach-faster-processing
-          Ask for faster ACH processing. Needs the merchant's ACH settings to allow it
+          Ask for faster ACH processing. Requires `--ach-enabled`, and the merchant's ACH settings must allow it
 
   -h, --help
           Print help (see a summary with '-h')

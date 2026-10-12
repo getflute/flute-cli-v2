@@ -1921,16 +1921,39 @@ pub static CONTRACTS: &[Contract] = &[
                 live: Live::Test("live_payment_link_create_get_update_delete"),
             },
             Variant {
-                name: "tax, metadata and faster ACH",
+                name: "mode, metadata and tax",
                 exchange: || Exchange {
                     request: RequestFixture {
                         body: Some(json!({
-                            "paymentMethods": {"ach": {"enabled": true, "fasterProcessing": true}},
+                            "paymentMethods": {"card": {"enabled": true}},
                             "currencyCode": "USD",
                             "mode": "PaymentAndSave",
                             "metadata": {"k": "https://x.example/?a=b"},
                             "taxRate": amount("8.5"),
                             "taxMode": "Exclusive"})),
+                        ..req("POST", "/v2/payment-links")
+                    },
+                    response: ok(Some(json!({
+                        "paymentLinkId": "3f8b2c1d-6e40-4a92-b7c5-1d2e3f4a5b60",
+                        "linkType": "SingleUse",
+                        "paymentMethods": {"card": {"enabled": true}},
+                        "currencyCode": "USD",
+                        "paymentLinkStatus": "Active",
+                        "shortUrl": "https://pay.example.com/l/abc123",
+                        "paymentCount": 0,
+                        "totalCollectedAmount": amount("0"),
+                        "createdOn": "2026-08-12T09:15:22.100Z",
+                        "modifiedOn": "2026-08-12T09:15:22.100Z"}))),
+                },
+                live: Live::Skip("no live scenario sends these fields yet"),
+            },
+            Variant {
+                name: "faster ACH",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "paymentMethods": {"ach": {"enabled": true, "fasterProcessing": true}},
+                            "currencyCode": "USD"})),
                         ..req("POST", "/v2/payment-links")
                     },
                     response: ok(Some(json!({
@@ -2241,13 +2264,27 @@ pub static CONTRACTS: &[Contract] = &[
                 live: Live::Test("live_payment_session_metadata_round_trip"),
             },
             Variant {
-                name: "tax and faster ACH",
+                name: "tax",
                 exchange: || Exchange {
                     request: RequestFixture {
                         body: Some(json!({
                             "amount": amount("20.00"),
                             "taxRate": amount("5"),
-                            "taxMode": "Exclusive",
+                            "taxMode": "Exclusive"})),
+                        ..req("POST", "/v2/payment-sessions")
+                    },
+                    response: ok(Some(json!({
+                        "id": "9c1f7a3e-2b58-4d06-8e93-4a5b6c7d8e90",
+                        "paymentMethods": {"card": {"enabled": true}}}))),
+                },
+                live: Live::Skip("no live scenario sends these fields yet"),
+            },
+            Variant {
+                name: "faster ACH",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "amount": amount("20.00"),
                             "paymentMethods": {"ach": {"enabled": true, "fasterProcessing": true}}})),
                         ..req("POST", "/v2/payment-sessions")
                     },

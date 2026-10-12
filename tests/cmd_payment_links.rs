@@ -63,20 +63,19 @@ async fn payment_link_create_full_exchange_matches_the_contract() {
 }
 
 #[tokio::test]
-async fn payment_link_create_tax_metadata_and_faster_ach_match_the_contract() {
+async fn payment_link_create_mode_metadata_and_tax_match_the_contract() {
     let server = support::mock_with_token().await;
     let ex = support::mount(
         &server,
         "flute-v2-post-payment-links",
-        "tax, metadata and faster ACH",
+        "mode, metadata and tax",
     )
     .await;
     support::bin(&server)
         .args([
             "payment-links",
             "create",
-            "--ach-enabled",
-            "--ach-faster-processing",
+            "--card-enabled",
             "--currency-code",
             "USD",
             "--mode",
@@ -91,6 +90,49 @@ async fn payment_link_create_tax_metadata_and_faster_ach_match_the_contract() {
         .assert()
         .success();
     support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
+async fn payment_link_create_faster_ach_matches_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(&server, "flute-v2-post-payment-links", "faster ACH").await;
+    support::bin(&server)
+        .args([
+            "payment-links",
+            "create",
+            "--ach-enabled",
+            "--ach-faster-processing",
+            "--currency-code",
+            "USD",
+        ])
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
+async fn faster_ach_without_ach_enabled_is_a_usage_error_on_create() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "payment-links",
+            "create",
+            "--card-enabled",
+            "--currency-code",
+            "USD",
+            "--ach-faster-processing",
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--ach-enabled"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
 }
 
 #[tokio::test]

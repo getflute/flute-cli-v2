@@ -14,10 +14,9 @@
 
 use crate::Ctx;
 use crate::api::ApiPath;
-use crate::cli::common;
+use crate::cli::common::{self, TaxMode};
 use crate::cli::money::{self, parse_amount, parse_rate, to_amount_number};
 use crate::cli::render::{self, Cell, Column, Resource};
-use crate::groups::payment_links::TaxMode;
 use anyhow::Result;
 use reqwest::Method;
 use rust_decimal::Decimal;
@@ -161,9 +160,13 @@ pub struct CreatePaymentSessionArgs {
     /// (`inclusive`). Sent with exactly one of `--tax-rate` or `--tax-amount`.
     #[arg(long, id = "session_tax_mode", value_enum, value_name = "TAX_MODE")]
     pub tax_mode: Option<TaxMode>,
-    /// Ask for faster ACH processing. Needs the merchant's ACH settings to
-    /// allow it.
-    #[arg(long = "ach-faster-processing", id = "session_ach_faster_processing")]
+    /// Ask for faster ACH processing. Requires `--ach-enabled`, and the
+    /// merchant's ACH settings must allow it.
+    #[arg(
+        long = "ach-faster-processing",
+        id = "session_ach_faster_processing",
+        requires = "session_ach_enabled"
+    )]
     pub ach_faster_processing: bool,
 }
 

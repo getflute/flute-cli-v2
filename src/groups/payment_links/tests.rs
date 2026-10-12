@@ -442,18 +442,18 @@ fn an_expiry_is_a_utc_date_time_ending_in_z() {
     }
 }
 
-/// The faster-processing switch names the ach object by itself when no other
-/// ach flag does, and the server decides whether the account allows it.
+/// With ACH offered, faster processing refines the same ach object.
 #[test]
-fn faster_processing_alone_still_sends_the_ach_object() {
+fn faster_processing_joins_the_enabled_ach_object() {
     let args = CreatePaymentLinkArgs {
+        ach_enabled: true,
         ach_faster_processing: true,
         ..card_only()
     };
     let body = build_create_payment_link_body(&args).unwrap();
     assert_eq!(
         body["paymentMethods"]["ach"],
-        serde_json::json!({"fasterProcessing": true})
+        serde_json::json!({"enabled": true, "fasterProcessing": true})
     );
 }
 

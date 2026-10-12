@@ -188,6 +188,13 @@ pub fn metadata_pair(raw: &str) -> Result<(String, String)> {
     Ok((key.to_string(), value.to_string()))
 }
 
+/// Whether the tax is added to the amount or already inside it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
+pub enum TaxMode {
+    Exclusive,
+    Inclusive,
+}
+
 /// The `metadata` object from every `--metadata` value.
 pub fn metadata_map(raw: &[String]) -> Result<Map<String, Value>> {
     raw.iter()

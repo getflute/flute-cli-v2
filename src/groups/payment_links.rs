@@ -8,7 +8,7 @@
 
 use crate::Ctx;
 use crate::api::ApiPath;
-use crate::cli::common::{self, PaginationArgs};
+use crate::cli::common::{self, PaginationArgs, TaxMode};
 use crate::cli::money::{
     self, PatchNumber, parse_amount, parse_amount_patch, parse_rate, parse_rate_patch,
     to_amount_number,
@@ -46,18 +46,11 @@ pub enum ShareChannel {
     Sms,
 }
 
-/// What a payment link or session does with the payer's payment method.
+/// What a payment link does with the payer's payment method.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
 pub enum LinkMode {
     Payment,
     PaymentAndSave,
-}
-
-/// Whether the tax is added to the amount or already inside it.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
-pub enum TaxMode {
-    Exclusive,
-    Inclusive,
 }
 
 /// `--tax-mode` on a merge patch: a mode, or the empty value that clears it.
@@ -246,9 +239,9 @@ pub struct CreatePaymentLinkArgs {
     /// (`inclusive`). Sent with exactly one of `--tax-rate` or `--tax-amount`.
     #[arg(long, value_enum)]
     pub tax_mode: Option<TaxMode>,
-    /// Ask for faster ACH processing. Needs the merchant's ACH settings to
-    /// allow it.
-    #[arg(long)]
+    /// Ask for faster ACH processing. Requires `--ach-enabled`, and the
+    /// merchant's ACH settings must allow it.
+    #[arg(long, requires = "ach_enabled")]
     pub ach_faster_processing: bool,
 }
 
