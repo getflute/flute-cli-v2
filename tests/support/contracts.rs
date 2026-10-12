@@ -171,7 +171,7 @@ pub static CONTRACTS: &[Contract] = &[
                             ("pageSize".into(), "5".into()),
                             ("email".into(), "ada@example.com".into()),
                             ("asc".into(), "false".into()),
-                            ("sortBy".into(), "lastName".into()),
+                            ("orderBy".into(), "lastName".into()),
                         ],
                         ..req("GET", "/v2/customers")
                     },
@@ -1216,6 +1216,20 @@ pub static CONTRACTS: &[Contract] = &[
                 live: Live::Test("live_card_credit"),
             },
         ],
+    },
+    Contract {
+        operation_id: "flute-v2-post-transactions-reversal",
+        route: "POST /v2/transactions/reversal",
+        mapping: Mapping::Excluded(
+            "documented, answers 405 on the API; the per-transaction reversal is the operation",
+        ),
+        variants: &[],
+    },
+    Contract {
+        operation_id: "flute-v2-post-pos-transactions-reversal",
+        route: "POST /v2/pos/transactions/reversal",
+        mapping: Mapping::Excluded("pos reversal"),
+        variants: &[],
     },
     Contract {
         operation_id: "flute-v2-post-pos-transactions",

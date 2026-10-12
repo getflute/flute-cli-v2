@@ -214,10 +214,10 @@ pub fn build_calculate_amount_body(args: &CalculateAmountArgs) -> Result<Value> 
 
 /// Build the `CreditRequestDto` body.
 ///
-/// The instrument rules are `create`'s, because they are one declaration.
-/// Two things differ: `referenceId` is **required**, and
-/// `creditDetails.cardData` declares no `captureMethod` — a credit is not an
-/// authorization, so none is sent.
+/// The instrument rules are `create`'s, with three differences: `referenceId`
+/// is **required**, `creditDetails.cardData` declares no `captureMethod` (a
+/// credit is not an authorization, so none is sent), and it declares no saved
+/// card id, so a saved card is refused.
 ///
 /// **The conditional ACH rule reaches this endpoint too**, so it is enforced
 /// here as well: `POST /v2/transactions/credit` answers `BillingAddress is
@@ -238,6 +238,13 @@ pub fn build_credit_body(args: &CreditArgs) -> Result<Value> {
     }
 
     let chosen = chosen_instrument(&args.instrument)?;
+    if chosen == Chosen::SavedCard {
+        anyhow::bail!(
+            "a card credit needs the card details (--card and --exp); a saved card \
+             cannot be credited by id. A saved bank account can: use \
+             --payment-method-id with --instrument ach."
+        );
+    }
     if chosen == Chosen::NewCard {
         parse_exp(args.instrument.exp.as_deref().unwrap_or_default())?;
     }

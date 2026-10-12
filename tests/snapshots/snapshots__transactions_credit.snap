@@ -2,7 +2,7 @@
 source: tests/snapshots.rs
 expression: help_for(&args)
 ---
-Card or ACH credit payment (POST /v2/transactions/credit)
+Card or ACH credit (POST /v2/transactions/credit). A card needs `--card` and `--exp`; only a saved bank account can be credited by id
 
 Usage: flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <PAYMENT_PROCESSOR_ID> --reference-id <REFERENCE_ID>
 

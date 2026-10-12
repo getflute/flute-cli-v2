@@ -162,7 +162,7 @@ pub fn build_list_customers_query(args: &ListCustomersArgs) -> Result<Vec<(&'sta
     if args.desc {
         query.push(("asc", "false".into()));
     }
-    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "orderBy", &args.sort_by);
     common::push_str(&mut query, "fullName", &args.full_name);
     common::push_str(&mut query, "email", &args.email);
     common::push_str(&mut query, "companyName", &args.company_name);
@@ -765,7 +765,7 @@ mod tests {
                 "pageIndex",
                 "pageSize",
                 "asc",
-                "sortBy",
+                "orderBy",
                 "fullName",
                 "email",
                 "companyName",

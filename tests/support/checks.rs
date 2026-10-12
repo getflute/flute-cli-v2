@@ -15,7 +15,7 @@ use super::spec::{self, assert_exchange_conforms};
 pub fn operation_set_matches_spec(contracts: &[Contract]) {
     let mut spec_routes = spec::non_webhook_routes();
     spec_routes.sort();
-    assert_eq!(spec_routes.len(), 50, "50 non-webhook operations expected");
+    assert_eq!(spec_routes.len(), 52, "52 non-webhook operations expected");
 
     let mut accounted: Vec<String> = contracts.iter().map(|c| c.route.to_string()).collect();
     // A duplicate row leaves the sorted lists different lengths, so the one

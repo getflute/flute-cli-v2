@@ -203,12 +203,14 @@ fn the_settlements_filters_match_the_bundle_where_it_declares_them() {
          reports"
     );
 
-    // `--asc` is a boolean because `sortOrder` has exactly two values; a third
-    // would leave a direction the flag cannot name.
-    let sort_order = spec::request_enum("flute-v2-get-settlements-batches", "?sortOrder");
-    assert_eq!(
-        sort_order,
-        BTreeSet::from(["asc".to_string(), "desc".to_string()])
+    // The reference declares `sortOrder` as a plain string and documents its
+    // two values in prose only, so they are fixed here: `--asc` is a boolean
+    // because the direction has exactly these two values.
+    let sort_order = spec::request_param_schema("flute-v2-get-settlements-batches", "?sortOrder");
+    assert_eq!(sort_order["type"], "string");
+    assert!(
+        sort_order.get("enum").is_none(),
+        "the reference declares an enum for sortOrder; compare against it"
     );
     let args = flute_cli2::groups::settlements::ListBatchesArgs {
         asc: true,

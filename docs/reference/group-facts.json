@@ -1,6 +1,6 @@
 {
- "bundle_sha256": "d67ff8f2a00fff6cc295a4f95c28453a7ab4c06465cacbae23c09b5ae626e478",
- "operation_count": 50,
+ "bundle_sha256": "6b137a6c9bb4a49f84cd52d48877c8a85d8fd57c3f776558c0efe68ce6cf3ee2",
+ "operation_count": 52,
  "operations": [
   {
    "additional_properties": null,
@@ -72,7 +72,7 @@
    "group": "api-keys",
    "leaves": [],
    "method": "DELETE",
-   "operation_id": "flute-v2-delete-api-keys-clientId",
+   "operation_id": "flute-v2-delete-api-keys-clientid",
    "path": "/v2/api-keys/{clientId}",
    "query": [],
    "request_body_required_flag": null,
@@ -142,7 +142,7 @@
      "type": "integer"
     },
     {
-     "default": true,
+     "default": false,
      "enum": null,
      "format": null,
      "maximum": null,
@@ -157,7 +157,7 @@
      "format": null,
      "maximum": null,
      "minimum": null,
-     "name": "sortBy",
+     "name": "orderBy",
      "required": false,
      "type": "string"
     },
@@ -299,7 +299,7 @@
    "group": "customers",
    "leaves": [],
    "method": "DELETE",
-   "operation_id": "flute-v2-delete-customers-customerId",
+   "operation_id": "flute-v2-delete-customers-customerid",
    "path": "/v2/customers/{customerId}",
    "query": [],
    "request_body_required_flag": null,
@@ -321,7 +321,7 @@
    "group": "customers",
    "leaves": [],
    "method": "GET",
-   "operation_id": "flute-v2-get-customers-customerId",
+   "operation_id": "flute-v2-get-customers-customerid",
    "path": "/v2/customers/{customerId}",
    "query": [],
    "request_body_required_flag": null,
@@ -365,7 +365,7 @@
     "/shouldUseBillingAsShippingAddress"
    ],
    "method": "PATCH",
-   "operation_id": "flute-v2-patch-customers-customerId",
+   "operation_id": "flute-v2-patch-customers-customerid",
    "path": "/v2/customers/{customerId}",
    "query": [],
    "request_body_required_flag": null,
@@ -459,7 +459,7 @@
      "type": "string"
     },
     {
-     "default": "asc",
+     "default": "desc",
      "enum": null,
      "format": null,
      "maximum": null,
@@ -495,12 +495,18 @@
     "/description",
     "/expiresOn",
     "/linkType",
+    "/metadata",
+    "/mode",
     "/name",
     "/paymentMethods/ach/enabled",
+    "/paymentMethods/ach/fasterProcessing",
     "/paymentMethods/ach/processorId",
     "/paymentMethods/card/enabled",
     "/paymentMethods/card/processorId",
-    "/referenceId"
+    "/referenceId",
+    "/taxAmount",
+    "/taxMode",
+    "/taxRate"
    ],
    "method": "POST",
    "operation_id": "flute-v2-post-payment-links",
@@ -527,7 +533,7 @@
    "group": "payment-links",
    "leaves": [],
    "method": "DELETE",
-   "operation_id": "flute-v2-delete-payment-links-paymentLinkId",
+   "operation_id": "flute-v2-delete-payment-links-paymentlinkid",
    "path": "/v2/payment-links/{paymentLinkId}",
    "query": [],
    "request_body_required_flag": null,
@@ -549,7 +555,7 @@
    "group": "payment-links",
    "leaves": [],
    "method": "GET",
-   "operation_id": "flute-v2-get-payment-links-paymentLinkId",
+   "operation_id": "flute-v2-get-payment-links-paymentlinkid",
    "path": "/v2/payment-links/{paymentLinkId}",
    "query": [],
    "request_body_required_flag": null,
@@ -578,16 +584,21 @@
     "/description",
     "/expiresOn",
     "/linkType",
+    "/metadata",
     "/name",
     "/paymentLinkStatus",
     "/paymentMethods/ach/enabled",
+    "/paymentMethods/ach/fasterProcessing",
     "/paymentMethods/ach/processorId",
     "/paymentMethods/card/enabled",
     "/paymentMethods/card/processorId",
-    "/referenceId"
+    "/referenceId",
+    "/taxAmount",
+    "/taxMode",
+    "/taxRate"
    ],
    "method": "PATCH",
-   "operation_id": "flute-v2-patch-payment-links-paymentLinkId",
+   "operation_id": "flute-v2-patch-payment-links-paymentlinkid",
    "path": "/v2/payment-links/{paymentLinkId}",
    "query": [],
    "request_body_required_flag": null,
@@ -615,7 +626,7 @@
     "/shareBy"
    ],
    "method": "POST",
-   "operation_id": "flute-v2-post-payment-links-paymentLinkId-share",
+   "operation_id": "flute-v2-post-payment-links-paymentlinkid-share",
    "path": "/v2/payment-links/{paymentLinkId}/share",
    "query": [],
    "request_body_required_flag": null,
@@ -680,7 +691,7 @@
      "format": null,
      "maximum": null,
      "minimum": null,
-     "name": "sortBy",
+     "name": "orderBy",
      "required": false,
      "type": "string"
     },
@@ -817,7 +828,7 @@
    "group": "payment-methods",
    "leaves": [],
    "method": "DELETE",
-   "operation_id": "flute-v2-delete-payment-methods-paymentMethodId",
+   "operation_id": "flute-v2-delete-payment-methods-paymentmethodid",
    "path": "/v2/payment-methods/{paymentMethodId}",
    "query": [],
    "request_body_required_flag": null,
@@ -839,7 +850,7 @@
    "group": "payment-methods",
    "leaves": [],
    "method": "GET",
-   "operation_id": "flute-v2-get-payment-methods-paymentMethodId",
+   "operation_id": "flute-v2-get-payment-methods-paymentmethodid",
    "path": "/v2/payment-methods/{paymentMethodId}",
    "query": [],
    "request_body_required_flag": null,
@@ -868,7 +879,7 @@
     "/paymentName"
    ],
    "method": "PATCH",
-   "operation_id": "flute-v2-patch-payment-methods-paymentMethodId",
+   "operation_id": "flute-v2-patch-payment-methods-paymentmethodid",
    "path": "/v2/payment-methods/{paymentMethodId}",
    "query": [],
    "request_body_required_flag": null,
@@ -890,7 +901,7 @@
    "group": "payment-methods",
    "leaves": [],
    "method": "POST",
-   "operation_id": "flute-v2-post-payment-methods-paymentMethodId-set-default",
+   "operation_id": "flute-v2-post-payment-methods-paymentmethodid-set-default",
    "path": "/v2/payment-methods/{paymentMethodId}/set-default",
    "query": [
     {
@@ -933,6 +944,7 @@
     "/mode",
     "/pageName",
     "/paymentMethods/ach/enabled",
+    "/paymentMethods/ach/fasterProcessing",
     "/paymentMethods/ach/processorId",
     "/paymentMethods/card/enabled",
     "/paymentMethods/card/processorId",
@@ -940,6 +952,9 @@
     "/referenceId",
     "/returnUrl",
     "/skipAddressVerification",
+    "/taxAmount",
+    "/taxMode",
+    "/taxRate",
     "/tipAmount"
    ],
    "method": "POST",
@@ -965,7 +980,7 @@
    "group": "payment-sessions",
    "leaves": [],
    "method": "GET",
-   "operation_id": "flute-v2-get-payment-sessions-paymentSessionId",
+   "operation_id": "flute-v2-get-payment-sessions-paymentsessionid",
    "path": "/v2/payment-sessions/{paymentSessionId}",
    "query": [],
    "request_body_required_flag": null,
@@ -987,7 +1002,7 @@
    "group": "payment-sessions",
    "leaves": [],
    "method": "POST",
-   "operation_id": "flute-v2-post-payment-sessions-paymentSessionId-cancel",
+   "operation_id": "flute-v2-post-payment-sessions-paymentsessionid-cancel",
    "path": "/v2/payment-sessions/{paymentSessionId}/cancel",
    "query": [],
    "request_body_required_flag": null,
@@ -1055,22 +1070,22 @@
      "type": "integer"
     },
     {
-     "default": "asc",
-     "enum": null,
-     "format": null,
-     "maximum": null,
-     "minimum": null,
-     "name": "sortOrder",
-     "required": false,
-     "type": "string"
-    },
-    {
      "default": null,
      "enum": null,
      "format": null,
      "maximum": null,
      "minimum": null,
      "name": "sortBy",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": "desc",
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "sortOrder",
      "required": false,
      "type": "string"
     },
@@ -1178,13 +1193,53 @@
    ]
   },
   {
+   "additional_properties": false,
+   "body_schema": "CreatePosTransactionReversalRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "pos",
+   "leaves": [
+    "/currencyCode",
+    "/customerId",
+    "/initiationChannel",
+    "/originalTransactionId",
+    "/paymentProcessorId",
+    "/posDeviceId",
+    "/readingMethod",
+    "/referenceId",
+    "/reversalAmount",
+    "/terminalId",
+    "/waitForAcceptanceByTerminal"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-pos-transactions-reversal",
+   "path": "/v2/pos/transactions/reversal",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "posDeviceId",
+    "referenceId",
+    "terminalId"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
+     "schema": "CreatePosTransactionResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
    "additional_properties": null,
    "body_schema": null,
    "content_types": [],
    "group": "pos",
    "leaves": [],
    "method": "GET",
-   "operation_id": "flute-v2-get-pos-transactions-posTransactionId",
+   "operation_id": "flute-v2-get-pos-transactions-postransactionid",
    "path": "/v2/pos/transactions/{posTransactionId}",
    "query": [
     {
@@ -1217,7 +1272,7 @@
    "group": "pos",
    "leaves": [],
    "method": "POST",
-   "operation_id": "flute-v2-post-pos-transactions-posTransactionId-cancel",
+   "operation_id": "flute-v2-post-pos-transactions-postransactionid-cancel",
    "path": "/v2/pos/transactions/{posTransactionId}/cancel",
    "query": [],
    "request_body_required_flag": null,
@@ -1243,7 +1298,7 @@
     "/terminalId"
    ],
    "method": "POST",
-   "operation_id": "flute-v2-post-pos-transactions-posTransactionId-print-receipt",
+   "operation_id": "flute-v2-post-pos-transactions-postransactionid-print-receipt",
    "path": "/v2/pos/transactions/{posTransactionId}/print-receipt",
    "query": [],
    "request_body_required_flag": null,
@@ -1393,10 +1448,7 @@
     },
     {
      "default": "desc",
-     "enum": [
-      "asc",
-      "desc"
-     ],
+     "enum": null,
      "format": null,
      "maximum": null,
      "minimum": null,
@@ -1405,7 +1457,7 @@
      "type": "string"
     },
     {
-     "default": null,
+     "default": "createdOn",
      "enum": null,
      "format": null,
      "maximum": null,
@@ -1456,7 +1508,12 @@
     },
     {
      "default": null,
-     "enum": null,
+     "enum": [
+      "Open",
+      "PendingSettlement",
+      "Settled",
+      "Declined"
+     ],
      "format": null,
      "maximum": null,
      "minimum": null,
@@ -1479,7 +1536,7 @@
   },
   {
    "additional_properties": false,
-   "body_schema": "SettleTransactionsRequestDto",
+   "body_schema": "CloseBatchRequestDto",
    "content_types": [
     "application/json"
    ],
@@ -1500,7 +1557,7 @@
      "bodyless": false,
      "example": true,
      "examples": [],
-     "schema": "SettleTransactionsResponseDto",
+     "schema": "CloseBatchResponseDto",
      "status": 200
     }
    ]
@@ -1546,7 +1603,7 @@
      "type": "string"
     },
     {
-     "default": "asc",
+     "default": "desc",
      "enum": null,
      "format": null,
      "maximum": null,
@@ -1635,7 +1692,7 @@
    "group": "terminals",
    "leaves": [],
    "method": "GET",
-   "operation_id": "flute-v2-get-terminals-terminalId-status",
+   "operation_id": "flute-v2-get-terminals-terminalid-status",
    "path": "/v2/terminals/{terminalId}/status",
    "query": [],
    "request_body_required_flag": null,
@@ -1691,7 +1748,7 @@
      "type": "string"
     },
     {
-     "default": "asc",
+     "default": "desc",
      "enum": null,
      "format": null,
      "maximum": null,
@@ -1722,23 +1779,13 @@
     },
     {
      "default": null,
-     "enum": [
-      "ApiKey",
-      "Invoice",
-      "MobileApp",
-      "Portal",
-      "QuickPayment",
-      "Subscription",
-      "TapToPay",
-      "Terminal",
-      "WebComponent"
-     ],
+     "enum": null,
      "format": null,
      "maximum": null,
      "minimum": null,
      "name": "sourceType",
      "required": false,
-     "type": "string"
+     "type": null
     },
     {
      "default": null,
@@ -1753,7 +1800,7 @@
     {
      "default": null,
      "enum": null,
-     "format": null,
+     "format": "uuid",
      "maximum": null,
      "minimum": null,
      "name": "batchId",
@@ -1797,7 +1844,7 @@
      "minimum": null,
      "name": "paymentMethodType",
      "required": false,
-     "type": "string"
+     "type": null
     },
     {
      "default": null,
@@ -1885,6 +1932,7 @@
     "/contactInfo/lastName",
     "/contactInfo/mobilePhoneNumber",
     "/currencyCode",
+    "/customerId",
     "/deviceId",
     "/extraAmounts/discountAmount",
     "/extraAmounts/discountRate",
@@ -1912,12 +1960,13 @@
     "/transactionDetails/achData/paymentMethodId",
     "/transactionDetails/achData/requesterIpAddress",
     "/transactionDetails/achData/secCode",
+    "/transactionDetails/cardData/captureMethod",
     "/transactionDetails/cardData/paymentMethodDetails/cardNumber",
     "/transactionDetails/cardData/paymentMethodDetails/expirationMonth",
     "/transactionDetails/cardData/paymentMethodDetails/expirationYear",
     "/transactionDetails/cardData/paymentMethodDetails/securityCode",
     "/transactionDetails/cardData/paymentMethodId",
-    "/transactionEnhancedData/dutyCharges",
+    "/transactionEnhancedData/dutyChargesRate",
     "/transactionEnhancedData/invoiceNumber",
     "/transactionEnhancedData/products/[]/discountRate",
     "/transactionEnhancedData/products/[]/measurementUnit",
@@ -1938,6 +1987,7 @@
    "request_body_required_flag": null,
    "required_fields": [
     "baseAmount",
+    "billingAddress",
     "paymentProcessorId",
     "transactionDetails"
    ],
@@ -1950,7 +2000,7 @@
       "Create transaction response (Authorization)",
       "Create transaction response (Sale)"
      ],
-     "schema": "PageOfGetTransactionResponseDto",
+     "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
    ]
@@ -1977,7 +2027,9 @@
    "path": "/v2/transactions/calculate-amount",
    "query": [],
    "request_body_required_flag": null,
-   "required_fields": [],
+   "required_fields": [
+    "baseAmount"
+   ],
    "responses": [
     {
      "bodyless": false,
@@ -2022,7 +2074,6 @@
     "/creditDetails/cardData/paymentMethodDetails/expirationMonth",
     "/creditDetails/cardData/paymentMethodDetails/expirationYear",
     "/creditDetails/cardData/paymentMethodDetails/securityCode",
-    "/creditDetails/cardData/paymentMethodId",
     "/currencyCode",
     "/customerId",
     "/paymentProcessorId",
@@ -2050,6 +2101,72 @@
      "bodyless": false,
      "example": true,
      "examples": [],
+     "schema": "GetTransactionResponseDtoFull",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreditRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "transactions",
+   "leaves": [
+    "/baseAmount",
+    "/billingAddress/addressLine1",
+    "/billingAddress/addressLine2",
+    "/billingAddress/city",
+    "/billingAddress/countryCode",
+    "/billingAddress/postalCode",
+    "/billingAddress/stateCode",
+    "/contactInfo/companyName",
+    "/contactInfo/email",
+    "/contactInfo/firstName",
+    "/contactInfo/hasSmsConsent",
+    "/contactInfo/lastName",
+    "/contactInfo/mobilePhoneNumber",
+    "/creditDetails/achData/isSameDayProcessing",
+    "/creditDetails/achData/paymentMethodDetails/accountHolderType",
+    "/creditDetails/achData/paymentMethodDetails/accountNumber",
+    "/creditDetails/achData/paymentMethodDetails/accountType",
+    "/creditDetails/achData/paymentMethodDetails/routingNumber",
+    "/creditDetails/achData/paymentMethodDetails/taxId",
+    "/creditDetails/achData/paymentMethodId",
+    "/creditDetails/achData/requesterIpAddress",
+    "/creditDetails/achData/secCode",
+    "/creditDetails/cardData/paymentMethodDetails/cardNumber",
+    "/creditDetails/cardData/paymentMethodDetails/expirationMonth",
+    "/creditDetails/cardData/paymentMethodDetails/expirationYear",
+    "/creditDetails/cardData/paymentMethodDetails/securityCode",
+    "/currencyCode",
+    "/customerId",
+    "/paymentProcessorId",
+    "/referenceId",
+    "/shippingAddress/addressLine1",
+    "/shippingAddress/addressLine2",
+    "/shippingAddress/city",
+    "/shippingAddress/countryCode",
+    "/shippingAddress/postalCode",
+    "/shippingAddress/stateCode"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-transactions-reversal",
+   "path": "/v2/transactions/reversal",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [
+    "baseAmount",
+    "creditDetails",
+    "paymentProcessorId",
+    "referenceId"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": true,
+     "examples": [],
      "schema": "PageOfGetTransactionResponseDto",
      "status": 200
     }
@@ -2062,7 +2179,7 @@
    "group": "transactions",
    "leaves": [],
    "method": "GET",
-   "operation_id": "flute-v2-get-transactions-transactionId",
+   "operation_id": "flute-v2-get-transactions-transactionid",
    "path": "/v2/transactions/{transactionId}",
    "query": [],
    "request_body_required_flag": null,
@@ -2087,7 +2204,7 @@
    "group": "transactions",
    "leaves": [],
    "method": "POST",
-   "operation_id": "flute-v2-post-transactions-transactionId-ach-hold",
+   "operation_id": "flute-v2-post-transactions-transactionid-ach-hold",
    "path": "/v2/transactions/{transactionId}/ach-hold",
    "query": [],
    "request_body_required_flag": null,
@@ -2097,7 +2214,7 @@
      "bodyless": false,
      "example": true,
      "examples": [],
-     "schema": "PageOfGetTransactionResponseDto",
+     "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
    ]
@@ -2109,7 +2226,7 @@
    "group": "transactions",
    "leaves": [],
    "method": "POST",
-   "operation_id": "flute-v2-post-transactions-transactionId-ach-release",
+   "operation_id": "flute-v2-post-transactions-transactionid-ach-release",
    "path": "/v2/transactions/{transactionId}/ach-release",
    "query": [],
    "request_body_required_flag": null,
@@ -2119,7 +2236,7 @@
      "bodyless": false,
      "example": true,
      "examples": [],
-     "schema": "PageOfGetTransactionResponseDto",
+     "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
    ]
@@ -2135,7 +2252,7 @@
     "/captureAmount"
    ],
    "method": "POST",
-   "operation_id": "flute-v2-post-transactions-transactionId-capture",
+   "operation_id": "flute-v2-post-transactions-transactionid-capture",
    "path": "/v2/transactions/{transactionId}/capture",
    "query": [],
    "request_body_required_flag": null,
@@ -2145,7 +2262,7 @@
      "bodyless": false,
      "example": true,
      "examples": [],
-     "schema": "PageOfGetTransactionResponseDto",
+     "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
    ]
@@ -2161,7 +2278,7 @@
     "/reversalAmount"
    ],
    "method": "POST",
-   "operation_id": "flute-v2-post-transactions-transactionId-reversal",
+   "operation_id": "flute-v2-post-transactions-transactionid-reversal",
    "path": "/v2/transactions/{transactionId}/reversal",
    "query": [],
    "request_body_required_flag": null,
@@ -2171,7 +2288,7 @@
      "bodyless": false,
      "example": true,
      "examples": [],
-     "schema": "PageOfGetTransactionResponseDto",
+     "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
    ]
@@ -2189,7 +2306,7 @@
     "/shareBy"
    ],
    "method": "POST",
-   "operation_id": "flute-v2-post-transactions-transactionId-share-receipt",
+   "operation_id": "flute-v2-post-transactions-transactionid-share-receipt",
    "path": "/v2/transactions/{transactionId}/share-receipt",
    "query": [],
    "request_body_required_flag": null,
@@ -2220,7 +2337,7 @@
     "/tipRate"
    ],
    "method": "POST",
-   "operation_id": "flute-v2-post-transactions-transactionId-tip-adjustment",
+   "operation_id": "flute-v2-post-transactions-transactionid-tip-adjustment",
    "path": "/v2/transactions/{transactionId}/tip-adjustment",
    "query": [],
    "request_body_required_flag": null,
@@ -2230,7 +2347,7 @@
      "bodyless": false,
      "example": true,
      "examples": [],
-     "schema": "PageOfGetTransactionResponseDto",
+     "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
    ]

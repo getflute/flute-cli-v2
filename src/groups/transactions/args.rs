@@ -117,7 +117,8 @@ pub enum TransactionsCommand {
         #[arg(long, value_parser = parse_amount, allow_negative_numbers = true)]
         amount: Option<Decimal>,
     },
-    /// Card or ACH credit payment (POST /v2/transactions/credit).
+    /// Card or ACH credit (POST /v2/transactions/credit). A card needs
+    /// `--card` and `--exp`; only a saved bank account can be credited by id.
     Credit(CreditArgs),
     /// Adjust the tip on a transaction
     /// (POST /v2/transactions/{transactionId}/tip-adjustment).

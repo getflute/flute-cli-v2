@@ -84,6 +84,9 @@ pub struct ListPaymentMethodsArgs {
     /// Sort results by this field name.
     #[arg(long, id = "pm_sort_by", value_name = "SORT_BY")]
     pub sort_by: Option<String>,
+    /// Sort ascending.
+    #[arg(long, id = "pm_asc", conflicts_with = "pm_desc")]
+    pub asc: bool,
     /// Sort descending.
     #[arg(long, id = "pm_desc")]
     pub desc: bool,
@@ -178,10 +181,12 @@ pub fn build_list_payment_methods_query(
 ) -> Result<Vec<(&'static str, String)>> {
     args.pagination.validate()?;
     let mut query = args.pagination.query();
-    if args.desc {
+    if args.asc {
+        query.push(("asc", "true".into()));
+    } else if args.desc {
         query.push(("asc", "false".into()));
     }
-    common::push_str(&mut query, "sortBy", &args.sort_by);
+    common::push_str(&mut query, "orderBy", &args.sort_by);
     common::push_str(&mut query, "search", &args.search);
     common::push_id(&mut query, "--customer-id", "customerId", &args.customer_id)?;
     common::push_str(&mut query, "createdFrom", &args.created_from);
@@ -743,6 +748,7 @@ mod tests {
                 all: false,
             },
             sort_by: Some("createdOn".into()),
+            asc: false,
             desc: true,
             search: Some("visa".into()),
             customer_id: Some("cus_1".into()),
@@ -760,13 +766,24 @@ mod tests {
                 "pageIndex",
                 "pageSize",
                 "asc",
-                "sortBy",
+                "orderBy",
                 "search",
                 "customerId",
                 "createdFrom",
                 "createdTo"
             ]
         );
+    }
+
+    /// `--asc` sends the explicit direction; the API's default is also ascending.
+    #[test]
+    fn asc_sends_asc_true() {
+        let args = ListPaymentMethodsArgs {
+            asc: true,
+            ..Default::default()
+        };
+        let q = build_list_payment_methods_query(&args).unwrap();
+        assert_eq!(q.iter().find(|(k, _)| *k == "asc").unwrap().1, "true");
     }
 
     /// A card and a bank account keep their masks in different containers.

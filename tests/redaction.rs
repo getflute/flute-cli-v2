@@ -468,7 +468,7 @@ async fn the_debug_trace_reports_the_query_string() {
         .clone();
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
 
-    assert!(stderr.contains("sortBy=createdOn"), "{stderr}");
+    assert!(stderr.contains("orderBy=createdOn"), "{stderr}");
     assert!(stderr.contains("asc=false"), "{stderr}");
     assert!(stderr.contains("fullName=Ada"), "{stderr}");
 }

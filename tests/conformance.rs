@@ -17,8 +17,8 @@ fn vendored_bundle_matches_its_recorded_hash() {
 
 /// The bundle must hold exactly the operation set the design counted.
 #[test]
-fn the_bundle_declares_fifty_non_webhook_operations() {
-    assert_eq!(support::spec::non_webhook_routes().len(), 50);
+fn the_bundle_declares_fifty_two_non_webhook_operations() {
+    assert_eq!(support::spec::non_webhook_routes().len(), 52);
 }
 
 /// The generated fact sheet and the surface walker must mean the same thing by

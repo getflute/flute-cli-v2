@@ -98,7 +98,6 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-transactions-credit", "/contactInfo/email", Flag("--contact-email")),
     ("flute-v2-post-transactions-credit", "/contactInfo/mobilePhoneNumber", Flag("--contact-phone")),
     ("flute-v2-post-transactions-credit", "/contactInfo/hasSmsConsent", Flag("--contact-sms-consent")),
-    ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodId", Flag("--payment-method-id/--instrument")),
     ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/cardNumber", Flag("--card")),
     ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/securityCode", Flag("--cvv")),
     ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/expirationMonth", Flag("--exp")),
@@ -150,8 +149,8 @@ const ROWS: &[Row] = &[
     ("flute-v2-get-payment-methods", "?pageSize", Flag("--page-size")),
     // As on `customers list`: the API defaults `asc` to true, so the
     // flag names the non-default direction.
-    ("flute-v2-get-payment-methods", "?asc", Flag("--desc")),
-    ("flute-v2-get-payment-methods", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-payment-methods", "?asc", Flag("--asc/--desc")),
+    ("flute-v2-get-payment-methods", "?orderBy", Flag("--sort-by")),
     ("flute-v2-get-payment-methods", "?search", Flag("--search")),
     ("flute-v2-get-payment-methods", "?createdFrom", Flag("--created-from")),
     ("flute-v2-get-payment-methods", "?createdTo", Flag("--created-to")),
@@ -183,7 +182,7 @@ const ROWS: &[Row] = &[
     // express false, so the flag names the non-default direction and the
     // parameter is sent only when it is asked for.
     ("flute-v2-get-customers", "?asc", Flag("--desc")),
-    ("flute-v2-get-customers", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-customers", "?orderBy", Flag("--sort-by")),
     ("flute-v2-get-customers", "?fullName", Flag("--full-name")),
     ("flute-v2-get-customers", "?email", Flag("--email")),
     ("flute-v2-get-customers", "?companyName", Flag("--company-name")),
@@ -298,15 +297,25 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-transactions", "/extraAmounts/tipAmount", Flag("--tip-amount")),
     ("flute-v2-post-transactions", "/extraAmounts/tipRate", Flag("--tip-rate")),
     ("flute-v2-post-transactions", "/isCustomerInitiatedTransaction", Flag("--customer-initiated")),
+    ("flute-v2-post-transactions", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-transactions", "/transactionDetails/cardData/captureMethod", Flag("--capture-method")),
     ("flute-v2-post-transactions", "/pricingType", Flag("--pricing-type")),
-    // The server has no member for it. A charge carrying the field is
-    // rejected outright — not ignored — so a flag here could only ever
-    // break the request it was added to. The declaration is doubly
-    // suspect: it also puts `maxLength` on a `number`. Restore the flag
-    // when a live charge carrying `dutyCharges` succeeds.
-    ("flute-v2-post-transactions", "/transactionEnhancedData/dutyCharges", Excluded(
-        "the API rejects it: no member of TransactionEnhancedDataDto maps to              dutyCharges, though the schema declares it",
-        )),
+    ("flute-v2-post-payment-links", "/metadata", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-links", "/mode", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-links", "/paymentMethods/ach/fasterProcessing", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-links", "/taxAmount", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-links", "/taxMode", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-links", "/taxRate", Excluded("not offered as a flag")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/metadata", Excluded("not offered as a flag")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/paymentMethods/ach/fasterProcessing", Excluded("not offered as a flag")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/taxAmount", Excluded("not offered as a flag")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/taxMode", Excluded("not offered as a flag")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/taxRate", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-sessions", "/paymentMethods/ach/fasterProcessing", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-sessions", "/taxAmount", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-sessions", "/taxMode", Excluded("not offered as a flag")),
+    ("flute-v2-post-payment-sessions", "/taxRate", Excluded("not offered as a flag")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/dutyChargesRate", Excluded("not offered as a flag")),
     ("flute-v2-post-transactions", "/transactionEnhancedData/invoiceNumber", Flag("--l3-invoice")),
     ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/discountRate", Flag("--l3-product")),
     ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/measurementUnit", Flag("--l3-product")),

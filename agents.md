@@ -439,7 +439,12 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   alongside a stored id, because nothing in the id says which container it
   belongs in. `--sec-code`, `--requester-ip` and `--same-day` with a card, and
   `--ach-tax-id` with anything but a new bank account, are refused rather than
-  dropped. `credit` takes the same instrument flags under the same rules.
+  dropped. `credit` takes the same instrument flags under the same rules,
+  except that a saved card is refused: `--payment-method-id` with
+  `--instrument card` is a `client` envelope, exit 3, nothing sent, because
+  `creditDetails.cardData` declares no saved-card id and the API answers it
+  with a 400. A card credit takes `--card` and `--exp`; a saved bank account
+  (`--instrument ach`) is credited by id.
 - **`--capture-method manual` creates an authorization** to capture later;
   `auto`, the default, charges immediately. It applies to a card only: on an
   ACH instrument, new or saved, `manual` is refused before the wire.
