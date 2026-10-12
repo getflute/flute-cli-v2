@@ -588,7 +588,10 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
   `sortOrder`; with neither, results come back newest first. `terminals list`
   and `pos list` take the same pair. `customers list` and `payment-methods
-  list` send `asc=true` or `asc=false` instead.
+  list` send `asc=true` or `asc=false` instead, and without `--sort-by` they
+  also send `orderBy=createdOn`, because the server ignores a direction that
+  names no field. `--sort-by` takes only the field names `--help` lists, on
+  `payment-methods`, `terminals` and `pos` as on `customers`.
 - `delete` requires `--yes`, and it and `share` both answer **204**.
 
 ### `payment-sessions`

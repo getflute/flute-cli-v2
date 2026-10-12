@@ -89,10 +89,10 @@ pub struct ListPaymentMethodsArgs {
         value_parser = ["createdOn", "name"]
     )]
     pub sort_by: Option<String>,
-    /// Sort ascending.
+    /// Sort ascending, by `--sort-by` or else by creation date.
     #[arg(long, id = "pm_asc", conflicts_with = "pm_desc")]
     pub asc: bool,
-    /// Sort descending.
+    /// Sort descending, by `--sort-by` or else by creation date.
     #[arg(long, id = "pm_desc")]
     pub desc: bool,
     /// Match payment methods whose label (the `--name` they were given)
@@ -191,7 +191,13 @@ pub fn build_list_payment_methods_query(
     } else if args.desc {
         query.push(("asc", "false".into()));
     }
-    common::push_str(&mut query, "orderBy", &args.sort_by);
+    // The server ignores a direction that names no field, so a direction
+    // alone sorts by creation date, the field its default order uses.
+    let order_by = args
+        .sort_by
+        .clone()
+        .or_else(|| (args.asc || args.desc).then(|| "createdOn".to_string()));
+    common::push_str(&mut query, "orderBy", &order_by);
     common::push_str(&mut query, "search", &args.search);
     common::push_id(&mut query, "--customer-id", "customerId", &args.customer_id)?;
     common::push_str(&mut query, "createdFrom", &args.created_from);
@@ -789,6 +795,28 @@ mod tests {
         };
         let q = build_list_payment_methods_query(&args).unwrap();
         assert_eq!(q.iter().find(|(k, _)| *k == "asc").unwrap().1, "true");
+    }
+
+    /// The server ignores a direction that names no field, so a direction
+    /// alone sorts by creation date, the field its default order uses.
+    #[test]
+    fn a_direction_without_sort_by_sorts_by_created_on() {
+        let order_by = |sort_by: Option<&str>, asc, desc| {
+            let args = ListPaymentMethodsArgs {
+                sort_by: sort_by.map(str::to_string),
+                asc,
+                desc,
+                ..Default::default()
+            };
+            let q = build_list_payment_methods_query(&args).unwrap();
+            q.iter()
+                .find(|(k, _)| *k == "orderBy")
+                .map(|(_, v)| v.clone())
+        };
+        assert_eq!(order_by(None, true, false).as_deref(), Some("createdOn"));
+        assert_eq!(order_by(None, false, true).as_deref(), Some("createdOn"));
+        assert_eq!(order_by(Some("name"), true, false).as_deref(), Some("name"));
+        assert_eq!(order_by(None, false, false), None);
     }
 
     /// A card and a bank account keep their masks in different containers.

@@ -180,7 +180,13 @@ pub fn build_list_customers_query(args: &ListCustomersArgs) -> Result<Vec<(&'sta
     } else if args.desc {
         query.push(("asc", "false".into()));
     }
-    common::push_str(&mut query, "orderBy", &args.sort_by);
+    // The server ignores a direction that names no field, so a direction
+    // alone sorts by creation date, the field its default order uses.
+    let order_by = args
+        .sort_by
+        .clone()
+        .or_else(|| (args.asc || args.desc).then(|| "createdOn".to_string()));
+    common::push_str(&mut query, "orderBy", &order_by);
     common::push_str(&mut query, "fullName", &args.full_name);
     common::push_str(&mut query, "email", &args.email);
     common::push_str(&mut query, "companyName", &args.company_name);
@@ -810,6 +816,28 @@ mod tests {
         assert_eq!(asc(true, false).as_deref(), Some("true"));
         assert_eq!(asc(false, true).as_deref(), Some("false"));
         assert_eq!(asc(false, false), None);
+    }
+
+    /// The server ignores a direction that names no field, so a direction
+    /// alone sorts by creation date, the field its default order uses.
+    #[test]
+    fn a_direction_without_sort_by_sorts_by_created_on() {
+        let order_by = |sort_by: Option<&str>, asc, desc| {
+            let args = ListCustomersArgs {
+                sort_by: sort_by.map(str::to_string),
+                asc,
+                desc,
+                ..Default::default()
+            };
+            let q = build_list_customers_query(&args).unwrap();
+            q.iter()
+                .find(|(k, _)| *k == "orderBy")
+                .map(|(_, v)| v.clone())
+        };
+        assert_eq!(order_by(None, true, false).as_deref(), Some("createdOn"));
+        assert_eq!(order_by(None, false, true).as_deref(), Some("createdOn"));
+        assert_eq!(order_by(Some("name"), true, false).as_deref(), Some("name"));
+        assert_eq!(order_by(None, false, false), None);
     }
 
     /// An empty filter string is not a filter.
