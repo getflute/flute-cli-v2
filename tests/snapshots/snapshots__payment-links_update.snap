@@ -73,7 +73,7 @@ Options:
           New tax mode, `exclusive` or `inclusive`. Sent with exactly one of `--tax-rate` or `--tax-amount`, and cleared with them
 
       --ach-faster-processing [<ACH_FASTER_PROCESSING>]
-          Ask for faster ACH processing: `--ach-faster-processing` or `--ach-faster-processing false`. Needs the merchant's ACH settings to allow it
+          Ask for faster ACH processing: `--ach-faster-processing` or `--ach-faster-processing false`. Requires `--ach-enabled` (true), and the merchant's ACH settings must allow it
           
           [possible values: true, false]
 

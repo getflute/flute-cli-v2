@@ -136,6 +136,24 @@ async fn faster_ach_without_ach_enabled_is_a_usage_error_on_create() {
 }
 
 #[tokio::test]
+async fn faster_ach_without_ach_enabled_is_a_usage_error_on_update() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["payment-links", "update", LINK, "--ach-faster-processing"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--ach-enabled"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
+
+#[tokio::test]
 async fn payment_link_get_exchange_matches_the_contract() {
     let server = support::mock_with_token().await;
     let ex = support::mount(

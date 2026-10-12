@@ -146,6 +146,7 @@ fn tax_metadata_and_faster_processing_set_on_update() {
         tax_amount: Some(PatchNumber::Set("0.75".parse().unwrap())),
         tax_mode: Some(TaxModePatch::Set(TaxMode::Inclusive)),
         metadata: vec!["z=1".into(), "y=a=b".into()],
+        ach_enabled: Some(true),
         ach_faster_processing: Some(false),
         ..update_args()
     };
@@ -155,7 +156,7 @@ fn tax_metadata_and_faster_processing_set_on_update() {
     assert_eq!(body["metadata"], serde_json::json!({"z": "1", "y": "a=b"}));
     assert_eq!(
         body["paymentMethods"]["ach"],
-        serde_json::json!({"fasterProcessing": false})
+        serde_json::json!({"enabled": true, "fasterProcessing": false})
     );
 }
 
@@ -170,4 +171,18 @@ fn setting_and_clearing_a_tax_field_is_refused() {
         .unwrap_err()
         .to_string();
     assert!(err.contains("tax-rate"), "{err}");
+}
+
+/// Faster processing cannot ride along with turning ACH off.
+#[test]
+fn faster_processing_with_ach_disabled_is_refused() {
+    let args = UpdatePaymentLinkArgs {
+        ach_enabled: Some(false),
+        ach_faster_processing: Some(true),
+        ..update_args()
+    };
+    let err = build_update_payment_link_body(&args)
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("--ach-faster-processing"), "{err}");
 }

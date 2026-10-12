@@ -598,7 +598,9 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
   Otherwise the server answers a 400 saying so. On `create` it requires
   `--ach-enabled` (a usage error, exit 3, without it), so it only refines an
   ACH offer you asked for. On `update` it takes a value
-  (`--ach-faster-processing false`) and is not clearable.
+  (`--ach-faster-processing false`), requires `--ach-enabled`, is refused with
+  `--ach-enabled false`, and is not clearable: a patch that names the `ach`
+  object turns ACH on for a link that had none.
 - `share` sends a real message. `--consent` is required: a share without it
   is refused before the wire, exit 3.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send

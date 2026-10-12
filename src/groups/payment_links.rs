@@ -331,10 +331,11 @@ pub struct UpdatePaymentLinkArgs {
           value_name = "TAX_MODE")]
     pub tax_mode: Option<TaxModePatch>,
     /// Ask for faster ACH processing: `--ach-faster-processing` or
-    /// `--ach-faster-processing false`. Needs the merchant's ACH settings to
-    /// allow it.
+    /// `--ach-faster-processing false`. Requires `--ach-enabled` (true), and
+    /// the merchant's ACH settings must allow it.
     #[arg(long, id = "update_ach_faster_processing", value_name = "ACH_FASTER_PROCESSING",
-          num_args = 0..=1, default_missing_value = "true")]
+          num_args = 0..=1, default_missing_value = "true",
+          requires = "update_ach_enabled")]
     pub ach_faster_processing: Option<bool>,
     /// Clear a field back to nothing. Repeat the flag for several fields.
     ///
@@ -505,6 +506,12 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
         (args.card_enabled, &args.card_processor_id),
         (args.ach_enabled, &args.ach_processor_id),
     )?;
+    if args.ach_faster_processing.is_some() && args.ach_enabled == Some(false) {
+        anyhow::bail!(
+            "--ach-faster-processing refines an ACH offer and cannot be combined \
+             with --ach-enabled false"
+        );
+    }
     if let Some(v) = args.ach_faster_processing {
         common::set_ach_faster_processing(&mut methods, v);
     }
