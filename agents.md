@@ -507,9 +507,8 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   same `data` — only `meta.correlation_id`, which names the request, differs —
   so an agent gains nothing from `inspect` and spends a second round trip on
   it. Neither has an endpoint of its own beyond the read.
-- **`list --from` and `--to` read a date without a time as midnight at the start
-  of that day**, so `--to 2026-03-10` stops there. Pass a time, such as
-  `2026-03-10T23:59:59Z`, to take in the whole day.
+- **`list --from` and `--to` accept a date without a time.** `--from` starts at
+  the beginning of that day and `--to` includes that whole day.
 - `list` filters are all **server-side**. There is no client-side filtering
   anywhere in this CLI: a filter applied locally reports a wrong answer on any
   collection larger than one page.
