@@ -213,10 +213,10 @@ async fn settlement_list_table_shows_the_processor_the_counts_and_the_amounts() 
         .stdout(predicate::str::contains("2026-03-23"));
 }
 
-/// The close response carries the resulting status and no identifier at all,
-/// so that status is what `quiet` prints — there is nothing else in it.
+/// The close response carries the resulting status and no identifier, so
+/// `quiet` prints nothing.
 #[tokio::test]
-async fn settlement_close_reports_the_batch_status_in_every_mode() {
+async fn settlement_close_has_no_identifier_to_print_under_quiet() {
     let server = support::mock_with_token().await;
     support::mount(
         &server,
@@ -235,7 +235,7 @@ async fn settlement_close_reports_the_batch_status_in_every_mode() {
         ])
         .assert()
         .success()
-        .stdout("PendingSettlement\n");
+        .stdout("");
 
     support::bin(&server)
         .args([
@@ -252,6 +252,29 @@ async fn settlement_close_reports_the_batch_status_in_every_mode() {
         .stdout(predicate::str::contains(
             "\"batchStatus\": \"PendingSettlement\"",
         ));
+}
+
+/// The open batch has a null `batchId`, so `quiet` prints a line for every
+/// other batch and nothing for it.
+#[tokio::test]
+async fn settlement_list_quiet_skips_the_open_batch() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("GET"))
+        .and(path("/v2/settlements/batches"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "items": [
+                {"batchId": null, "batchStatus": "Open"},
+                {"batchId": BATCH, "batchStatus": "Settled"}
+            ],
+            "pageInfo": {"hasMore": false}
+        })))
+        .mount(&server)
+        .await;
+    support::bin(&server)
+        .args(["--output", "quiet", "settlements", "list"])
+        .assert()
+        .success()
+        .stdout(format!("{BATCH}\n"));
 }
 
 /// `settlements get` renders one batch, not a collection, so it carries the

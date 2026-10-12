@@ -80,7 +80,7 @@ CI log stays quiet.
   each holding its row with a dash when the response lacks it. Every other
   field is in `--output json` only, so never parse `table`.
 - `--output quiet` prints the identifier alone, one per line for a collection.
-  Ideal for chaining. Four commands have no identifier to print and print
+  Ideal for chaining. Five commands have no identifier to print and print
   nothing at all: see
   [Commands with no identifier](#commands-with-no-identifier).
 
@@ -258,7 +258,7 @@ failing.
 
 ### Commands with no identifier
 
-Four responses carry no identifier the CLI can print, and this is the schema's
+Five responses carry no identifier the CLI can print, and this is the schema's
 shape rather than a choice:
 
 - **`payment-sessions get`** — the read response declares no `id`, of any
@@ -275,6 +275,8 @@ shape rather than a choice:
   caller supplied. Nothing is created, so the response names no resource and
   `quiet` prints nothing. The currency code it echoes is not an identifier:
   nothing can be read back with it.
+- **`settlements close`** — the response carries `batchStatus` and nothing
+  else, so it names no batch and `quiet` prints nothing.
 
 That is nothing at all — no line, no newline. Do not read the empty stdout as a
 failure; check the exit code.
@@ -721,7 +723,8 @@ flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
   `kind: "api"`, status 404, exit 4, although the API answered 200: the message
   says the filtered list returned no batch. Two matches for one id is a
   refusal rather than a guess. The open batch has a `null` `batchId`, so it
-  cannot be read by id.
+  cannot be read by id. Under `--output quiet`, `list` prints the id of every
+  batch that has one, so the open batch prints no line.
 - **`--asc`, not `--desc`** — this list's `sortOrder` defaults to `desc`.
   `--sort-by` takes only the field names `--help` lists, and `--status`
   matches in any case, so `Settled` as the table prints it is accepted.

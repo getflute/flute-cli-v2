@@ -230,11 +230,11 @@ pub static SETTLEMENT: Resource = Resource {
 
 /// `SettleTransactionsResponseDto` declares one property, `batchStatus`, and
 /// carries no batch id — so a close cannot be rendered as a settlement, and
-/// the resulting status is the only thing `quiet` has to print.
+/// `quiet` has nothing to print.
 pub static BATCH_CLOSURE: Resource = Resource {
     object: "batch_closure",
     object_list: "batch_closures",
-    id: "/batchStatus",
+    id: "",
     detail: &["/batchStatus"],
     columns: &[Column {
         header: "STATUS",
