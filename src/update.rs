@@ -98,11 +98,19 @@ pub async fn run() -> Result<()> {
         return Ok(());
     }
 
-    println!("Checking for updates\u{2026}");
-    let updated = updater
-        .run()
-        .await
-        .map_err(|e| anyhow::anyhow!(crate::api::with_causes(e)))?;
+    eprintln!("Checking for updates\u{2026}");
+    let updated = updater.run().await.map_err(|e| {
+        let network = matches!(
+            e,
+            axoupdater::AxoupdateError::Reqwest(_) | axoupdater::AxoupdateError::Axoasset(_)
+        );
+        let msg = crate::api::with_causes(e);
+        if network {
+            anyhow::Error::from(crate::api::ApiError::Transport(msg))
+        } else {
+            anyhow::anyhow!(msg)
+        }
+    })?;
     match updated {
         Some(result) => println!("Updated to {}.", result.new_version),
         None => println!(

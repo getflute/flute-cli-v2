@@ -616,6 +616,46 @@ fn an_update_that_cannot_reach_github_is_a_transport_failure() {
     );
 }
 
+/// With an install receipt, `update` looks the release up through the
+/// installer path. A network failure there is a transport failure too, and
+/// stdout carries the envelope alone.
+#[test]
+fn an_update_with_a_receipt_that_cannot_reach_github_is_a_transport_failure() {
+    let dir = tempfile::tempdir().unwrap();
+    // The receipt must name the directory the binary runs from, or the
+    // updater treats it as another install's and never looks anything up.
+    let exe = std::fs::canonicalize(assert_cmd::cargo::cargo_bin("flute2")).unwrap();
+    std::fs::write(
+        dir.path().join("flute2-receipt.json"),
+        serde_json::json!({
+            "install_prefix": exe.parent().unwrap().to_str().unwrap(),
+            "binaries": ["flute2"],
+            "source": {"release_type": "github", "owner": "getflute",
+                       "name": "flute-cli-v2", "app_name": "flute2"},
+            "version": "0.0.1",
+            "provider": {"source": "cargo-dist", "version": "0.30.0"},
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let out = support::bin_without_credentials()
+        .env("AXOUPDATER_CONFIG_PATH", dir.path())
+        .env("HTTPS_PROXY", "http://127.0.0.1:1")
+        .env("https_proxy", "http://127.0.0.1:1")
+        .env("ALL_PROXY", "http://127.0.0.1:1")
+        .env_remove("NO_PROXY")
+        .env_remove("no_proxy")
+        .args(["--output", "json", "update"])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out)
+        .unwrap_or_else(|e| panic!("stdout is not one envelope: {e}: {out:?}"));
+    assert_eq!(v["kind"], "transport", "{v}");
+}
+
 /// The token endpoint answering 401 is the other half of the split: the
 /// credentials reached it and were refused, which is exit 2 and an operator's
 /// problem.
