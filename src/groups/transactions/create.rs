@@ -443,6 +443,7 @@ fn enhanced_data(args: &CreateTransactionArgs) -> Result<Option<Value>> {
     for (key, value) in [
         ("salesTaxRate", args.sales_tax_rate),
         ("shippingCharges", args.shipping_charges),
+        ("dutyChargesRate", args.duty_rate),
     ] {
         if let Some(v) = value {
             map.insert(key.to_string(), to_amount_number(v)?);

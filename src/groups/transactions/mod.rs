@@ -29,6 +29,7 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                 ("--discount-rate", args.discount_rate),
                 ("--surcharge-rate", args.surcharge_rate),
                 ("--l2-tax-rate", args.sales_tax_rate),
+                ("--l3-duty-rate", args.duty_rate),
             ]);
             let resp = ctx
                 .api

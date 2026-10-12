@@ -458,6 +458,10 @@ pub struct CreateTransactionArgs {
     /// Level-3 shipping charges.
     #[arg(long = "l3-shipping", value_parser = parse_amount, value_name = "SHIPPING_CHARGES", allow_negative_numbers = true)]
     pub shipping_charges: Option<Decimal>,
+    /// Level-3 duty charges rate as a percentage, e.g. `2.5` for 2.5%. The
+    /// transaction read does not report it back.
+    #[arg(long = "l3-duty-rate", value_parser = parse_rate, value_name = "DUTY_RATE", allow_negative_numbers = true)]
+    pub duty_rate: Option<Decimal>,
     /// Level-3 product line item, as comma-separated `key=value` pairs.
     /// Repeat the flag for multiple products.
     ///

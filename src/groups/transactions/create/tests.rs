@@ -545,6 +545,7 @@ fn enhanced_data_reaches_the_wire_and_is_omitted_when_absent() {
     args.invoice_number = Some("INV-1".into());
     args.purchase_order = Some("PO-1".into());
     args.shipping_charges = Some("4.99".parse().unwrap());
+    args.duty_rate = Some("2.5".parse().unwrap());
     args.products = vec!["productName=Widget,unitPrice=9.99,quantity=2".into()];
     let data = &build_create_transaction_body(&args).unwrap()["transactionEnhancedData"];
     assert_eq!(data["invoiceNumber"], "INV-1");
@@ -556,6 +557,10 @@ fn enhanced_data_reaches_the_wire_and_is_omitted_when_absent() {
     assert_eq!(
         serde_json::to_string(&data["shippingCharges"]).unwrap(),
         "4.99"
+    );
+    assert_eq!(
+        serde_json::to_string(&data["dutyChargesRate"]).unwrap(),
+        "2.5"
     );
     // No `dutyCharges`: the server's `TransactionEnhancedDataDto` has no
     // member for it, so the flag is gone and the key must not appear.

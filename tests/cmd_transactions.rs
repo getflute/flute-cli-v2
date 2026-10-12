@@ -667,6 +667,8 @@ async fn transaction_create_level_three_exchange_matches_the_contract() {
             "PO-1",
             "--l3-shipping",
             "4.99",
+            "--l3-duty-rate",
+            "2.5",
             "--l3-product",
             "productName=Widget,productDescription=A widget,productCode=W-1,\
              unitPrice=9.99,measurementUnit=EA,quantity=2,taxAmount=0.82,\
