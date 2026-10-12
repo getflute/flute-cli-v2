@@ -673,6 +673,40 @@ async fn a_token_endpoint_that_fails_is_an_api_failure_not_an_auth_one() {
     }
 }
 
+/// Any 4xx from the token endpoint other than 429 is a refusal of the
+/// credentials: exit 2, and nothing reaches the API, so a delete cannot be
+/// mistaken for its idempotent "already gone" success.
+#[tokio::test]
+async fn a_token_endpoint_4xx_is_an_auth_failure_and_sends_no_delete() {
+    for status in [404u16, 405, 422] {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/oauth2/token"))
+            .respond_with(wiremock::ResponseTemplate::new(status))
+            .mount(&server)
+            .await;
+
+        let out = support::bin(&server)
+            .args(["--output", "json", "customers", "delete", "c-1", "--yes"])
+            .assert()
+            .code(2)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "auth", "{status}: {v}");
+        assert!(
+            server
+                .received_requests()
+                .await
+                .unwrap()
+                .iter()
+                .all(|r| r.url.path() == "/oauth2/token"),
+            "{status}: only the token endpoint may be called"
+        );
+    }
+}
+
 /// A token endpoint answering 200 with a body that is not a token is a
 /// **decode** failure, exit 1: the credentials were accepted and the CLI
 /// cannot read the answer, which is a contract change to investigate.
