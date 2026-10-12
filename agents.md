@@ -149,7 +149,7 @@ A usage error's `message` is clap's complaint alone — no `error:` label, tip,
 |---|---|
 | `0` | success — **including a declined payment**, and including a 404 on a delete or revoke |
 | `1` | general: transport, a body that could not be decoded — including a `pos create --wait` or `pos reversal --wait` response carrying no `posTransactionStatus` — a server 5xx, and an expired `--wait-timeout` |
-| `2` | authorisation: 401, 403, or no credentials at all |
+| `2` | authorisation: 401, 403, a token-endpoint 4xx other than 429, or no credentials at all |
 | `3` | validation: server 400 or 422, client-side refusals, and CLI usage errors |
 | `4` | not found: a 404 that was not mapped to success |
 | `130` | interrupted — Ctrl-C during a `pos create` or `pos reversal` request or its `--wait` poll |

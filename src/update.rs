@@ -100,10 +100,7 @@ pub async fn run() -> Result<()> {
 
     eprintln!("Checking for updates\u{2026}");
     let updated = updater.run().await.map_err(|e| {
-        let network = matches!(
-            e,
-            axoupdater::AxoupdateError::Reqwest(_) | axoupdater::AxoupdateError::Axoasset(_)
-        );
+        let network = matches!(e, axoupdater::AxoupdateError::Reqwest(_));
         let msg = crate::api::with_causes(e);
         if network {
             anyhow::Error::from(crate::api::ApiError::Transport(msg))

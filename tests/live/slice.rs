@@ -202,8 +202,7 @@ fn live_card_sale_with_customer() {
 }
 
 /// The API accepts a card charge that carries no billing address, although the
-/// published request schema requires one. The address check then declines it,
-/// and a decline is still a transaction.
+/// published request schema requires one, and answers with a transaction.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_sale_without_billing_address() {

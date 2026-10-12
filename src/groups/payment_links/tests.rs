@@ -84,7 +84,6 @@ fn every_create_flag_reaches_the_body_under_its_wire_name() {
     assert_eq!(body["paymentMethods"]["ach"]["fasterProcessing"], true);
     assert_eq!(body["paymentMethods"]["ach"]["processorId"], "pp-ach");
     assert_eq!(body["paymentMethods"]["card"]["processorId"], "pp-card");
-    assert_eq!(body["paymentMethods"]["ach"]["processorId"], "pp-ach");
     assert_eq!(body["baseAmount"].to_string(), "25.00");
     assert_eq!(body["currencyCode"], "USD");
     assert_eq!(body["linkType"], "MultiUse");
