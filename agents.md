@@ -398,9 +398,9 @@ dot segment is resolved away, and `%` spells any of them as an escape the URL
 parser decodes, so such an identifier would address an operation other than the
 one named. An identifier sent in a query parameter or a body is held to the
 empty rule alone — `settlements get`'s batch id, `settlements close
---payment-processor-id`, `pos print-receipt --terminal-id` and `payment-methods
-set-default --customer-id`. So is every list filter whose value names a
-resource: `transactions list`'s `--source-id`, `--batch-id`, `--customer-id`,
+--payment-processor-id`, `pos print-receipt --terminal-id`, `pos reversal
+--original-transaction-id` and `payment-methods set-default --customer-id`.
+So is every list filter whose value names a resource: `transactions list`'s `--source-id`, `--batch-id`, `--customer-id`,
 `--merchant-id` and `--reference-id`, `payment-methods list --customer-id`,
 `pos list --terminal-id`, `terminals list --serial-number`, and each repeat of
 `settlements list`'s `--batch-ids` and `--processor-ids`. An empty one is a
@@ -678,9 +678,11 @@ flute2 pos print-receipt [OPTIONS] --terminal-id <TERMINAL_ID> <POS_TRANSACTION_
   a failed poll. Without the field the poll has no stop condition, so
   waiting on one could only end in the timeout.
 - **`reversal` reverses a transaction or refunds without one.** With
-  `--original-transaction-id` the API decides between a void, which reverses
-  the full amount, and a refund, which `--amount` caps; only a card
-  transaction can be reversed. Without it the reversal is an unreferenced
+  `--original-transaction-id` — the id `transactions get` takes, which a POS
+  transaction carries as `linkedTransaction.transactionId`; the API looks it
+  up among those transactions, not among POS transaction ids — the API decides
+  between a void, which reverses the full amount, and a refund, which
+  `--amount` caps; only a card transaction can be reversed. Without it the reversal is an unreferenced
   refund, and the API requires `--amount` and `--currency-code`, answering 400
   naming each one missing. A void or a referenced credit-card refund completes
   on the API; a debit-card referenced refund or any unreferenced refund waits
@@ -895,11 +897,11 @@ re-issuing.**
 
 **Use a unique `--reference-id`.** It is part of the API's duplicate-check key:
 the same card and amount can be charged again when the reference ids differ,
-and cannot when they do not. The window is not documented. Five of the
+and cannot when they do not. The window is not documented. Six of the
 unsafe-to-retry commands take one — `transactions create`, `transactions
-credit`, `pos create`, `payment-links create` and `payment-sessions create` —
-and `pos reversal` requires one, which the schema declares unique for the
-merchant.
+credit`, `pos create`, `payment-links create` and `payment-sessions create`,
+and `pos reversal`, which requires one and whose schema declares it unique for
+the merchant.
 
 The other seven have no de-duplication knob at all. `capture` and `reversal`
 take an `--amount`, but it is the operation's meaning rather than a key to vary;
@@ -926,7 +928,7 @@ never happened. `transactions get <id>` is the lookup that survives them.
 | Vault a card for a customer | `flute2 … customers create --first-name … --last-name … --billing-line1 … --billing-postal-code … --billing-country …`, then `payment-methods add-card --customer-id <id> --card … --exp …` |
 | Charge a vaulted card | `flute2 … transactions create --payment-method-id <id> --instrument card --customer-id <id> --payment-processor-id <id> --amount … --reference-id <unique>` |
 | Start a terminal sale | `flute2 --output json pos create --terminal-id <id> --pos-device-id <dev> --amount 10.50 --currency-code USD --wait` |
-| Reverse a terminal sale | `flute2 --output json pos reversal --terminal-id <id> --pos-device-id <dev> --reference-id <unique> --original-transaction-id <id> --wait` |
+| Reverse a terminal sale | `flute2 --output json pos reversal --terminal-id <id> --pos-device-id <dev> --reference-id <unique> --original-transaction-id <transactionId> --wait` — the sale's `linkedTransaction.transactionId`, not its `posTransactionId` |
 | Take a payment on a hosted page | `flute2 --output json payment-sessions create --amount 10.50 --card-enabled` |
 | Issue a merchant API key | `flute2 --output json api-keys create --merchant-id <id> --name "<name>"` — save the one-shot secret; needs partner credentials |
 

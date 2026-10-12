@@ -1554,3 +1554,24 @@ async fn pos_reversal_refuses_a_blank_required_field_before_the_wire() {
         "a client-side refusal must not reach the API"
     );
 }
+
+/// An empty original id is a value that went missing, and dropping it would
+/// send an unreferenced refund to whatever card is presented.
+#[tokio::test]
+async fn pos_reversal_refuses_an_empty_original_transaction_id() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(reversal(&["--original-transaction-id", ""]))
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--original-transaction-id"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "a client-side refusal must not reach the API"
+    );
+}

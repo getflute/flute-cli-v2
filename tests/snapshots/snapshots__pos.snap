@@ -2,7 +2,7 @@
 source: tests/snapshots.rs
 expression: help_for(&args)
 ---
-POS transaction operations (create [--wait], get, list, cancel, print-receipt)
+POS transaction operations (create [--wait], reversal [--wait], get, list, cancel, print-receipt)
 
 Usage: flute2 pos [OPTIONS] <COMMAND>
 

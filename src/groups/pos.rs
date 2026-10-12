@@ -183,8 +183,10 @@ pub struct PosReversalArgs {
     /// Merchant-assigned reference ID, unique for the merchant (required).
     #[arg(long)]
     pub reference_id: String,
-    /// Transaction UUID to reverse. Omit for an unreferenced refund, which
-    /// needs `--amount` and `--currency-code`.
+    /// Transaction UUID to reverse: the id `transactions get` takes, which a
+    /// POS transaction carries as `linkedTransaction.transactionId`, not a
+    /// POS transaction id. Omit for an unreferenced refund, which needs
+    /// `--amount` and `--currency-code`.
     #[arg(long)]
     pub original_transaction_id: Option<String>,
     /// Amount to reverse. Plain decimal, e.g. `12.50`. Caps a refund of an
@@ -382,6 +384,11 @@ pub fn build_pos_reversal_body(args: &PosReversalArgs) -> Result<Value> {
     }
     if args.amount.is_some_and(|a| a <= Decimal::ZERO) {
         anyhow::bail!("--amount must be greater than zero; omit it to reverse the full amount");
+    }
+    // Dropped, an empty original id would turn a reversal into an
+    // unreferenced refund to whatever card is presented.
+    if let Some(id) = &args.original_transaction_id {
+        common::reject_empty_id("--original-transaction-id", id)?;
     }
     common::reject_empty_processor_id(
         "--payment-processor-id",

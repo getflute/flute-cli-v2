@@ -19,7 +19,7 @@ Options:
           Merchant-assigned reference ID, unique for the merchant (required)
 
       --original-transaction-id <ORIGINAL_TRANSACTION_ID>
-          Transaction UUID to reverse. Omit for an unreferenced refund, which needs `--amount` and `--currency-code`
+          Transaction UUID to reverse: the id `transactions get` takes, which a POS transaction carries as `linkedTransaction.transactionId`, not a POS transaction id. Omit for an unreferenced refund, which needs `--amount` and `--currency-code`
 
       --amount <AMOUNT>
           Amount to reverse. Plain decimal, e.g. `12.50`. Caps a refund of an original transaction; omit to reverse the full amount. Ignored on a void

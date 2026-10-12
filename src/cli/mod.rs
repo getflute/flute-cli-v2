@@ -93,8 +93,8 @@ pub enum Command {
         #[command(subcommand)]
         command: crate::groups::terminals::TerminalsCommand,
     },
-    /// POS transaction operations (create [--wait], get, list, cancel,
-    /// print-receipt).
+    /// POS transaction operations (create [--wait], reversal [--wait], get,
+    /// list, cancel, print-receipt).
     Pos {
         #[command(subcommand)]
         command: crate::groups::pos::PosCommand,

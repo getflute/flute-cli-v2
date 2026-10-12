@@ -16,7 +16,7 @@ Commands:
   payment-links     Payment link operations (create, get, list, update, delete, share)
   payment-sessions  Payment session operations (create, get, cancel)
   terminals         Terminal operations (list, status)
-  pos               POS transaction operations (create [--wait], get, list, cancel, print-receipt)
+  pos               POS transaction operations (create [--wait], reversal [--wait], get, list, cancel, print-receipt)
   settlements       Settlement batch operations (list, get, close)
   settings          Account settings operations (payment-config, contact-info, autofill, update-autofill)
   api-keys          Merchant API key operations (create, list, revoke)
