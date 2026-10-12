@@ -274,11 +274,12 @@ pub fn absent(
     id: &str,
     verb: &'static str,
     line: &str,
+    correlation_id: Option<String>,
 ) -> Result<()> {
     let mut data = confirmation_data(resource, id, verb);
     data[verb] = Value::Bool(false);
     data["found"] = Value::Bool(false);
-    emit_confirmation(ctx, resource, id, data, line, None)
+    emit_confirmation(ctx, resource, id, data, line, correlation_id)
 }
 
 fn emit_confirmation(

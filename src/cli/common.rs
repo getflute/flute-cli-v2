@@ -465,7 +465,11 @@ pub async fn delete(
         .await
     {
         Ok(resp) => render::confirmed(ctx, resource, id, verb, done, resp.correlation_id),
-        Err(ApiError::Api { status: 404, .. }) => render::absent(ctx, resource, id, verb, absent),
+        Err(ApiError::Api {
+            status: 404,
+            correlation_id,
+            ..
+        }) => render::absent(ctx, resource, id, verb, absent, correlation_id),
         Err(e) => Err(e.into()),
     }
 }

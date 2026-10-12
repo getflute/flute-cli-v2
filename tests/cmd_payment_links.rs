@@ -369,6 +369,7 @@ async fn payment_link_delete_on_a_missing_link_exits_zero() {
     assert_eq!(v["data"]["paymentLinkId"], LINK);
     assert_eq!(v["data"]["deleted"], false, "{v}");
     assert_eq!(v["data"]["found"], false, "{v}");
+    assert_eq!(v["meta"]["correlation_id"], "c-1", "{v}");
 }
 
 /// `paymentMethods` is the only required field, so a create naming no method

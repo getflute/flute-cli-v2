@@ -207,7 +207,8 @@ the confirmation does not claim a removal:
   "meta": { "environment": "sandbox" } }
 ```
 
-`revoke` reports `revoked: false, found: false`. The `table` line says nothing
+`revoke` reports `revoked: false, found: false`. `meta.correlation_id` is the
+404's own, when it carried one. The `table` line says nothing
 was deleted; `quiet` prints the identifier, as it does on success. A caller
 that must know the resource existed reads `found`.
 
