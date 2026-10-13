@@ -51,6 +51,8 @@ pub enum SettlementsCommand {
         /// (required).
         #[arg(long)]
         payment_processor_id: String,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
 }
 
@@ -283,15 +285,16 @@ pub async fn dispatch(ctx: &Ctx, command: SettlementsCommand) -> Result<()> {
         }
         SettlementsCommand::Close {
             payment_processor_id,
+            idempotency,
         } => {
             let body = build_close_batch_body(&payment_processor_id)?;
             let resp = ctx
                 .api
-                .request(
+                .request_keyed(
                     Method::POST,
                     "/v2/settlements/batches/close",
-                    &[],
                     Some(body),
+                    idempotency.key()?,
                 )
                 .await?;
             render::one(

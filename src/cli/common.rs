@@ -24,6 +24,34 @@ pub struct PaginationArgs {
     pub all: bool,
 }
 
+/// The `Idempotency-Key` header, on the writes whose operation declares it.
+#[derive(clap::Args, Debug, Default, Clone)]
+pub struct IdempotencyArgs {
+    /// Send this key as `Idempotency-Key`: a retry with the same key and
+    /// arguments returns the first result instead of repeating the operation.
+    #[arg(long, id = "idempotency_key", value_name = "KEY")]
+    pub idempotency_key: Option<String>,
+}
+
+impl IdempotencyArgs {
+    /// The key to send, or `None` for no header.
+    ///
+    /// An empty key is a value that went missing, such as an unset shell
+    /// variable, and one a header cannot carry would fail as a transport
+    /// error with nothing sent; both are refused here instead.
+    pub fn key(&self) -> Result<Option<&str>> {
+        if let Some(key) = &self.idempotency_key {
+            reject_empty_id("--idempotency-key", key)?;
+            if reqwest::header::HeaderValue::from_str(key).is_err() {
+                anyhow::bail!(
+                    "--idempotency-key must be printable ASCII; this one cannot be sent as a header"
+                );
+            }
+        }
+        Ok(self.idempotency_key.as_deref())
+    }
+}
+
 /// An empty value clears a field; `None` leaves it alone.
 ///
 /// On a merge-patch update an explicit null is the removal and an absent key

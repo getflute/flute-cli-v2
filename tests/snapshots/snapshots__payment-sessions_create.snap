@@ -79,6 +79,9 @@ Options:
       --ach-faster-processing
           Ask for faster ACH processing. Requires `--ach-enabled`, and the merchant's ACH settings must allow it
 
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
+
   -h, --help
           Print help (see a summary with '-h')
 

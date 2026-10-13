@@ -121,12 +121,12 @@ and appears only when no header arrived.
 
 | `kind` | Meaning | Retry? |
 |---|---|---|
-| `api`, status 500/502/503/504 | server error, which can arrive after the API carried the request out | only a command in the **Safe to retry** column of [Idempotency](#idempotency), with backoff; any other — reconcile with `list` or `get` first |
+| `api`, status 500/502/503/504 | server error, which can arrive after the API carried the request out | only a command in the **Safe to retry** column of [Idempotency](#idempotency) — a keyed write with its same `--idempotency-key` among them — with backoff; any other — reconcile with `list` or `get` first |
 | `api`, status 401/403 | authorisation | no — refresh credentials, then retry once |
 | `api`, status 400/422 | permanent for this request | no — surface `message` and `correlation_id` |
 | `api`, status 404 | not found | no |
 | `api`, status 402/409/429 | no exit code of their own — see the note under the exit-code table | 429 yes, with backoff; others no |
-| `transport` | connection, DNS or TLS failure, or a **request timeout** — on the API request, the token request or `update`'s release lookup, with the cause named in `message`. A timeout can land after the API received the request and carried it out | only a command in the **Safe to retry** column of [Idempotency](#idempotency), with backoff; any other — reconcile with `list` or `get` first |
+| `transport` | connection, DNS or TLS failure, or a **request timeout** — on the API request, the token request or `update`'s release lookup, with the cause named in `message`. A timeout can land after the API received the request and carried it out | only a command in the **Safe to retry** column of [Idempotency](#idempotency) — a keyed write with its same `--idempotency-key` among them — with backoff; any other — reconcile with `list` or `get` first |
 | `auth` | no credentials, one of `FLUTE2_CLIENT_ID` and `FLUTE2_CLIENT_SECRET` set without the other, or the token endpoint answered the ones it was sent with a 4xx other than 429 | no — an operator must configure credentials |
 | `decode` | the API sent something this CLI cannot read: a contract change, or a CLI bug | no — surface it for investigation |
 | `client` | bad arguments, usage error, or client-side validation | no — fix the invocation |
@@ -901,26 +901,50 @@ value is refused — exit 3, nothing sent — whatever else the update carries.
 
 | Safe to retry | Not safe to retry |
 |---|---|
-| every `get`, `list`, `status` and `inspect` | `transactions create`, `credit`, `capture`, `reversal`, `tip-adjust`; `pos create`, `reversal`; `customers create`; `payment-methods add-card`, `add-ach`; `payment-links create`; `payment-sessions create`; `api-keys create` |
-| `customers delete`, `payment-methods delete`, `payment-links delete`, `api-keys revoke` — a repeat 404 is exit 0 with `found: false` | `pos cancel`, `payment-sessions cancel` — a repeat answers 400, exit 3; reconcile with `get` |
+| every `get`, `list`, `status` and `inspect` | a keyed write sent without `--idempotency-key` |
+| `customers delete`, `payment-methods delete`, `payment-links delete`, `api-keys revoke` — a repeat 404 is exit 0 with `found: false` | `customers create`, `payment-methods add-card`, `payment-methods add-ach`, `api-keys create` — they take no key |
+| a keyed write re-sent with the same `--idempotency-key` and the same arguments | |
+
+**The keyed writes** are the fifteen whose operation declares the
+`Idempotency-Key` header: `transactions create`, `credit`, `capture`,
+`reversal`, `tip-adjust`, `ach-hold`, `ach-release`; `pos create`, `cancel`,
+`reversal`; `payment-links create`, `share`; `payment-sessions create`,
+`cancel`; and `settlements close`. Each takes `--idempotency-key <KEY>` and
+sends it as that header, on the request and on the CLI's own retry after a
+401. Without the flag no header is sent; the CLI generates no key.
+
+- **The same key and the same arguments return the first result** instead of
+  repeating the operation: one charge, one transaction id. How long the server
+  holds a key is not documented.
+- **The same key with different arguments is a 422**, `kind: "api"`, exit 3:
+  a key names one request.
+- **A key is shared across every keyed command for the merchant**, not scoped
+  to one: a key spent on `transactions create` answers 422 on
+  `payment-sessions create`. Use a fresh key — a UUID is the usual choice — for
+  each distinct operation, and reuse it only to retry that operation.
+- The server takes any non-empty key of at most 255 characters and answers a
+  longer one with a 400 naming the header. An empty key is refused before the
+  wire, `client`, exit 3.
+- The key is not echoed in the envelope: the caller chose it and already holds
+  it.
 
 A `transport` failure or a 5xx on something not safe to retry is ambiguous:
-the request may have been carried out. **`list` or `get` to reconcile before
-re-issuing.**
+the request may have been carried out. **Re-send a keyed write with the same
+key, or `list` or `get` to reconcile before re-issuing.**
 
-**Use a unique `--reference-id`.** It is part of the API's duplicate-check key:
-the same card and amount can be charged again when the reference ids differ,
-and cannot when they do not. The window is not documented. Six of the
-unsafe-to-retry commands take one — `transactions create`, `transactions
-credit`, `pos create`, `payment-links create` and `payment-sessions create`,
-and `pos reversal`, which requires one and whose schema declares it unique for
-the merchant.
+**Use a unique `--reference-id`.** It is the merchant's own identifier and part
+of the API's duplicate-check key, not the retry mechanism: the same card and
+amount can be charged again when the reference ids differ, and cannot when they
+do not — a repeat without an idempotency key is refused as a duplicate, 400.
+The window is not documented. Six of the keyed writes take one —
+`transactions create`, `transactions credit`, `pos create`, `payment-links
+create` and `payment-sessions create`, and `pos reversal`, which requires one
+and whose schema declares it unique for the merchant.
 
-The other seven have no de-duplication knob at all. `capture` and `reversal`
-take an `--amount`, but it is the operation's meaning rather than a key to vary;
-`transactions tip-adjust`, `customers create`, `payment-methods add-card`,
-`payment-methods add-ach` and `api-keys create` take neither. **Reconcile with
-`list` or `get` before re-issuing any of the seven.**
+The four writes that take no key have no de-duplication knob at all:
+`customers create`, `payment-methods add-card`, `payment-methods add-ach` and
+`api-keys create`. **Reconcile with `list` or `get` before re-issuing any of
+the four.**
 
 **Reconcile an ACH hold, release or reversal by transaction id.** Those three
 answer with a `referenceId` the API assigned, so a `list --reference-id` by the
@@ -933,14 +957,14 @@ never happened. `transactions get <id>` is the lookup that survives them.
 |---|---|
 | Health check | `flute2 --output json ping` |
 | Find the processor ids | `flute2 --output json settings payment-config` |
-| Charge a card | `flute2 --output json transactions create --payment-processor-id <id> --amount 10.50 --reference-id <unique> --card <pan> --exp MM/YY --cvv <cvv> --billing-line1 <street> --billing-postal-code <zip> --billing-country <cc>` |
+| Charge a card | `flute2 --output json transactions create --payment-processor-id <id> --amount 10.50 --reference-id <unique> --idempotency-key <uuid> --card <pan> --exp MM/YY --cvv <cvv> --billing-line1 <street> --billing-postal-code <zip> --billing-country <cc>` — a retry re-sends the same key |
 | Authorize, then capture | the same with `--capture-method manual` — a card only — then `flute2 --output json transactions capture --transaction-id <id>` |
-| Refund or void | `flute2 --output json transactions reversal --transaction-id <id> [--amount …]` |
+| Refund or void | `flute2 --output json transactions reversal --transaction-id <id> --idempotency-key <uuid> [--amount …]` |
 | Read one transaction | `flute2 --output json transactions get <id>` |
 | Walk every transaction | `flute2 --output json transactions list --all` |
 | Vault a card for a customer | `flute2 … customers create --first-name … --last-name … --billing-line1 … --billing-postal-code … --billing-country …`, then `payment-methods add-card --customer-id <id> --card … --exp …` |
 | Charge a vaulted card | `flute2 … transactions create --payment-method-id <id> --instrument card --customer-id <id> --payment-processor-id <id> --amount … --reference-id <unique>` |
-| Start a terminal sale | `flute2 --output json pos create --terminal-id <id> --pos-device-id <dev> --amount 10.50 --currency-code USD --wait` |
+| Start a terminal sale | `flute2 --output json pos create --terminal-id <id> --pos-device-id <dev> --amount 10.50 --currency-code USD --idempotency-key <uuid> --wait` |
 | Reverse a terminal sale | `flute2 --output json pos reversal --terminal-id <id> --pos-device-id <dev> --reference-id <unique> --original-transaction-id <transactionId> --wait` — the sale's `linkedTransaction.transactionId`, not its `posTransactionId` |
 | Take a payment on a hosted page | `flute2 --output json payment-sessions create --amount 10.50 --card-enabled` |
 | Issue a merchant API key | `flute2 --output json api-keys create --merchant-id <id> --name "<name>"` — save the one-shot secret; needs partner credentials |
@@ -970,7 +994,10 @@ refused as a duplicate.
   later process on the machine. Pass `--profile` per command instead.
 - **Don't fire a second `pos create`** on a terminal that already has one in
   progress.
-- **Don't retry a money-moving create** without reconciling first.
+- **Don't retry a money-moving write without its `--idempotency-key`.** Re-send
+  it with the same key and arguments, or reconcile with `list` or `get` first.
+- **Don't reuse an idempotency key for a different operation.** It answers 422,
+  whichever command it was spent on.
 - **Don't rely on 402, 409 or 429 having a dedicated exit code.** They exit 1
   today and may not tomorrow.
 - **Don't expect `devices` or `subscriptions`** — see

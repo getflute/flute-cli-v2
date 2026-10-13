@@ -266,7 +266,21 @@ impl ApiClient {
         query: &[(&str, String)],
         body: Option<Value>,
     ) -> Result<Response, ApiError> {
-        self.request_within(method, path, query, body, None).await
+        self.request_within(method, path, query, body, None, None)
+            .await
+    }
+
+    /// The same, carrying `key` as the `Idempotency-Key` header when one is
+    /// given. Without one the request is exactly what `request` sends.
+    pub async fn request_keyed(
+        &self,
+        method: Method,
+        path: impl Into<ApiPath>,
+        body: Option<Value>,
+        key: Option<&str>,
+    ) -> Result<Response, ApiError> {
+        self.request_within(method, path, &[], body, None, key)
+            .await
     }
 
     /// The same, bounded by `timeout` rather than by the client-wide one.
@@ -281,6 +295,7 @@ impl ApiClient {
         query: &[(&str, String)],
         body: Option<Value>,
         timeout: Option<Duration>,
+        idempotency_key: Option<&str>,
     ) -> Result<Response, ApiError> {
         let url = format!("{}{}", self.base_url, path.into().as_str());
         let traced = traced_url(&url, query);
@@ -292,7 +307,14 @@ impl ApiClient {
         );
 
         let first = self
-            .issue(&method, &url, query, body.as_ref(), timeout)
+            .issue(
+                &method,
+                &url,
+                query,
+                body.as_ref(),
+                timeout,
+                idempotency_key,
+            )
             .await?;
         trace_response(&method, &traced, &first);
         let outcome = if first.status == StatusCode::UNAUTHORIZED.as_u16() {
@@ -302,7 +324,14 @@ impl ApiClient {
             info!("HTTP 401 — invalidating cached token and retrying once");
             self.tokens.invalidate().await;
             let retry = self
-                .issue(&method, &url, query, body.as_ref(), timeout)
+                .issue(
+                    &method,
+                    &url,
+                    query,
+                    body.as_ref(),
+                    timeout,
+                    idempotency_key,
+                )
                 .await?;
             trace_response(&method, &traced, &retry);
             retry
@@ -346,6 +375,7 @@ impl ApiClient {
         query: &[(&str, String)],
         body: Option<&Value>,
         timeout: Option<Duration>,
+        idempotency_key: Option<&str>,
     ) -> Result<Raw, ApiError> {
         let token = self.tokens.bearer().await.map_err(token_failure)?;
 
@@ -377,6 +407,9 @@ impl ApiClient {
         }
         if let Some(bound) = timeout {
             req = req.timeout(bound);
+        }
+        if let Some(key) = idempotency_key {
+            req = req.header("Idempotency-Key", key);
         }
 
         let resp = req
@@ -627,6 +660,7 @@ mod tests {
                 &[],
                 None,
                 Some(Duration::from_millis(200)),
+                None,
             )
             .await
             .unwrap_err();
@@ -783,6 +817,74 @@ mod tests {
             .filter(|r| r.url.path() == "/oauth2/token")
             .count();
         assert_eq!(tok_calls, 2, "the retry must use a freshly fetched token");
+    }
+
+    /// The retry repeats the request, so it carries the same key: the server
+    /// replays the first attempt's outcome rather than running it twice.
+    #[tokio::test]
+    async fn a_key_is_sent_on_the_request_and_on_its_401_retry() {
+        let server = MockServer::start().await;
+        token_ok(&server).mount(&server).await;
+        Mock::given(method("POST"))
+            .and(path("/v2/transactions"))
+            .respond_with(FailFirst {
+                calls: AtomicUsize::new(0),
+                first: 401,
+            })
+            .mount(&server)
+            .await;
+
+        client_for(&server)
+            .request_keyed(
+                reqwest::Method::POST,
+                "/v2/transactions",
+                Some(json!({})),
+                Some("key-1"),
+            )
+            .await
+            .unwrap();
+
+        let keys: Vec<_> = server
+            .received_requests()
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|r| r.url.path() == "/v2/transactions")
+            .map(|r| r.headers.get("idempotency-key").cloned())
+            .collect();
+        assert_eq!(keys.len(), 2);
+        assert!(
+            keys.iter()
+                .all(|k| k.as_ref().is_some_and(|v| v == "key-1"))
+        );
+    }
+
+    #[tokio::test]
+    async fn an_unkeyed_request_carries_no_key_header() {
+        let server = MockServer::start().await;
+        token_ok(&server).mount(&server).await;
+        Mock::given(method("POST"))
+            .and(path("/v2/transactions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({})))
+            .mount(&server)
+            .await;
+
+        let client = client_for(&server);
+        client
+            .request_keyed(reqwest::Method::POST, "/v2/transactions", None, None)
+            .await
+            .unwrap();
+        client
+            .request(reqwest::Method::POST, "/v2/transactions", &[], None)
+            .await
+            .unwrap();
+
+        let reqs = server.received_requests().await.unwrap();
+        assert!(
+            reqs.iter()
+                .filter(|r| r.url.path() == "/v2/transactions")
+                .all(|r| !r.headers.contains_key("idempotency-key"))
+        );
     }
 
     /// A second 401 is the server's answer, not an invitation to keep trying.

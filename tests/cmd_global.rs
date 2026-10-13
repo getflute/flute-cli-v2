@@ -1350,3 +1350,274 @@ fn customers_sort_by_offers_created_on_and_not_external_id() {
         .assert()
         .code(3);
 }
+
+/// The fifteen writes whose operation declares `Idempotency-Key`, each with
+/// the arguments it needs to reach the wire.
+const KEYED_WRITES: &[&[&str]] = &[
+    &[
+        "transactions",
+        "create",
+        "--payment-processor-id",
+        "pp-1",
+        "--amount",
+        "1.00",
+        "--card",
+        "4111111111111111",
+        "--cvv",
+        "123",
+        "--exp",
+        "12/30",
+    ],
+    &[
+        "transactions",
+        "credit",
+        "--payment-processor-id",
+        "pp-1",
+        "--amount",
+        "1.00",
+        "--reference-id",
+        "ref-1",
+        "--card",
+        "4111111111111111",
+        "--cvv",
+        "123",
+        "--exp",
+        "12/30",
+    ],
+    &["transactions", "capture", "--transaction-id", "txn-1"],
+    // The partial reversal reads the transaction first; that read takes no key.
+    &[
+        "transactions",
+        "reversal",
+        "--transaction-id",
+        "txn-1",
+        "--amount",
+        "1.00",
+    ],
+    &[
+        "transactions",
+        "tip-adjust",
+        "--transaction-id",
+        "txn-1",
+        "--tip-amount",
+        "1.00",
+    ],
+    &["transactions", "ach-hold", "txn-1"],
+    &["transactions", "ach-release", "txn-1"],
+    // `--wait` polls with GETs, and the poll takes no key.
+    &[
+        "pos",
+        "create",
+        "--terminal-id",
+        "t-1",
+        "--pos-device-id",
+        "d-1",
+        "--amount",
+        "1.00",
+        "--currency-code",
+        "USD",
+        "--wait",
+    ],
+    &["pos", "cancel", "p-1", "--yes"],
+    &[
+        "pos",
+        "reversal",
+        "--terminal-id",
+        "t-1",
+        "--pos-device-id",
+        "d-1",
+        "--reference-id",
+        "ref-1",
+        "--original-transaction-id",
+        "txn-1",
+        "--wait",
+    ],
+    &[
+        "payment-links",
+        "create",
+        "--card-enabled",
+        "--currency-code",
+        "USD",
+    ],
+    &[
+        "payment-links",
+        "share",
+        "pl-1",
+        "--share-by",
+        "sms",
+        "--recipient",
+        "+14155552309",
+        "--consent",
+    ],
+    &[
+        "payment-sessions",
+        "create",
+        "--amount",
+        "1.00",
+        "--card-enabled",
+    ],
+    &["payment-sessions", "cancel", "ps-1", "--yes"],
+    &["settlements", "close", "--payment-processor-id", "pp-1"],
+];
+
+/// A server that answers every write as in progress and every read as
+/// finished, so a `--wait` poll ends after one GET and a partial reversal's
+/// read finds a settled card transaction.
+async fn answers_every_request() -> wiremock::MockServer {
+    use wiremock::matchers::method;
+    use wiremock::{Mock, ResponseTemplate};
+    let server = support::mock_with_token().await;
+    for (verb, pos_status) in [("POST", "InProgress"), ("GET", "Completed")] {
+        Mock::given(method(verb))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "transactionId": "txn-1", "paymentMethodType": "Card",
+                "transactionStatus": "Settled", "posTransactionId": "p-1",
+                "posTransactionStatus": pos_status,
+            })))
+            .mount(&server)
+            .await;
+    }
+    server
+}
+
+/// Each API request as its method and the `Idempotency-Key` it carried.
+async fn keys_sent(server: &wiremock::MockServer) -> Vec<(String, Option<String>)> {
+    server
+        .received_requests()
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|r| r.url.path() != "/oauth2/token")
+        .map(|r| {
+            let key = r
+                .headers
+                .get("idempotency-key")
+                .map(|v| v.to_str().unwrap().to_string());
+            (r.method.to_string(), key)
+        })
+        .collect()
+}
+
+/// The given key reaches the write verbatim and no read; without the flag no
+/// request carries the header.
+#[tokio::test]
+async fn every_keyed_write_sends_the_given_key_on_its_write_alone() {
+    for argv in KEYED_WRITES {
+        let key = format!("key {}", argv.join(" "));
+        let server = answers_every_request().await;
+        support::bin(&server)
+            .args(*argv)
+            .args(["--idempotency-key", &key])
+            .output()
+            .unwrap();
+        let sent = keys_sent(&server).await;
+        let writes: Vec<_> = sent.iter().filter(|(m, _)| m == "POST").collect();
+        assert_eq!(writes.len(), 1, "{argv:?}: {sent:?}");
+        assert_eq!(writes[0].1.as_deref(), Some(key.as_str()), "{argv:?}");
+        assert!(
+            sent.iter().all(|(m, k)| m == "POST" || k.is_none()),
+            "{argv:?}: a read carried the key: {sent:?}"
+        );
+        let reads_too = argv.contains(&"--wait") || argv[..2] == ["transactions", "reversal"];
+        assert_eq!(
+            sent.iter().any(|(m, _)| m == "GET"),
+            reads_too,
+            "{argv:?}: {sent:?}"
+        );
+
+        let server = answers_every_request().await;
+        support::bin(&server).args(*argv).output().unwrap();
+        let sent = keys_sent(&server).await;
+        assert!(!sent.is_empty(), "{argv:?}");
+        assert!(sent.iter().all(|(_, k)| k.is_none()), "{argv:?}: {sent:?}");
+    }
+}
+
+/// An empty key is a value that went missing: refused, nothing sent.
+#[tokio::test]
+async fn an_empty_idempotency_key_is_refused_before_the_wire() {
+    let server = answers_every_request().await;
+    let out = support::bin(&server)
+        .args(["--output", "json", "settlements", "close"])
+        .args(["--payment-processor-id", "pp-1", "--idempotency-key", " "])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "client", "{v}");
+    assert!(
+        v["message"].as_str().unwrap().contains("--idempotency-key"),
+        "{v}"
+    );
+    assert!(keys_sent(&server).await.is_empty());
+}
+
+/// A key reused with different arguments is the server's 422, reported as
+/// any other validation failure.
+#[tokio::test]
+async fn a_reused_key_with_different_arguments_is_an_api_422_exit_3() {
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, ResponseTemplate};
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/settlements/batches/close"))
+        .and(header("idempotency-key", "k-1"))
+        .respond_with(ResponseTemplate::new(422).set_body_json(serde_json::json!({
+            "ErrorCode": "IdempotencyKeyConflict",
+            "Details": "This Idempotency-Key was already used with a different request. \
+                        Use a new key for a new request.",
+        })))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json", "settlements", "close"])
+        .args(["--payment-processor-id", "pp-1", "--idempotency-key", "k-1"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "api", "{v}");
+    assert_eq!(v["status"], 422, "{v}");
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .contains("already used with a different request"),
+        "{v}"
+    );
+}
+
+/// The writes whose operation declares no key do not take the flag.
+#[test]
+fn a_write_without_a_declared_key_refuses_the_flag() {
+    for argv in [
+        &[
+            "customers",
+            "create",
+            "--first-name",
+            "A",
+            "--last-name",
+            "B",
+        ][..],
+        &[
+            "payment-methods",
+            "add-card",
+            "--card",
+            "4111111111111111",
+            "--exp",
+            "12/30",
+        ],
+        &["api-keys", "create", "--merchant-id", "m-1", "--name", "n"],
+    ] {
+        support::bin_without_credentials()
+            .args(argv)
+            .args(["--idempotency-key", "k-1"])
+            .assert()
+            .code(3)
+            .stderr(predicate::str::contains("--idempotency-key"));
+    }
+}

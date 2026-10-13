@@ -7,10 +7,16 @@ Adjust the tip on a transaction (POST /v2/transactions/{transactionId}/tip-adjus
 Usage: flute2 transactions tip-adjust [OPTIONS] --transaction-id <TRANSACTION_ID>
 
 Options:
-      --transaction-id <TRANSACTION_ID>  UUID of the transaction to adjust (required)
-      --tip-amount <TIP_AMOUNT>          New tip amount. Plain decimal, e.g. `3.50`
-      --tip-rate <TIP_RATE>              New tip rate as a percentage, e.g. `18.5` for 18.5%
-  -h, --help                             Print help
+      --transaction-id <TRANSACTION_ID>
+          UUID of the transaction to adjust (required)
+      --tip-amount <TIP_AMOUNT>
+          New tip amount. Plain decimal, e.g. `3.50`
+      --tip-rate <TIP_RATE>
+          New tip rate as a percentage, e.g. `18.5` for 18.5%
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
+  -h, --help
+          Print help
 
 Global options:
       --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]

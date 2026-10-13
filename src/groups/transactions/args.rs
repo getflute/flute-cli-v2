@@ -101,6 +101,8 @@ pub enum TransactionsCommand {
         /// Capture amount for a partial capture. Omit for a full capture.
         #[arg(long, value_parser = parse_amount, allow_negative_numbers = true)]
         amount: Option<Decimal>,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Void or refund a transaction
     /// (POST /v2/transactions/{transactionId}/reversal).
@@ -116,6 +118,8 @@ pub enum TransactionsCommand {
         /// reversal.
         #[arg(long, value_parser = parse_amount, allow_negative_numbers = true)]
         amount: Option<Decimal>,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Card or ACH credit (POST /v2/transactions/credit). A card needs
     /// `--card`, `--exp` and `--cvv`; only a saved bank account can be credited by id.
@@ -132,18 +136,24 @@ pub enum TransactionsCommand {
         /// New tip rate as a percentage, e.g. `18.5` for 18.5%.
         #[arg(long, value_parser = parse_rate, id = "adjust_tip_rate", value_name = "TIP_RATE", allow_negative_numbers = true)]
         tip_rate: Option<Decimal>,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Place an ACH transaction on hold
     /// (POST /v2/transactions/{transactionId}/ach-hold).
     AchHold {
         /// ACH transaction UUID to hold (positional).
         transaction_id: String,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Release an ACH transaction from hold
     /// (POST /v2/transactions/{transactionId}/ach-release).
     AchRelease {
         /// ACH transaction UUID to release (positional).
         transaction_id: String,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Send a transaction receipt to a customer
     /// (POST /v2/transactions/{transactionId}/share-receipt).
@@ -281,6 +291,8 @@ pub struct CreditArgs {
     pub billing: BillingArgs,
     #[command(flatten)]
     pub shipping: ShippingArgs,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 #[derive(clap::Args, Debug)]
@@ -483,4 +495,6 @@ pub struct CreateTransactionArgs {
     pub billing: BillingArgs,
     #[command(flatten)]
     pub shipping: ShippingArgs,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }

@@ -12,6 +12,9 @@ Options:
       --payment-processor-id <PAYMENT_PROCESSOR_ID>
           UUID of the payment processor whose open batch should be settled (required)
 
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
+
   -h, --help
           Print help (see a summary with '-h')
 

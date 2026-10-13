@@ -250,6 +250,8 @@ pub struct CreatePaymentLinkArgs {
     /// merchant's ACH settings must allow it.
     #[arg(long, requires = "ach_enabled")]
     pub ach_faster_processing: bool,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 #[derive(clap::Args, Debug, Default)]
@@ -404,6 +406,8 @@ pub struct SharePaymentLinkArgs {
     /// The customer has consented to receive it (required).
     #[arg(long = "consent", id = "link_consent")]
     pub has_customer_consent: bool,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 /// The `paymentMethods` object, which is the one required field.
@@ -708,7 +712,12 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
             money::note_fractional_rates(&[("--tax-rate", args.tax_rate)]);
             let resp = ctx
                 .api
-                .request(Method::POST, "/v2/payment-links", &[], Some(body))
+                .request_keyed(
+                    Method::POST,
+                    "/v2/payment-links",
+                    Some(body),
+                    args.idempotency.key()?,
+                )
                 .await?;
             render::one(
                 ctx,
@@ -787,13 +796,13 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
             let body = build_share_payment_link_body(&args)?;
             let resp = ctx
                 .api
-                .request(
+                .request_keyed(
                     Method::POST,
                     ApiPath::from("/v2/payment-links")
                         .id(&args.payment_link_id)?
                         .seg("share"),
-                    &[],
                     Some(body),
+                    args.idempotency.key()?,
                 )
                 .await?;
             // 204 with no body, so the confirmation comes from the request.

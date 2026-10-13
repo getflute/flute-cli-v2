@@ -102,6 +102,8 @@ pub enum PosCommand {
         /// Confirm the cancellation (required).
         #[arg(long)]
         yes: bool,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Print a transaction receipt on a terminal
     /// (POST /v2/pos/transactions/{posTransactionId}/print-receipt).
@@ -170,6 +172,8 @@ pub struct CreatePosTransactionArgs {
     /// (default 120, at most 86400). Requires `--wait`.
     #[arg(long, requires = "wait", default_value_t = DEFAULT_WAIT_TIMEOUT_SECS, value_parser = clap::value_parser!(u64).range(0..=86_400))]
     pub wait_timeout: u64,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 #[derive(clap::Args, Debug, Default)]
@@ -220,6 +224,8 @@ pub struct PosReversalArgs {
     /// up (default 120, at most 86400). Requires `--wait`.
     #[arg(long, requires = "wait", default_value_t = DEFAULT_WAIT_TIMEOUT_SECS, value_parser = clap::value_parser!(u64).range(0..=86_400))]
     pub wait_timeout: u64,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 #[derive(clap::Args, Debug, Default)]
@@ -518,6 +524,7 @@ async fn wait_for_a_terminal_status(
                         &[("waitForTransactionProcessing", "true".into())],
                         None,
                         Some(remaining + POLL_TIMEOUT_MARGIN),
+                        None,
                     )
                     .await
             } => r,
@@ -637,6 +644,7 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
                 ctx,
                 "/v2/pos/transactions",
                 body,
+                args.idempotency.key()?,
                 args.wait,
                 args.wait_timeout,
             )
@@ -648,6 +656,7 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
                 ctx,
                 "/v2/pos/transactions/reversal",
                 body,
+                args.idempotency.key()?,
                 args.wait,
                 args.wait_timeout,
             )
@@ -676,6 +685,7 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
                     &query,
                     None,
                     bound,
+                    None,
                 )
                 .await?;
             render::one(
@@ -697,19 +707,21 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
             .await
         }
         PosCommand::Cancel {
-            pos_transaction_id, ..
+            pos_transaction_id,
+            idempotency,
+            ..
         } => {
             // A cancelled transaction still exists and refuses a repeat with a
             // 400, so a 404 is an id the server never had: plain not-found.
             let resp = ctx
                 .api
-                .request(
+                .request_keyed(
                     Method::POST,
                     ApiPath::from("/v2/pos/transactions")
                         .id(&pos_transaction_id)?
                         .seg("cancel"),
-                    &[],
                     None,
+                    idempotency.key()?,
                 )
                 .await?;
             render::one(
@@ -758,6 +770,7 @@ async fn submit(
     ctx: &Ctx,
     route: &'static str,
     body: Value,
+    idempotency_key: Option<&str>,
     wait: bool,
     wait_timeout: u64,
 ) -> Result<()> {
@@ -785,7 +798,7 @@ async fn submit(
         }
         r = ctx
             .api
-            .request_within(Method::POST, route, &[], Some(body), bound) => r?,
+            .request_within(Method::POST, route, &[], Some(body), bound, idempotency_key) => r?,
     };
     let created = common::body_of(resp.body)?;
     if !wait {

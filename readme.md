@@ -82,6 +82,8 @@ flute2 transactions create \
 
 **Give every charge its own `--reference-id`.** The API refuses a second charge of the same card for the same amount as a possible duplicate unless the reference ids differ.
 
+**Retry with `--idempotency-key`.** Every money-moving write, and a few others, takes `--idempotency-key <KEY>`; re-sending a command that timed out with the same key and arguments returns the first result instead of charging twice. Use a fresh key, such as a UUID, for each new operation. [`agents.md`](agents.md#idempotency) lists the commands that take one.
+
 **Authorize now, capture later:**
 
 ```sh

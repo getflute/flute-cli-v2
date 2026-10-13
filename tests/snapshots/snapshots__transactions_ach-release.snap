@@ -10,7 +10,8 @@ Arguments:
   <TRANSACTION_ID>  ACH transaction UUID to release (positional)
 
 Options:
-  -h, --help  Print help
+      --idempotency-key <KEY>  Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
+  -h, --help                   Print help
 
 Global options:
       --profile <PROFILE>  Active profile (environment). `sandbox` (default) or `production`/`prod` [env: FLUTE2_PROFILE=]

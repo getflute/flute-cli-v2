@@ -74,6 +74,7 @@ fn every_create_flag_reaches_the_body_under_its_wire_name() {
         tax_amount: None,
         tax_mode: Some(TaxMode::Exclusive),
         ach_faster_processing: true,
+        idempotency: Default::default(),
     };
     let body = build_create_payment_link_body(&args).unwrap();
     assert_eq!(body["mode"], "PaymentAndSave");
@@ -302,6 +303,7 @@ fn share_args(consent: bool) -> SharePaymentLinkArgs {
         share_by: ShareChannel::Sms,
         recipient: "+14155552309".into(),
         has_customer_consent: consent,
+        idempotency: Default::default(),
     }
 }
 

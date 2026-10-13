@@ -69,6 +69,8 @@ pub enum PaymentSessionsCommand {
         /// Confirm the cancellation (required).
         #[arg(long)]
         yes: bool,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
 }
 
@@ -168,6 +170,8 @@ pub struct CreatePaymentSessionArgs {
         requires = "session_ach_enabled"
     )]
     pub ach_faster_processing: bool,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 /// The amount rules the description carries and the schema cannot.
@@ -378,7 +382,12 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
             money::note_fractional_rates(&[("--tax-rate", args.tax_rate)]);
             let resp = ctx
                 .api
-                .request(Method::POST, "/v2/payment-sessions", &[], Some(body))
+                .request_keyed(
+                    Method::POST,
+                    "/v2/payment-sessions",
+                    Some(body),
+                    args.idempotency.key()?,
+                )
                 .await?;
             render::one(
                 ctx,
@@ -405,19 +414,21 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
             )
         }
         PaymentSessionsCommand::Cancel {
-            payment_session_id, ..
+            payment_session_id,
+            idempotency,
+            ..
         } => {
             // A cancelled session still exists and refuses a repeat with a 400,
             // so a 404 is an id the server never had: plain not-found.
             let resp = ctx
                 .api
-                .request(
+                .request_keyed(
                     Method::POST,
                     ApiPath::from("/v2/payment-sessions")
                         .id(&payment_session_id)?
                         .seg("cancel"),
-                    &[],
                     None,
+                    idempotency.key()?,
                 )
                 .await?;
             render::confirmed(
@@ -498,6 +509,7 @@ mod tests {
             tax_amount: None,
             tax_mode: Some(TaxMode::Exclusive),
             ach_faster_processing: true,
+            idempotency: Default::default(),
         };
         let body = build_create_payment_session_body(&args).unwrap();
         assert_eq!(body["taxRate"].to_string(), "8.5");
