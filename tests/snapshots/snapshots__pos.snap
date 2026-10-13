@@ -2,12 +2,13 @@
 source: tests/snapshots.rs
 expression: help_for(&args)
 ---
-POS transaction operations (create [--wait], get, list, cancel, print-receipt)
+POS transaction operations (create [--wait], reversal [--wait], get, list, cancel, print-receipt)
 
 Usage: flute2 pos [OPTIONS] <COMMAND>
 
 Commands:
   create         Create a POS transaction (POST /v2/pos/transactions)
+  reversal       Reverse a POS transaction, or refund with no original transaction (POST /v2/pos/transactions/reversal)
   get            Fetch a single POS transaction by ID (GET /v2/pos/transactions/{posTransactionId})
   list           List POS transactions (GET /v2/pos/transactions)
   cancel         Cancel a POS transaction (POST /v2/pos/transactions/{posTransactionId}/cancel)

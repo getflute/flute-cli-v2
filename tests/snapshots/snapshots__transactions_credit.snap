@@ -2,7 +2,7 @@
 source: tests/snapshots.rs
 expression: help_for(&args)
 ---
-Card or ACH credit payment (POST /v2/transactions/credit)
+Card or ACH credit (POST /v2/transactions/credit). A card needs `--card`, `--exp` and `--cvv`; only a saved bank account can be credited by id
 
 Usage: flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <PAYMENT_PROCESSOR_ID> --reference-id <REFERENCE_ID>
 
@@ -79,6 +79,8 @@ Options:
           Shipping postal / ZIP code
       --shipping-country <COUNTRY>
           Shipping country code (e.g. `US`)
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
   -h, --help
           Print help
 

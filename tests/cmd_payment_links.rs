@@ -63,6 +63,97 @@ async fn payment_link_create_full_exchange_matches_the_contract() {
 }
 
 #[tokio::test]
+async fn payment_link_create_mode_metadata_and_tax_match_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(
+        &server,
+        "flute-v2-post-payment-links",
+        "mode, metadata and tax",
+    )
+    .await;
+    support::bin(&server)
+        .args([
+            "payment-links",
+            "create",
+            "--card-enabled",
+            "--currency-code",
+            "USD",
+            "--mode",
+            "payment-and-save",
+            "--metadata",
+            "k=https://x.example/?a=b",
+            "--tax-rate",
+            "8.5",
+            "--tax-mode",
+            "exclusive",
+        ])
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
+async fn payment_link_create_faster_ach_matches_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(&server, "flute-v2-post-payment-links", "faster ACH").await;
+    support::bin(&server)
+        .args([
+            "payment-links",
+            "create",
+            "--ach-enabled",
+            "--ach-faster-processing",
+            "--currency-code",
+            "USD",
+        ])
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
+async fn faster_ach_without_ach_enabled_is_a_usage_error_on_create() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "payment-links",
+            "create",
+            "--card-enabled",
+            "--currency-code",
+            "USD",
+            "--ach-faster-processing",
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--ach-enabled"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
+
+#[tokio::test]
+async fn faster_ach_without_ach_enabled_is_a_usage_error_on_update() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args(["payment-links", "update", LINK, "--ach-faster-processing"])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--ach-enabled"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
+
+#[tokio::test]
 async fn payment_link_get_exchange_matches_the_contract() {
     let server = support::mock_with_token().await;
     let ex = support::mount(
@@ -205,6 +296,28 @@ async fn payment_link_share_exchange_matches_the_contract() {
     support::assert_exchange_observed(&server, &ex).await;
 }
 
+/// The server accepts only `Active` and `Inactive` on an update, so the
+/// other two list-filter values are refused before the wire.
+#[tokio::test]
+async fn payment_link_update_status_offers_only_active_and_inactive() {
+    for bad in ["completed", "expired"] {
+        let server = support::mock_with_token().await;
+        support::bin(&server)
+            .args(["payment-links", "update", LINK, "--status", bad])
+            .assert()
+            .code(3);
+        assert!(
+            server
+                .received_requests()
+                .await
+                .unwrap()
+                .iter()
+                .all(|r| r.url.path() == "/oauth2/token"),
+            "{bad}"
+        );
+    }
+}
+
 /// Destructive, so it is refused client-side with no request issued.
 #[tokio::test]
 async fn payment_link_delete_without_yes_issues_no_request() {
@@ -256,6 +369,7 @@ async fn payment_link_delete_on_a_missing_link_exits_zero() {
     assert_eq!(v["data"]["paymentLinkId"], LINK);
     assert_eq!(v["data"]["deleted"], false, "{v}");
     assert_eq!(v["data"]["found"], false, "{v}");
+    assert_eq!(v["meta"]["correlation_id"], "c-1", "{v}");
 }
 
 /// `paymentMethods` is the only required field, so a create naming no method

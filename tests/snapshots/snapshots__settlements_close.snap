@@ -4,13 +4,16 @@ expression: help_for(&args)
 ---
 Settle the open batch for a payment processor (POST /v2/settlements/batches/close).
 
-This is a batch-level operation, not a per-transaction one. It closes and settles the processor's entire open batch. Use `--payment-processor-id` to identify the processor.
+This is a batch-level operation, not a per-transaction one. It closes and settles the processor's entire open batch. Use `--payment-processor-id` to identify the processor. Batch close is for card processors.
 
 Usage: flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
 
 Options:
       --payment-processor-id <PAYMENT_PROCESSOR_ID>
           UUID of the payment processor whose open batch should be settled (required)
+
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
 
   -h, --help
           Print help (see a summary with '-h')

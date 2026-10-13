@@ -616,6 +616,118 @@ fn an_update_that_cannot_reach_github_is_a_transport_failure() {
     );
 }
 
+/// GitHub answering the release lookup with an HTTP error — a 403 rate limit
+/// above all — is not a network failure: the request arrived and was refused,
+/// and retrying does not help where `FLUTE2_GITHUB_TOKEN` does. So it is not
+/// `transport`, and the message carries the status.
+#[tokio::test]
+async fn an_update_that_github_refuses_is_not_a_transport_failure() {
+    let server = wiremock::MockServer::start().await;
+    wiremock::Mock::given(wiremock::matchers::any())
+        .respond_with(wiremock::ResponseTemplate::new(403))
+        .mount(&server)
+        .await;
+    let out = support::bin_without_credentials()
+        .env("FLUTE2_INSTALLER_GHE_BASE_URL", server.uri())
+        .args(["--output", "json", "update"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out)
+        .unwrap_or_else(|e| panic!("stdout is not one envelope: {e}: {out:?}"));
+    assert!(
+        !server.received_requests().await.unwrap().is_empty(),
+        "the lookup never reached the stub"
+    );
+    assert_ne!(v["kind"], "transport", "{v}");
+    assert!(v["message"].as_str().unwrap().contains("403"), "{v}");
+}
+
+/// With an install receipt, `update` looks the release up through the
+/// installer path. A network failure there is a transport failure too, and
+/// stdout carries the envelope alone.
+#[test]
+fn an_update_with_a_receipt_that_cannot_reach_github_is_a_transport_failure() {
+    let dir = tempfile::tempdir().unwrap();
+    // The receipt must name the directory the binary runs from, or the
+    // updater treats it as another install's and never looks anything up.
+    let exe = std::fs::canonicalize(assert_cmd::cargo::cargo_bin("flute2")).unwrap();
+    std::fs::write(
+        dir.path().join("flute2-receipt.json"),
+        serde_json::json!({
+            "install_prefix": exe.parent().unwrap().to_str().unwrap(),
+            "binaries": ["flute2"],
+            "source": {"release_type": "github", "owner": "getflute",
+                       "name": "flute-cli-v2", "app_name": "flute2"},
+            "version": "0.0.1",
+            "provider": {"source": "cargo-dist", "version": "0.30.0"},
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let out = support::bin_without_credentials()
+        .env("AXOUPDATER_CONFIG_PATH", dir.path())
+        .env("HTTPS_PROXY", "http://127.0.0.1:1")
+        .env("https_proxy", "http://127.0.0.1:1")
+        .env("ALL_PROXY", "http://127.0.0.1:1")
+        .env_remove("NO_PROXY")
+        .env_remove("no_proxy")
+        .args(["--output", "json", "update"])
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out)
+        .unwrap_or_else(|e| panic!("stdout is not one envelope: {e}: {out:?}"));
+    assert_eq!(v["kind"], "transport", "{v}");
+}
+
+/// With an install receipt the lookup runs through the installer path, and a
+/// refusal from GitHub there is not a network failure either.
+#[tokio::test]
+async fn an_update_with_a_receipt_that_github_refuses_is_not_a_transport_failure() {
+    let server = wiremock::MockServer::start().await;
+    wiremock::Mock::given(wiremock::matchers::any())
+        .respond_with(wiremock::ResponseTemplate::new(403))
+        .mount(&server)
+        .await;
+    let dir = tempfile::tempdir().unwrap();
+    let exe = std::fs::canonicalize(assert_cmd::cargo::cargo_bin("flute2")).unwrap();
+    std::fs::write(
+        dir.path().join("flute2-receipt.json"),
+        serde_json::json!({
+            "install_prefix": exe.parent().unwrap().to_str().unwrap(),
+            "binaries": ["flute2"],
+            "source": {"release_type": "github", "owner": "getflute",
+                       "name": "flute-cli-v2", "app_name": "flute2"},
+            "version": "0.0.1",
+            "provider": {"source": "cargo-dist", "version": "0.30.0"},
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let out = support::bin_without_credentials()
+        .env("AXOUPDATER_CONFIG_PATH", dir.path())
+        .env("FLUTE2_INSTALLER_GHE_BASE_URL", server.uri())
+        .args(["--output", "json", "update"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out)
+        .unwrap_or_else(|e| panic!("stdout is not one envelope: {e}: {out:?}"));
+    assert!(
+        !server.received_requests().await.unwrap().is_empty(),
+        "the lookup never reached the stub"
+    );
+    assert_ne!(v["kind"], "transport", "{v}");
+    assert!(v["message"].as_str().unwrap().contains("403"), "{v}");
+}
+
 /// The token endpoint answering 401 is the other half of the split: the
 /// credentials reached it and were refused, which is exit 2 and an operator's
 /// problem.
@@ -670,6 +782,47 @@ async fn a_token_endpoint_that_fails_is_an_api_failure_not_an_auth_one() {
         assert_eq!(v["status"], status, "{v}");
         let message = v["message"].as_str().unwrap();
         assert!(message.starts_with("token request failed: "), "{v}");
+    }
+}
+
+/// Any 4xx from the token endpoint other than 429 is a refusal of the
+/// credentials: exit 2, and nothing reaches the API, so a delete cannot be
+/// mistaken for its idempotent "already gone" success.
+#[tokio::test]
+async fn a_token_endpoint_4xx_is_an_auth_failure_and_sends_no_delete() {
+    for status in [404u16, 405, 422] {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/oauth2/token"))
+            .respond_with(wiremock::ResponseTemplate::new(status))
+            .mount(&server)
+            .await;
+
+        let out = support::bin(&server)
+            .args(["--output", "json", "customers", "delete", "c-1", "--yes"])
+            .assert()
+            .code(2)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "auth", "{status}: {v}");
+        assert!(
+            v["message"]
+                .as_str()
+                .unwrap()
+                .starts_with("token request failed: "),
+            "{status}: {v}"
+        );
+        assert!(
+            server
+                .received_requests()
+                .await
+                .unwrap()
+                .iter()
+                .all(|r| r.url.path() == "/oauth2/token"),
+            "{status}: only the token endpoint may be called"
+        );
     }
 }
 
@@ -1248,4 +1401,336 @@ async fn an_empty_query_or_body_identifier_is_refused_before_the_wire() {
         server.received_requests().await.unwrap().is_empty(),
         "a refused identifier still reached the network"
     );
+}
+
+/// `--sort-by` offers the fields the API sorts on, so any other is a usage
+/// error that sends nothing.
+#[test]
+fn list_sort_by_rejects_a_field_the_api_does_not_sort_on() {
+    for group in ["customers", "payment-methods", "terminals", "pos"] {
+        support::bin_without_credentials()
+            .args([group, "list", "--sort-by", "bogus"])
+            .assert()
+            .code(3)
+            .stderr(predicate::str::contains("possible values"));
+    }
+}
+
+/// `customers list` sorts by its default field, `createdOn`, and refuses
+/// `externalId`, which the server accepts without sorting.
+#[test]
+fn customers_sort_by_offers_created_on_and_not_external_id() {
+    support::bin_without_credentials()
+        .args(["customers", "list", "--sort-by", "createdOn"])
+        .assert()
+        .code(2);
+    support::bin_without_credentials()
+        .args(["customers", "list", "--sort-by", "externalId"])
+        .assert()
+        .code(3);
+}
+
+/// The fifteen writes whose operation declares `Idempotency-Key`, each with
+/// the arguments it needs to reach the wire.
+const KEYED_WRITES: &[&[&str]] = &[
+    &[
+        "transactions",
+        "create",
+        "--payment-processor-id",
+        "pp-1",
+        "--amount",
+        "1.00",
+        "--card",
+        "4111111111111111",
+        "--cvv",
+        "123",
+        "--exp",
+        "12/30",
+    ],
+    &[
+        "transactions",
+        "credit",
+        "--payment-processor-id",
+        "pp-1",
+        "--amount",
+        "1.00",
+        "--reference-id",
+        "ref-1",
+        "--card",
+        "4111111111111111",
+        "--cvv",
+        "123",
+        "--exp",
+        "12/30",
+    ],
+    &["transactions", "capture", "--transaction-id", "txn-1"],
+    // The partial reversal reads the transaction first; that read takes no key.
+    &[
+        "transactions",
+        "reversal",
+        "--transaction-id",
+        "txn-1",
+        "--amount",
+        "1.00",
+    ],
+    &[
+        "transactions",
+        "tip-adjust",
+        "--transaction-id",
+        "txn-1",
+        "--tip-amount",
+        "1.00",
+    ],
+    &["transactions", "ach-hold", "txn-1"],
+    &["transactions", "ach-release", "txn-1"],
+    // `--wait` polls with GETs, and the poll takes no key.
+    &[
+        "pos",
+        "create",
+        "--terminal-id",
+        "t-1",
+        "--pos-device-id",
+        "d-1",
+        "--amount",
+        "1.00",
+        "--currency-code",
+        "USD",
+        "--wait",
+    ],
+    &["pos", "cancel", "p-1", "--yes"],
+    &[
+        "pos",
+        "reversal",
+        "--terminal-id",
+        "t-1",
+        "--pos-device-id",
+        "d-1",
+        "--reference-id",
+        "ref-1",
+        "--original-transaction-id",
+        "txn-1",
+        "--wait",
+    ],
+    &[
+        "payment-links",
+        "create",
+        "--card-enabled",
+        "--currency-code",
+        "USD",
+    ],
+    &[
+        "payment-links",
+        "share",
+        "pl-1",
+        "--share-by",
+        "sms",
+        "--recipient",
+        "+14155552309",
+        "--consent",
+    ],
+    &[
+        "payment-sessions",
+        "create",
+        "--amount",
+        "1.00",
+        "--card-enabled",
+    ],
+    &["payment-sessions", "cancel", "ps-1", "--yes"],
+    &["settlements", "close", "--payment-processor-id", "pp-1"],
+];
+
+/// A server that answers every write as in progress and every read as
+/// finished, so a `--wait` poll ends after one GET and a partial reversal's
+/// read finds a settled card transaction.
+async fn answers_every_request() -> wiremock::MockServer {
+    use wiremock::matchers::method;
+    use wiremock::{Mock, ResponseTemplate};
+    let server = support::mock_with_token().await;
+    for (verb, pos_status) in [("POST", "InProgress"), ("GET", "Completed")] {
+        Mock::given(method(verb))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "transactionId": "txn-1", "paymentMethodType": "Card",
+                "transactionStatus": "Settled", "posTransactionId": "p-1",
+                "posTransactionStatus": pos_status,
+            })))
+            .mount(&server)
+            .await;
+    }
+    server
+}
+
+/// Each API request as its method and the `Idempotency-Key` it carried.
+async fn keys_sent(server: &wiremock::MockServer) -> Vec<(String, Option<String>)> {
+    server
+        .received_requests()
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|r| r.url.path() != "/oauth2/token")
+        .map(|r| {
+            let key = r
+                .headers
+                .get("idempotency-key")
+                .map(|v| v.to_str().unwrap().to_string());
+            (r.method.to_string(), key)
+        })
+        .collect()
+}
+
+/// The given key reaches the write verbatim and no read; without the flag no
+/// request carries the header.
+#[tokio::test]
+async fn every_keyed_write_sends_the_given_key_on_its_write_alone() {
+    for argv in KEYED_WRITES {
+        let key = format!("key {}", argv.join(" "));
+        let server = answers_every_request().await;
+        support::bin(&server)
+            .args(*argv)
+            .args(["--idempotency-key", &key])
+            .output()
+            .unwrap();
+        let sent = keys_sent(&server).await;
+        let writes: Vec<_> = sent.iter().filter(|(m, _)| m == "POST").collect();
+        assert_eq!(writes.len(), 1, "{argv:?}: {sent:?}");
+        assert_eq!(writes[0].1.as_deref(), Some(key.as_str()), "{argv:?}");
+        assert!(
+            sent.iter().all(|(m, k)| m == "POST" || k.is_none()),
+            "{argv:?}: a read carried the key: {sent:?}"
+        );
+        let reads_too = argv.contains(&"--wait") || argv[..2] == ["transactions", "reversal"];
+        assert_eq!(
+            sent.iter().any(|(m, _)| m == "GET"),
+            reads_too,
+            "{argv:?}: {sent:?}"
+        );
+
+        let server = answers_every_request().await;
+        support::bin(&server).args(*argv).output().unwrap();
+        let sent = keys_sent(&server).await;
+        assert!(!sent.is_empty(), "{argv:?}");
+        assert!(sent.iter().all(|(_, k)| k.is_none()), "{argv:?}: {sent:?}");
+    }
+}
+
+/// An empty key is a value that went missing: refused, nothing sent.
+#[tokio::test]
+async fn an_empty_idempotency_key_is_refused_before_the_wire() {
+    let server = answers_every_request().await;
+    let out = support::bin(&server)
+        .args(["--output", "json", "settlements", "close"])
+        .args(["--payment-processor-id", "pp-1", "--idempotency-key", " "])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "client", "{v}");
+    assert!(
+        v["message"].as_str().unwrap().contains("--idempotency-key"),
+        "{v}"
+    );
+    assert!(keys_sent(&server).await.is_empty());
+}
+
+/// A key a header cannot carry intact is refused rather than failing as a
+/// transport error that reads as a request which may have been carried out.
+#[tokio::test]
+async fn a_key_that_is_not_printable_ascii_is_refused_before_the_wire() {
+    for key in ["a\u{1}b", "a\tb", "clé"] {
+        let server = answers_every_request().await;
+        let out = support::bin(&server)
+            .args(["--output", "json", "settlements", "close"])
+            .args(["--payment-processor-id", "pp-1", "--idempotency-key", key])
+            .assert()
+            .code(3)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "client", "{key:?}: {v}");
+        assert!(
+            v["message"].as_str().unwrap().contains("printable ASCII"),
+            "{key:?}: {v}"
+        );
+        assert!(keys_sent(&server).await.is_empty(), "{key:?}");
+    }
+}
+
+/// A key reused with different arguments is the server's 422, reported as
+/// any other validation failure.
+#[tokio::test]
+async fn a_reused_key_with_different_arguments_is_an_api_422_exit_3() {
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, ResponseTemplate};
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/settlements/batches/close"))
+        .and(header("idempotency-key", "k-1"))
+        .respond_with(ResponseTemplate::new(422).set_body_json(serde_json::json!({
+            "ErrorCode": "IdempotencyKeyConflict",
+            "Details": "This Idempotency-Key was already used with a different request. \
+                        Use a new key for a new request.",
+        })))
+        .mount(&server)
+        .await;
+    let out = support::bin(&server)
+        .args(["--output", "json", "settlements", "close"])
+        .args(["--payment-processor-id", "pp-1", "--idempotency-key", "k-1"])
+        .assert()
+        .code(3)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "api", "{v}");
+    assert_eq!(v["status"], 422, "{v}");
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .contains("already used with a different request"),
+        "{v}"
+    );
+}
+
+/// The writes whose operation declares no key do not take the flag.
+#[test]
+fn a_write_without_a_declared_key_refuses_the_flag() {
+    for argv in [
+        &[
+            "customers",
+            "create",
+            "--first-name",
+            "A",
+            "--last-name",
+            "B",
+        ][..],
+        &[
+            "payment-methods",
+            "add-card",
+            "--card",
+            "4111111111111111",
+            "--exp",
+            "12/30",
+        ],
+        &[
+            "payment-methods",
+            "add-ach",
+            "--account",
+            "123456789",
+            "--routing",
+            "021000021",
+            "--account-holder-type",
+            "personal",
+        ],
+        &["api-keys", "create", "--merchant-id", "m-1", "--name", "n"],
+    ] {
+        support::bin_without_credentials()
+            .args(argv)
+            .args(["--idempotency-key", "k-1"])
+            .assert()
+            .code(3)
+            .stderr(predicate::str::contains("--idempotency-key"));
+    }
 }

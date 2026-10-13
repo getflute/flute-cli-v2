@@ -101,6 +101,8 @@ pub enum TransactionsCommand {
         /// Capture amount for a partial capture. Omit for a full capture.
         #[arg(long, value_parser = parse_amount, allow_negative_numbers = true)]
         amount: Option<Decimal>,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Void or refund a transaction
     /// (POST /v2/transactions/{transactionId}/reversal).
@@ -116,8 +118,11 @@ pub enum TransactionsCommand {
         /// reversal.
         #[arg(long, value_parser = parse_amount, allow_negative_numbers = true)]
         amount: Option<Decimal>,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
-    /// Card or ACH credit payment (POST /v2/transactions/credit).
+    /// Card or ACH credit (POST /v2/transactions/credit). A card needs
+    /// `--card`, `--exp` and `--cvv`; only a saved bank account can be credited by id.
     Credit(CreditArgs),
     /// Adjust the tip on a transaction
     /// (POST /v2/transactions/{transactionId}/tip-adjustment).
@@ -131,18 +136,24 @@ pub enum TransactionsCommand {
         /// New tip rate as a percentage, e.g. `18.5` for 18.5%.
         #[arg(long, value_parser = parse_rate, id = "adjust_tip_rate", value_name = "TIP_RATE", allow_negative_numbers = true)]
         tip_rate: Option<Decimal>,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Place an ACH transaction on hold
     /// (POST /v2/transactions/{transactionId}/ach-hold).
     AchHold {
         /// ACH transaction UUID to hold (positional).
         transaction_id: String,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Release an ACH transaction from hold
     /// (POST /v2/transactions/{transactionId}/ach-release).
     AchRelease {
         /// ACH transaction UUID to release (positional).
         transaction_id: String,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
     /// Send a transaction receipt to a customer
     /// (POST /v2/transactions/{transactionId}/share-receipt).
@@ -200,10 +211,12 @@ pub struct ListTransactionsArgs {
     /// Sort descending, by `--sort-by` or else by transaction date.
     #[arg(long, id = "txn_desc")]
     pub desc: bool,
-    /// Filter results from this date-time inclusive (ISO 8601).
+    /// Filter results from this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter starts at the beginning of that day.
     #[arg(long = "from", id = "txn_from", value_name = "FROM_DATE")]
     pub from_date: Option<String>,
-    /// Filter results up to this date-time inclusive (ISO 8601).
+    /// Filter results up to this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter includes that whole day.
     #[arg(long = "to", id = "txn_to", value_name = "TO_DATE")]
     pub to_date: Option<String>,
     /// Filter by the transaction source.
@@ -278,6 +291,8 @@ pub struct CreditArgs {
     pub billing: BillingArgs,
     #[command(flatten)]
     pub shipping: ShippingArgs,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 #[derive(clap::Args, Debug)]
@@ -457,6 +472,10 @@ pub struct CreateTransactionArgs {
     /// Level-3 shipping charges.
     #[arg(long = "l3-shipping", value_parser = parse_amount, value_name = "SHIPPING_CHARGES", allow_negative_numbers = true)]
     pub shipping_charges: Option<Decimal>,
+    /// Level-3 duty charges rate as a percentage, e.g. `2.5` for 2.5%. The
+    /// transaction read does not report it back.
+    #[arg(long = "l3-duty-rate", value_parser = parse_rate, value_name = "DUTY_RATE", allow_negative_numbers = true)]
+    pub duty_rate: Option<Decimal>,
     /// Level-3 product line item, as comma-separated `key=value` pairs.
     /// Repeat the flag for multiple products.
     ///
@@ -476,4 +495,6 @@ pub struct CreateTransactionArgs {
     pub billing: BillingArgs,
     #[command(flatten)]
     pub shipping: ShippingArgs,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }

@@ -88,6 +88,68 @@ async fn payment_session_full_exchange_matches_the_contract() {
 }
 
 #[tokio::test]
+async fn payment_session_create_tax_matches_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(&server, "flute-v2-post-payment-sessions", "tax").await;
+    support::bin(&server)
+        .args([
+            "payment-sessions",
+            "create",
+            "--amount",
+            "20.00",
+            "--tax-rate",
+            "5",
+            "--tax-mode",
+            "exclusive",
+        ])
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
+async fn payment_session_create_faster_ach_matches_the_contract() {
+    let server = support::mock_with_token().await;
+    let ex = support::mount(&server, "flute-v2-post-payment-sessions", "faster ACH").await;
+    support::bin(&server)
+        .args([
+            "payment-sessions",
+            "create",
+            "--amount",
+            "20.00",
+            "--ach-enabled",
+            "--ach-faster-processing",
+        ])
+        .assert()
+        .success();
+    support::assert_exchange_observed(&server, &ex).await;
+}
+
+#[tokio::test]
+async fn faster_ach_without_ach_enabled_is_a_usage_error_on_create() {
+    let server = support::mock_with_token().await;
+    support::bin(&server)
+        .args([
+            "payment-sessions",
+            "create",
+            "--amount",
+            "20.00",
+            "--ach-faster-processing",
+        ])
+        .assert()
+        .code(3)
+        .stderr(predicate::str::contains("--ach-enabled"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+    );
+}
+
+#[tokio::test]
 async fn payment_session_get_exchange_matches_the_contract() {
     let server = support::mock_with_token().await;
     let ex = support::mount(

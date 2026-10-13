@@ -11,6 +11,8 @@ Options:
           UUID of the transaction to capture (required)
       --amount <AMOUNT>
           Capture amount for a partial capture. Omit for a full capture
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
   -h, --help
           Print help
 

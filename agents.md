@@ -80,7 +80,7 @@ CI log stays quiet.
   each holding its row with a dash when the response lacks it. Every other
   field is in `--output json` only, so never parse `table`.
 - `--output quiet` prints the identifier alone, one per line for a collection.
-  Ideal for chaining. Four commands have no identifier to print and print
+  Ideal for chaining. Five commands have no identifier to print and print
   nothing at all: see
   [Commands with no identifier](#commands-with-no-identifier).
 
@@ -121,15 +121,15 @@ and appears only when no header arrived.
 
 | `kind` | Meaning | Retry? |
 |---|---|---|
-| `api`, status 500/502/503/504 | server error, which can arrive after the API carried the request out | only a command in the **Safe to retry** column of [Idempotency](#idempotency), with backoff; any other — reconcile with `list` or `get` first |
+| `api`, status 500/502/503/504 | server error, which can arrive after the API carried the request out | only a command in the **Safe to retry** column of [Idempotency](#idempotency) — a keyed write with its same `--idempotency-key` among them — with backoff; any other — reconcile with `list` or `get` first |
 | `api`, status 401/403 | authorisation | no — refresh credentials, then retry once |
 | `api`, status 400/422 | permanent for this request | no — surface `message` and `correlation_id` |
 | `api`, status 404 | not found | no |
 | `api`, status 402/409/429 | no exit code of their own — see the note under the exit-code table | 429 yes, with backoff; others no |
-| `transport` | connection, DNS or TLS failure, or a **request timeout** — on the API request, the token request or `update`'s release lookup, with the cause named in `message`. A timeout can land after the API received the request and carried it out | only a command in the **Safe to retry** column of [Idempotency](#idempotency), with backoff; any other — reconcile with `list` or `get` first |
-| `auth` | no credentials, one of `FLUTE2_CLIENT_ID` and `FLUTE2_CLIENT_SECRET` set without the other, or the token endpoint refused the ones it was sent | no — an operator must configure credentials |
+| `transport` | connection, DNS or TLS failure, or a **request timeout** — on the API request, the token request or an `update` request that got no HTTP answer, with the cause named in `message`. A timeout can land after the API received the request and carried it out | only a command in the **Safe to retry** column of [Idempotency](#idempotency) — a keyed write with its same `--idempotency-key` among them — with backoff; any other — reconcile with `list` or `get` first |
+| `auth` | no credentials, one of `FLUTE2_CLIENT_ID` and `FLUTE2_CLIENT_SECRET` set without the other, or the token endpoint answered the ones it was sent with a 4xx other than 429 | no — an operator must configure credentials |
 | `decode` | the API sent something this CLI cannot read: a contract change, or a CLI bug | no — surface it for investigation |
-| `client` | bad arguments, usage error, or client-side validation | no — fix the invocation |
+| `client` | bad arguments, usage error, or client-side validation; also `update`'s release lookup answered with an HTTP error, the status in `message` | no — fix the invocation; for a GitHub 403, set `FLUTE2_GITHUB_TOKEN` |
 
 A **usage error** is a `client` envelope on stdout under `--output json`, and
 clap's own styled text on stderr otherwise — including a group invoked with no
@@ -148,11 +148,11 @@ A usage error's `message` is clap's complaint alone — no `error:` label, tip,
 | Code | Meaning |
 |---|---|
 | `0` | success — **including a declined payment**, and including a 404 on a delete or revoke |
-| `1` | general: transport, a body that could not be decoded — including a `pos create --wait` response carrying no `posTransactionStatus` — a server 5xx, and an expired `--wait-timeout` |
-| `2` | authorisation: 401, 403, or no credentials at all |
+| `1` | general: transport, a body that could not be decoded — including a `pos create --wait` or `pos reversal --wait` response carrying no `posTransactionStatus` — a server 5xx, and an expired `--wait-timeout` |
+| `2` | authorisation: 401, 403, a token-endpoint 4xx other than 429, or no credentials at all |
 | `3` | validation: server 400 or 422, client-side refusals, and CLI usage errors |
 | `4` | not found: a 404 that was not mapped to success |
-| `130` | interrupted — Ctrl-C during a `pos create` request or its `--wait` poll |
+| `130` | interrupted — Ctrl-C during a `pos create` or `pos reversal` request or its `--wait` poll |
 | `141` | the consumer of stdout stopped reading before the output was complete |
 
 `130` and `141` are in the table rather than in prose alone, so an agent that
@@ -207,14 +207,19 @@ the confirmation does not claim a removal:
   "meta": { "environment": "sandbox" } }
 ```
 
-`revoke` reports `revoked: false, found: false`. The `table` line says nothing
+`revoke` reports `revoked: false, found: false`. `meta.correlation_id` is the
+404's own, when it carried one. The `table` line says nothing
 was deleted; `quiet` prints the identifier, as it does on success. A caller
 that must know the resource existed reads `found`.
 
 **The cancels are not in this rule.** A cancelled `pos` transaction or payment
-session still exists, and a second cancel answers 400, exit 3. The only 404 a
-cancel meets is an id the server never had, which is exit 4 like any other
-not-found. Reconcile with `get` before re-issuing a cancel.
+session still exists, and a second cancel without an idempotency key answers
+400, exit 3. A repeat with the key the first cancel carried returns the first
+result instead — observed on the sandbox for `payment-sessions cancel`;
+`pos cancel` was not exercised. See [Idempotency](#idempotency). The only 404
+a cancel meets is an id the server never had, which is exit 4 like any other
+not-found.
+Reconcile with `get` before re-issuing a cancel that carried no key.
 
 Every other 404 is exit 4, on a write as much as on a read: a `capture`, an
 `update` or a `share` against an id the server does not have exits 4, not 0.
@@ -258,7 +263,7 @@ failing.
 
 ### Commands with no identifier
 
-Four responses carry no identifier the CLI can print, and this is the schema's
+Five responses carry no identifier the CLI can print, and this is the schema's
 shape rather than a choice:
 
 - **`payment-sessions get`** — the read response declares no `id`, of any
@@ -275,6 +280,8 @@ shape rather than a choice:
   caller supplied. Nothing is created, so the response names no resource and
   `quiet` prints nothing. The currency code it echoes is not an identifier:
   nothing can be read back with it.
+- **`settlements close`** — the response carries `batchStatus` and nothing
+  else, so it names no batch and `quiet` prints nothing.
 
 That is nothing at all — no line, no newline. Do not read the empty stdout as a
 failure; check the exit code.
@@ -304,8 +311,8 @@ agent should pass `--profile` on each command and leave the file alone.
 
 ### The non-zero exits that carry no error envelope
 
-Three are `pos create --wait`, and they are why you must not infer the shape
-of stdout from the exit code.
+Three are `pos create --wait`, and `pos reversal --wait` ends the same three
+ways. They are why you must not infer the shape of stdout from the exit code.
 
 - **`--wait-timeout` expired** — the last-known **success** envelope is on
   stdout (`object: "pos_transaction"`, *not* an error envelope), a warning is on
@@ -380,7 +387,7 @@ places and sent as exact JSON numbers. **No amount passes through a float.**
 A negative amount or rate is refused, and the refusal names the flag and the
 rule it broke, as every other malformed value does. `--exp` is `MM/YY` or
 `MM/YYYY`. `--expires-on` and `--expires-at` take a UTC date-time
-ending in `Z`, e.g. `2026-09-15T00:00:00Z`; an offset, `+00:00` included, is
+ending in `Z`, e.g. `2030-09-15T00:00:00Z`; an offset, `+00:00` included, is
 refused before the wire, exit 3, because the API refuses it.
 
 `--payment-processor-id` is required on `transactions create`, `transactions
@@ -398,9 +405,9 @@ dot segment is resolved away, and `%` spells any of them as an escape the URL
 parser decodes, so such an identifier would address an operation other than the
 one named. An identifier sent in a query parameter or a body is held to the
 empty rule alone — `settlements get`'s batch id, `settlements close
---payment-processor-id`, `pos print-receipt --terminal-id` and `payment-methods
-set-default --customer-id`. So is every list filter whose value names a
-resource: `transactions list`'s `--source-id`, `--batch-id`, `--customer-id`,
+--payment-processor-id`, `pos print-receipt --terminal-id`, `pos reversal
+--original-transaction-id` and `payment-methods set-default --customer-id`.
+So is every list filter whose value names a resource: `transactions list`'s `--source-id`, `--batch-id`, `--customer-id`,
 `--merchant-id` and `--reference-id`, `payment-methods list --customer-id`,
 `pos list --terminal-id`, `terminals list --serial-number`, and each repeat of
 `settlements list`'s `--batch-ids` and `--processor-ids`. An empty one is a
@@ -439,7 +446,12 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   alongside a stored id, because nothing in the id says which container it
   belongs in. `--sec-code`, `--requester-ip` and `--same-day` with a card, and
   `--ach-tax-id` with anything but a new bank account, are refused rather than
-  dropped. `credit` takes the same instrument flags under the same rules.
+  dropped. `credit` takes the same instrument flags under the same rules,
+  except that a saved card is refused: `--payment-method-id` with
+  `--instrument card` is a `client` envelope, exit 3, nothing sent, because
+  `creditDetails.cardData` declares no saved-card id and the API answers it
+  with a 400. A card credit takes `--card`, `--exp` and `--cvv` together; a saved bank account
+  (`--instrument ach`) is credited by id.
 - **`--capture-method manual` creates an authorization** to capture later;
   `auto`, the default, charges immediately. It applies to a card only: on an
   ACH instrument, new or saved, `manual` is refused before the wire.
@@ -499,16 +511,23 @@ flute2 transactions credit [OPTIONS] --amount <AMOUNT> --payment-processor-id <P
   same `data` — only `meta.correlation_id`, which names the request, differs —
   so an agent gains nothing from `inspect` and spends a second round trip on
   it. Neither has an endpoint of its own beyond the read.
+- **`list --from` and `--to` filter by whole days.** The API ignores the time
+  part of a date-time. `--from` starts at the beginning of that day and `--to`
+  includes that whole day.
 - `list` filters are all **server-side**. There is no client-side filtering
   anywhere in this CLI: a filter applied locally reports a wrong answer on any
   collection larger than one page.
 - **Rate flags are percentages.** `--tip-rate`, `--discount-rate`,
-  `--surcharge-rate` and `--l2-tax-rate` take `18.5` for 18.5%. A fraction is
+  `--surcharge-rate`, `--l2-tax-rate`, `--l3-duty-rate` and `--tax-rate` take
+  `18.5` for 18.5%. A fraction is
   a valid rate, so `0.18` is accepted and means 0.18%, not 18% — and a value
   between 0 and 1 is noted on **stderr**, one line per flag, naming both
   readings. The note changes neither the request, the envelope, nor the exit
   code. `settings update-autofill`'s `--l2-tax-rate`, `--l3-shipping-rate`,
   `--l3-duty-rate` and `--product-discount` carry the same rule.
+- **`--l3-duty-rate` is accepted and not read back.** The transaction read
+  carries no duty or other enhanced-data field, so the value sent cannot be
+  confirmed from a `get`.
 - **`--l3-invoice` accepts only letters, digits and spaces.** Undocumented, not
   enforced locally, and the API's own message is clear — a hyphen, as in the
   schema's own example, is rejected.
@@ -533,9 +552,10 @@ flute2 customers delete [OPTIONS] <CUSTOMER_ID>
 - The two booleans **take a value on `update`** — `--sms-consent false` — and
   are bare switches on `create`. A patch has to be able to clear a flag.
 - `delete` requires `--yes`.
-- `list` returns newest first. Observed on the sandbox: the order is the same
-  with `--desc` or `--sort-by`, and `--created-from`/`--created-to` do not
-  narrow the result — the server applies neither.
+- `list` returns newest first, and `--desc` asks for the order the server
+  applies anyway. `--asc` reverses it, and `--sort-by` takes only the field
+  names `--help` lists. Observed on the sandbox: `--created-from` and
+  `--created-to` do not narrow the result — the server applies neither.
 
 ### `payment-methods`
 
@@ -577,11 +597,35 @@ flute2 payment-links share [OPTIONS] --share-by <SHARE_BY> --recipient <RECIPIEN
 - `update` is an RFC 7396 merge patch: an empty value or `--clear <field>`
   removes a value — see [Clearing a field](#clearing-a-field). Clearing
   `--amount` makes a fixed-price link one the payer fills in.
+- **The API requires `--tax-mode` with exactly one of `--tax-rate` or
+  `--tax-amount`.** The server answers a 400 naming `taxMode` for any other combination, so the
+  CLI does not check the pairing. `--tax-rate` is a percentage; `--tax-amount`
+  is a plain amount. `payment-sessions create` takes the same three flags.
+- **`--mode payment|payment-and-save` is `create` only**; `update` rejects it.
+- `--metadata key=value` is repeatable and splits on the first `=`. On
+  `update` the pairs are **merged into the stored map**: a named key is added
+  or replaced and the other keys are kept. `--clear metadata` or
+  `--metadata ""` removes the whole map, and an empty value after `=` stores an
+  empty string.
+- **`--ach-faster-processing` needs the merchant's ACH settings to allow it.**
+  Otherwise the server answers a 400 saying so. On `create` it requires
+  `--ach-enabled` (a usage error, exit 3, without it), so it only refines an
+  ACH offer you asked for. On `update` it takes a value
+  (`--ach-faster-processing false`), requires `--ach-enabled`, is refused with
+  `--ach-enabled false`, and is not clearable: a patch that names the `ach`
+  object turns ACH on for a link that had none.
 - `share` sends a real message. `--consent` is required: a share without it
   is refused before the wire, exit 3.
 - **`list` sends the direction you ask for.** `--asc` and `--desc` each send
   `sortOrder`; with neither, results come back newest first. `terminals list`
-  and `pos list` take the same pair.
+  and `pos list` take the same pair. `customers list` and `payment-methods
+  list` send `asc=true` or `asc=false` instead, and without `--sort-by` they
+  also send `orderBy=createdOn`, because the server ignores a direction that
+  names no field. `--sort-by` takes only the field names `--help` lists, on
+  `payment-methods`, `terminals` and `pos` as on `customers`. The newest-first
+  default does not cover `payment-methods list`: with neither direction its
+  order is the API's default, not by creation date, and `--desc` gives newest
+  first. A bare `customers list` is newest first.
 - `delete` requires `--yes`, and it and `share` both answer **204**.
 
 ### `payment-sessions`
@@ -600,19 +644,25 @@ flute2 payment-sessions cancel [OPTIONS] <PAYMENT_SESSION_ID>
   A save-method session refuses `--tip-amount` too, since it charges nothing,
   and every flag that configures a checkout page: `--card-enabled`,
   `--ach-enabled`, either processor id, `--return-url`, `--page-name`,
-  `--payment-notes`, `--after-completion-message`, `--expires-at` and
-  `--metadata`. Each is refused before the wire, exit 3.
+  `--payment-notes`, `--after-completion-message`, `--expires-at`,
+  `--metadata`, `--tax-amount`, `--tax-rate`, `--tax-mode` and
+  `--ach-faster-processing`. Each is refused before the wire, exit 3.
+- **Tax is `--tax-mode` plus exactly one of `--tax-rate` or `--tax-amount`**,
+  as on `payment-links`; the server refuses any other combination with a 400.
 - **Omitting both `--card-enabled` and `--ach-enabled` offers every payment
   method** the account has an active processor for; the session then reads
   back `paymentMethods: null`.
 - `--metadata key=value` is repeatable and splits on the **first** `=`, so a URL
   or a query string survives as a value.
-- `cancel` requires `--yes`. A second cancel is a 400, exit 3, and a 404 is exit 4.
+- `cancel` requires `--yes`. A second cancel without an idempotency key is a
+  400, exit 3; one with the key the first cancel carried returns the first
+  result. A 404 is exit 4.
 
 ### `pos`
 
 ```
 flute2 pos create [OPTIONS] --terminal-id <TERMINAL_ID> --pos-device-id <POS_DEVICE_ID> --amount <AMOUNT> --currency-code <CURRENCY_CODE>
+flute2 pos reversal [OPTIONS] --terminal-id <TERMINAL_ID> --pos-device-id <POS_DEVICE_ID> --reference-id <REFERENCE_ID>
 flute2 pos get [OPTIONS] <POS_TRANSACTION_ID>
 flute2 pos list [OPTIONS]
 flute2 pos cancel [OPTIONS] <POS_TRANSACTION_ID>
@@ -638,13 +688,30 @@ flute2 pos print-receipt [OPTIONS] --terminal-id <TERMINAL_ID> <POS_TRANSACTION_
   is a `transport` failure, exit 1.
 - **Ctrl-C during the create request** exits 130 with stdout empty in every
   output mode and one stderr line: the transaction may exist on the terminal,
-  so reconcile with `pos list` before creating another.
+  so reconcile with `pos list` before creating another. On `pos reversal` the
+  line says the reversal may have been carried out. With an
+  `--idempotency-key`, it names re-sending with the same key as the other way
+  out.
 - `--wait` with `--initiation-channel deeplink` is refused before the wire: the
   API requires terminal acceptance to be false for that channel.
 - A create response with no `posTransactionStatus` is a `decode` error, exit 1,
   rather than a state to wait out; a poll response without one ends the wait as
   a failed poll. Without the field the poll has no stop condition, so
   waiting on one could only end in the timeout.
+- **`reversal` reverses a transaction or refunds without one.** With
+  `--original-transaction-id` — the id `transactions get` takes, which a POS
+  transaction carries as `linkedTransaction.transactionId`; the API looks it
+  up among those transactions, not among POS transaction ids — the API decides
+  between a void, which reverses the full amount, and a refund, which
+  `--amount` caps; only a card transaction can be reversed. Without it the reversal is an unreferenced
+  refund, and the API requires `--amount` and `--currency-code`, answering 400
+  naming each one missing. A void or a referenced credit-card refund completes
+  on the API; a debit-card referenced refund or any unreferenced refund waits
+  for the card on the terminal. The response is a POS transaction in the
+  `pos_transaction` envelope, and `--wait`, `--wait-timeout`, the deeplink
+  refusal, Ctrl-C and the endings above apply to it exactly as to `create`. A
+  reversal that ends in a `transport` failure, a 5xx or Ctrl-C may have been
+  carried out: reconcile with `pos list` before issuing another.
 - A terminal takes **one** in-progress transaction. Cancel or complete before
   starting another.
 - `cancel` requires `--yes`.
@@ -675,12 +742,13 @@ flute2 settlements close [OPTIONS] --payment-processor-id <PAYMENT_PROCESSOR_ID>
   `kind: "api"`, status 404, exit 4, although the API answered 200: the message
   says the filtered list returned no batch. Two matches for one id is a
   refusal rather than a guess. The open batch has a `null` `batchId`, so it
-  cannot be read by id.
+  cannot be read by id. Under `--output quiet`, `list` prints the id of every
+  batch that has one, so the open batch prints no line.
 - **`--asc`, not `--desc`** — this list's `sortOrder` defaults to `desc`.
   `--sort-by` takes only the field names `--help` lists, and `--status`
   matches in any case, so `Settled` as the table prints it is accepted.
 - `close` settles the named processor's whole open batch, not one
-  transaction.
+  transaction. Batch close is for card processors.
 
 ### `settings`
 
@@ -744,9 +812,10 @@ flute2 auth token [OPTIONS]
 
 `auth status` is a **live** check: it calls the API, so `authenticated` is true
 only when the stored credentials actually round-trip. It is false when there
-are no credentials or the server refuses them; a check that gets no answer
-about them — the server is unreachable or fails — exits non-zero with the
-usual failure envelope instead.
+are no credentials, the token endpoint refuses them with a 400, 401 or 403, or
+the API answers 401 or 403; a check that gets no answer about them — the server
+is unreachable or fails, or the token endpoint answers any other 4xx — exits
+non-zero with the usual failure envelope instead.
 
 ## Pagination
 
@@ -811,8 +880,12 @@ Error: --first-name cannot be cleared; pass a value.
 |---|---|---|
 | `customers update` | `company`, `email`, `mobile` | `first-name`, `last-name` |
 | `payment-methods update` | `name` | — |
-| `payment-links update` | `amount`, `customer-id`, `reference-id`, `description`, `expires-on` | `name`, `currency-code`, `card-processor-id`, `ach-processor-id` |
+| `payment-links update` | `amount`, `customer-id`, `reference-id`, `description`, `expires-on`, `tax-amount`, `tax-rate`, `tax-mode`, `metadata` | `name`, `currency-code`, `card-processor-id`, `ach-processor-id` |
 | `settings update-autofill` | the six product defaults, `l3-shipping-rate`, `l3-duty-rate` | `l2-tax-rate` |
+
+**`payment-links update` clears the tax fields together.** The server takes
+`taxMode` and one of `taxRate` or `taxAmount` set or cleared as a unit, so
+`--clear tax-rate --clear tax-mode` is one clear and either alone is a 400.
 
 **Numeric flags clear by both spellings too.** `--amount ""` and
 `--clear amount` each send the null. Clearing an amount is not the same as
@@ -838,24 +911,55 @@ value is refused — exit 3, nothing sent — whatever else the update carries.
 
 | Safe to retry | Not safe to retry |
 |---|---|
-| every `get`, `list`, `status` and `inspect` | `transactions create`, `credit`, `capture`, `reversal`, `tip-adjust`; `pos create`; `customers create`; `payment-methods add-card`, `add-ach`; `payment-links create`; `payment-sessions create`; `api-keys create` |
-| `customers delete`, `payment-methods delete`, `payment-links delete`, `api-keys revoke` — a repeat 404 is exit 0 with `found: false` | `pos cancel`, `payment-sessions cancel` — a repeat answers 400, exit 3; reconcile with `get` |
+| every `get`, `list`, `status` and `inspect` | a keyed write sent without `--idempotency-key` — a repeat `pos cancel` or `payment-sessions cancel` answers 400, exit 3; reconcile with `get` |
+| `customers delete`, `payment-methods delete`, `payment-links delete`, `api-keys revoke` — a repeat 404 is exit 0 with `found: false` | `customers create`, `payment-methods add-card`, `payment-methods add-ach`, `api-keys create` — they take no key |
+| a keyed write re-sent with the same `--idempotency-key` and the same arguments — the cancels included | |
+
+**The keyed writes** are the fifteen whose operation declares the
+`Idempotency-Key` header: `transactions create`, `credit`, `capture`,
+`reversal`, `tip-adjust`, `ach-hold`, `ach-release`; `pos create`, `cancel`,
+`reversal`; `payment-links create`, `share`; `payment-sessions create`,
+`cancel`; and `settlements close`. Each takes `--idempotency-key <KEY>` and
+sends it as that header, on the request and on the CLI's own retry after a
+401. Without the flag no header is sent; the CLI generates no key.
+
+- **The same key and the same arguments return the first result** instead of
+  repeating the operation: one charge, one transaction id. The reference
+  declares the header on all fifteen. Observed on the sandbox, the replay
+  happens on `transactions create`, `capture` and `ach-hold`, and on
+  `payment-sessions create` and `cancel`; the other ten were not exercised.
+  How long the server holds a key is not documented.
+- **The same key with different arguments is a 422**, `kind: "api"`, exit 3:
+  a key names one request.
+- **A key is not scoped to one command.** Observed on the sandbox, a key spent
+  on `transactions create` answers 422 on `payment-sessions create`. Use a
+  fresh key — a UUID is the usual choice — for each distinct operation, and
+  reuse it only to retry that operation.
+- The server takes any non-empty key of at most 255 characters and answers a
+  longer one with a 400 naming the header. An empty key, and one with any
+  character outside printable ASCII — a tab, a control character, a non-ASCII
+  letter — are refused before the wire, `client`, exit 3.
+- The key is not echoed in the envelope: the caller chose it and already holds
+  it.
 
 A `transport` failure or a 5xx on something not safe to retry is ambiguous:
-the request may have been carried out. **`list` or `get` to reconcile before
-re-issuing.**
+the request may have been carried out. A key de-duplicates only when the
+first attempt carried it: **a write first sent with a key can be re-sent with
+that key; anything else — `list` or `get` to reconcile before re-issuing.**
 
-**Use a unique `--reference-id`.** It is part of the API's duplicate-check key:
-the same card and amount can be charged again when the reference ids differ,
-and cannot when they do not. The window is not documented. Five of the
-unsafe-to-retry commands take one — `transactions create`, `transactions
-credit`, `pos create`, `payment-links create` and `payment-sessions create`.
+**Use a unique `--reference-id`.** It is the merchant's own identifier and part
+of the API's duplicate-check key, not the retry mechanism: the same card and
+amount can be charged again when the reference ids differ, and cannot when they
+do not — a repeat without an idempotency key is refused as a duplicate, 400.
+The window is not documented. Six of the keyed writes take one —
+`transactions create`, `transactions credit`, `pos create`, `payment-links
+create` and `payment-sessions create`, and `pos reversal`, which requires one
+and whose schema declares it unique for the merchant.
 
-The other seven have no de-duplication knob at all. `capture` and `reversal`
-take an `--amount`, but it is the operation's meaning rather than a key to vary;
-`transactions tip-adjust`, `customers create`, `payment-methods add-card`,
-`payment-methods add-ach` and `api-keys create` take neither. **Reconcile with
-`list` or `get` before re-issuing any of the seven.**
+The four writes that take no key have no de-duplication knob at all:
+`customers create`, `payment-methods add-card`, `payment-methods add-ach` and
+`api-keys create`. **Reconcile with `list` or `get` before re-issuing any of
+the four.**
 
 **Reconcile an ACH hold, release or reversal by transaction id.** Those three
 answer with a `referenceId` the API assigned, so a `list --reference-id` by the
@@ -868,15 +972,16 @@ never happened. `transactions get <id>` is the lookup that survives them.
 |---|---|
 | Health check | `flute2 --output json ping` |
 | Find the processor ids | `flute2 --output json settings payment-config` |
-| Charge a card | `flute2 --output json transactions create --payment-processor-id <id> --amount 10.50 --reference-id <unique> --card <pan> --exp MM/YY --cvv <cvv> --billing-line1 <street> --billing-postal-code <zip> --billing-country <cc>` |
+| Charge a card | `flute2 --output json transactions create --payment-processor-id <id> --amount 10.50 --reference-id <unique> --idempotency-key <uuid> --card <pan> --exp MM/YY --cvv <cvv> --billing-line1 <street> --billing-postal-code <zip> --billing-country <cc>` — a retry re-sends the same key |
 | Authorize, then capture | the same with `--capture-method manual` — a card only — then `flute2 --output json transactions capture --transaction-id <id>` |
-| Refund or void | `flute2 --output json transactions reversal --transaction-id <id> [--amount …]` |
+| Refund or void | `flute2 --output json transactions reversal --transaction-id <id> --idempotency-key <uuid> [--amount …]` |
 | Read one transaction | `flute2 --output json transactions get <id>` |
 | Walk every transaction | `flute2 --output json transactions list --all` |
 | Vault a card for a customer | `flute2 … customers create --first-name … --last-name … --billing-line1 … --billing-postal-code … --billing-country …`, then `payment-methods add-card --customer-id <id> --card … --exp …` |
-| Charge a vaulted card | `flute2 … transactions create --payment-method-id <id> --instrument card --customer-id <id> --payment-processor-id <id> --amount … --reference-id <unique>` |
-| Start a terminal sale | `flute2 --output json pos create --terminal-id <id> --pos-device-id <dev> --amount 10.50 --currency-code USD --wait` |
-| Take a payment on a hosted page | `flute2 --output json payment-sessions create --amount 10.50 --card-enabled` |
+| Charge a vaulted card | `flute2 … transactions create --payment-method-id <id> --instrument card --customer-id <id> --payment-processor-id <id> --amount … --reference-id <unique> --idempotency-key <uuid>` |
+| Start a terminal sale | `flute2 --output json pos create --terminal-id <id> --pos-device-id <dev> --amount 10.50 --currency-code USD --idempotency-key <uuid> --wait` |
+| Reverse a terminal sale | `flute2 --output json pos reversal --terminal-id <id> --pos-device-id <dev> --reference-id <unique> --original-transaction-id <transactionId> --idempotency-key <uuid> --wait` — the sale's `linkedTransaction.transactionId`, not its `posTransactionId` |
+| Take a payment on a hosted page | `flute2 --output json payment-sessions create --amount 10.50 --card-enabled --idempotency-key <uuid>` |
 | Issue a merchant API key | `flute2 --output json api-keys create --merchant-id <id> --name "<name>"` — save the one-shot secret; needs partner credentials |
 
 **A card charge needs a billing address.** When address verification is on for
@@ -896,7 +1001,7 @@ refused as a duplicate.
   notice, the `--wait` warnings and a failed `--wait` poll, which leaves the
   created transaction's envelope on stdout.
 - **Don't infer stdout's shape from the exit code.** The `pos create --wait`
-  endings break that inference in both directions.
+  and `pos reversal --wait` endings break that inference in both directions.
 - **Don't parse stdout after exit 141.** It is a prefix of the document, and a
   prefix of valid JSON parses as nothing at all.
 - **Don't call `auth login`** from an agent. Use the environment variables.
@@ -904,7 +1009,11 @@ refused as a duplicate.
   later process on the machine. Pass `--profile` per command instead.
 - **Don't fire a second `pos create`** on a terminal that already has one in
   progress.
-- **Don't retry a money-moving create** without reconciling first.
+- **Don't retry a money-moving write without its `--idempotency-key`.** Re-send
+  it with the same key and arguments, or reconcile with `list` or `get` first.
+- **Don't reuse an idempotency key for a different operation.** The same
+  command with different arguments answers 422, and so did a key spent on
+  `transactions create` and reused on `payment-sessions create`.
 - **Don't rely on 402, 409 or 429 having a dedicated exit code.** They exit 1
   today and may not tomorrow.
 - **Don't expect `devices` or `subscriptions`** — see

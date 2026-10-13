@@ -14,8 +14,8 @@
 
 use crate::Ctx;
 use crate::api::ApiPath;
-use crate::cli::common;
-use crate::cli::money::{parse_amount, to_amount_number};
+use crate::cli::common::{self, TaxMode};
+use crate::cli::money::{self, parse_amount, parse_rate, to_amount_number};
 use crate::cli::render::{self, Cell, Column, Resource};
 use anyhow::Result;
 use reqwest::Method;
@@ -69,6 +69,8 @@ pub enum PaymentSessionsCommand {
         /// Confirm the cancellation (required).
         #[arg(long)]
         yes: bool,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
 }
 
@@ -114,7 +116,7 @@ pub struct CreatePaymentSessionArgs {
     /// Message shown to the payer once the session completes.
     #[arg(long)]
     pub after_completion_message: Option<String>,
-    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`.
+    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2030-09-15T00:00:00Z`.
     /// Omit for a session that never expires.
     #[arg(long, value_parser = crate::groups::payment_links::parse_utc_expiry)]
     pub expires_at: Option<String>,
@@ -146,21 +148,30 @@ pub struct CreatePaymentSessionArgs {
         value_name = "ACH_PROCESSOR_ID"
     )]
     pub ach_processor_id: Option<String>,
-}
-
-/// Parse one `--metadata` value into a key and a value.
-///
-/// Only the **first** `=` separates them: metadata is arbitrary, and a query
-/// string or a URL as a value is ordinary rather than exotic.
-fn metadata_pair(raw: &str) -> Result<(String, String)> {
-    let Some((key, value)) = raw.split_once('=') else {
-        anyhow::bail!("--metadata takes key=value pairs; '{raw}' has no '='");
-    };
-    let key = key.trim();
-    if key.is_empty() {
-        anyhow::bail!("--metadata '{raw}' has an empty key");
-    }
-    Ok((key.to_string(), value.to_string()))
+    /// Tax as a plain amount, e.g. `1.00`. The API requires `--tax-mode` with
+    /// exactly one of `--tax-rate` or `--tax-amount`.
+    #[arg(long, id = "session_tax_amount", value_parser = parse_amount,
+          value_name = "TAX_AMOUNT", allow_negative_numbers = true)]
+    pub tax_amount: Option<Decimal>,
+    /// Tax as a percentage, e.g. `8.5` for 8.5%. The API requires `--tax-mode`
+    /// with exactly one of `--tax-rate` or `--tax-amount`.
+    #[arg(long, id = "session_tax_rate", value_parser = parse_rate,
+          value_name = "TAX_RATE", allow_negative_numbers = true)]
+    pub tax_rate: Option<Decimal>,
+    /// Whether the tax is added to the amount (`exclusive`) or included in it
+    /// (`inclusive`). Sent with exactly one of `--tax-rate` or `--tax-amount`.
+    #[arg(long, id = "session_tax_mode", value_enum, value_name = "TAX_MODE")]
+    pub tax_mode: Option<TaxMode>,
+    /// Ask for faster ACH processing. Requires `--ach-enabled`, and the
+    /// merchant's ACH settings must allow it.
+    #[arg(
+        long = "ach-faster-processing",
+        id = "session_ach_faster_processing",
+        requires = "session_ach_enabled"
+    )]
+    pub ach_faster_processing: bool,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 /// The amount rules the description carries and the schema cannot.
@@ -226,16 +237,9 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
     );
     common::put_str(&mut body, "expiresAt", &args.expires_at);
 
-    let mut metadata = Map::new();
-    for raw in &args.metadata {
-        let (key, value) = metadata_pair(raw)?;
-        metadata.insert(key, Value::String(value));
-    }
-    if !metadata.is_empty() {
-        body.insert("metadata".into(), Value::Object(metadata));
-    }
+    common::put_metadata(&mut body, &args.metadata)?;
 
-    let methods = common::payment_methods(
+    let mut methods = common::payment_methods(
         (
             common::offered(args.card_enabled, &args.card_processor_id),
             &args.card_processor_id,
@@ -245,9 +249,13 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
             &args.ach_processor_id,
         ),
     )?;
+    if args.ach_faster_processing {
+        common::set_ach_faster_processing(&mut methods, true);
+    }
     if !methods.is_empty() {
         body.insert("paymentMethods".into(), Value::Object(methods));
     }
+    common::put_tax(&mut body, args.tax_amount, args.tax_rate, args.tax_mode)?;
     if !args.mode.unwrap_or_default().charges() {
         refuse_checkout_flags(args)?;
     }
@@ -256,7 +264,8 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
 
 /// A save-method session has no checkout page, and the API refuses every
 /// field that configures one — the payment methods, the page's text, its
-/// expiry, the return URL and the metadata — with a 400.
+/// expiry, the return URL, the metadata, the tax and faster ACH processing — with
+/// a 400.
 fn refuse_checkout_flags(args: &CreatePaymentSessionArgs) -> Result<()> {
     let set = |v: &Option<String>| v.as_deref().is_some_and(|s| !s.is_empty());
     let given: Vec<&str> = [
@@ -273,6 +282,10 @@ fn refuse_checkout_flags(args: &CreatePaymentSessionArgs) -> Result<()> {
         ),
         ("--expires-at", set(&args.expires_at)),
         ("--metadata", !args.metadata.is_empty()),
+        ("--tax-amount", args.tax_amount.is_some()),
+        ("--tax-rate", args.tax_rate.is_some()),
+        ("--tax-mode", args.tax_mode.is_some()),
+        ("--ach-faster-processing", args.ach_faster_processing),
     ]
     .into_iter()
     .filter_map(|(flag, given)| given.then_some(flag))
@@ -355,9 +368,15 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
     match command {
         PaymentSessionsCommand::Create(args) => {
             let body = build_create_payment_session_body(&args)?;
+            money::note_fractional_rates(&[("--tax-rate", args.tax_rate)]);
             let resp = ctx
                 .api
-                .request(Method::POST, "/v2/payment-sessions", &[], Some(body))
+                .request_keyed(
+                    Method::POST,
+                    "/v2/payment-sessions",
+                    Some(body),
+                    args.idempotency.key()?,
+                )
                 .await?;
             render::one(
                 ctx,
@@ -384,19 +403,21 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
             )
         }
         PaymentSessionsCommand::Cancel {
-            payment_session_id, ..
+            payment_session_id,
+            idempotency,
+            ..
         } => {
             // A cancelled session still exists and refuses a repeat with a 400,
             // so a 404 is an id the server never had: plain not-found.
             let resp = ctx
                 .api
-                .request(
+                .request_keyed(
                     Method::POST,
                     ApiPath::from("/v2/payment-sessions")
                         .id(&payment_session_id)?
                         .seg("cancel"),
-                    &[],
                     None,
+                    idempotency.key()?,
                 )
                 .await?;
             render::confirmed(
@@ -414,6 +435,7 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentSessionsCommand) -> Result<()> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cli::common::metadata_pair;
 
     /// Nothing is required, and an absent amount is a flexible-amount
     /// session — so no flags at all is a legal request.
@@ -472,8 +494,18 @@ mod tests {
             card_processor_id: Some("pp-card".into()),
             ach_enabled: true,
             ach_processor_id: Some("pp-ach".into()),
+            tax_rate: Some("8.5".parse().unwrap()),
+            tax_amount: None,
+            tax_mode: Some(TaxMode::Exclusive),
+            ach_faster_processing: true,
+            idempotency: Default::default(),
         };
         let body = build_create_payment_session_body(&args).unwrap();
+        assert_eq!(body["taxRate"].to_string(), "8.5");
+        assert_eq!(body["taxMode"], "Exclusive");
+        assert!(body.get("taxAmount").is_none());
+        assert_eq!(body["paymentMethods"]["ach"]["fasterProcessing"], true);
+        assert_eq!(body["paymentMethods"]["ach"]["enabled"], true);
         assert_eq!(body["mode"], "PaymentAndSave");
         assert_eq!(body["amount"].to_string(), "25.00");
         assert_eq!(body["tipAmount"].to_string(), "14.50");
@@ -624,6 +656,34 @@ mod tests {
                 "--metadata",
                 CreatePaymentSessionArgs {
                     metadata: vec!["a=b".into()],
+                    ..Default::default()
+                },
+            ),
+            (
+                "--tax-rate",
+                CreatePaymentSessionArgs {
+                    tax_rate: Some("5".parse().unwrap()),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--tax-amount",
+                CreatePaymentSessionArgs {
+                    tax_amount: Some("1.00".parse().unwrap()),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--tax-mode",
+                CreatePaymentSessionArgs {
+                    tax_mode: Some(TaxMode::Inclusive),
+                    ..Default::default()
+                },
+            ),
+            (
+                "--ach-faster-processing",
+                CreatePaymentSessionArgs {
+                    ach_faster_processing: true,
                     ..Default::default()
                 },
             ),

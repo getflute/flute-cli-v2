@@ -8,8 +8,11 @@
 
 use crate::Ctx;
 use crate::api::ApiPath;
-use crate::cli::common::{self, PaginationArgs};
-use crate::cli::money::{PatchNumber, parse_amount, parse_amount_patch, to_amount_number};
+use crate::cli::common::{self, PaginationArgs, TaxMode};
+use crate::cli::money::{
+    self, PatchNumber, parse_amount, parse_amount_patch, parse_rate, parse_rate_patch,
+    to_amount_number,
+};
 use crate::cli::render::{self, Cell, Column, Resource};
 use anyhow::Result;
 use reqwest::Method;
@@ -32,6 +35,13 @@ pub enum PaymentLinkStatus {
     Inactive,
 }
 
+/// The statuses an update accepts; the server answers 400 for the other two.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
+pub enum UpdateLinkStatus {
+    Active,
+    Inactive,
+}
+
 /// `SharePaymentLinkRequestDto.shareBy` declares exactly these two.
 ///
 /// Deliberately **not** `groups::transactions::ShareBy`, which carries `Sms`
@@ -41,6 +51,27 @@ pub enum PaymentLinkStatus {
 pub enum ShareChannel {
     Email,
     Sms,
+}
+
+/// What a payment link does with the payer's payment method.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
+pub enum LinkMode {
+    Payment,
+    PaymentAndSave,
+}
+
+/// `--tax-mode` on a merge patch: a mode, or the empty value that clears it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum TaxModePatch {
+    Clear,
+    Set(TaxMode),
+}
+
+fn parse_tax_mode_patch(raw: &str) -> Result<TaxModePatch, String> {
+    if raw.trim().is_empty() {
+        return Ok(TaxModePatch::Clear);
+    }
+    <TaxMode as clap::ValueEnum>::from_str(raw.trim(), true).map(TaxModePatch::Set)
 }
 
 /// A field `--clear` can null out, and the wire key it nulls.
@@ -55,6 +86,10 @@ pub enum Clearable {
     ReferenceId,
     Description,
     ExpiresOn,
+    TaxAmount,
+    TaxRate,
+    TaxMode,
+    Metadata,
 }
 
 impl Clearable {
@@ -65,12 +100,16 @@ impl Clearable {
             Self::ReferenceId => "referenceId",
             Self::Description => "description",
             Self::ExpiresOn => "expiresOn",
+            Self::TaxAmount => "taxAmount",
+            Self::TaxRate => "taxRate",
+            Self::TaxMode => "taxMode",
+            Self::Metadata => "metadata",
         }
     }
 }
 
 /// Parse an expiry as the API takes one: a UTC date-time in ISO 8601 with a
-/// `Z` suffix, e.g. `2026-09-15T00:00:00Z`, with optional fractional seconds.
+/// `Z` suffix, e.g. `2030-09-15T00:00:00Z`, with optional fractional seconds.
 ///
 /// The API answers anything else with a 400: a word or a bare date with a
 /// .NET conversion error that names no flag, and a date-time without the `Z`
@@ -81,7 +120,7 @@ pub(crate) fn parse_utc_expiry(raw: &str) -> Result<String> {
     if raw.is_empty() || is_utc_date_time(raw) {
         return Ok(raw.to_string());
     }
-    anyhow::bail!("expected a UTC date-time in ISO 8601 ending in Z, e.g. 2026-09-15T00:00:00Z")
+    anyhow::bail!("expected a UTC date-time in ISO 8601 ending in Z, e.g. 2030-09-15T00:00:00Z")
 }
 
 fn is_utc_date_time(raw: &str) -> bool {
@@ -183,10 +222,36 @@ pub struct CreatePaymentLinkArgs {
     /// Merchant-internal notes. Never shown to customers.
     #[arg(long)]
     pub description: Option<String>,
-    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2026-09-15T00:00:00Z`.
+    /// UTC expiry (ISO 8601, ending in `Z`), e.g. `2030-09-15T00:00:00Z`.
     /// Omit for a link that never expires.
     #[arg(long, value_parser = parse_utc_expiry)]
     pub expires_on: Option<String>,
+    /// What the link does with the payer's payment method: `payment`
+    /// (default) or `payment-and-save`.
+    #[arg(long, value_enum)]
+    pub mode: Option<LinkMode>,
+    /// Arbitrary `key=value` pair to attach, handed back on the read. Repeat
+    /// the flag for several pairs.
+    #[arg(long = "metadata", value_name = "KEY=VALUE")]
+    pub metadata: Vec<String>,
+    /// Tax as a plain amount, e.g. `1.00`. The API requires `--tax-mode` with
+    /// exactly one of `--tax-rate` or `--tax-amount`.
+    #[arg(long, value_parser = parse_amount, value_name = "TAX_AMOUNT", allow_negative_numbers = true)]
+    pub tax_amount: Option<Decimal>,
+    /// Tax as a percentage, e.g. `8.5` for 8.5%. The API requires `--tax-mode`
+    /// with exactly one of `--tax-rate` or `--tax-amount`.
+    #[arg(long, value_parser = parse_rate, value_name = "TAX_RATE", allow_negative_numbers = true)]
+    pub tax_rate: Option<Decimal>,
+    /// Whether the tax is added to the amount (`exclusive`) or included in it
+    /// (`inclusive`). Sent with exactly one of `--tax-rate` or `--tax-amount`.
+    #[arg(long, value_enum)]
+    pub tax_mode: Option<TaxMode>,
+    /// Ask for faster ACH processing. Requires `--ach-enabled`, and the
+    /// merchant's ACH settings must allow it.
+    #[arg(long, requires = "ach_enabled")]
+    pub ach_faster_processing: bool,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 #[derive(clap::Args, Debug, Default)]
@@ -235,7 +300,7 @@ pub struct UpdatePaymentLinkArgs {
         id = "update_link_status",
         value_name = "PAYMENT_LINK_STATUS"
     )]
-    pub payment_link_status: Option<PaymentLinkStatus>,
+    pub payment_link_status: Option<UpdateLinkStatus>,
     /// Customer UUID to attach the link to.
     #[arg(long, id = "update_link_customer_id", value_name = "CUSTOMER_ID")]
     pub customer_id: Option<String>,
@@ -249,10 +314,40 @@ pub struct UpdatePaymentLinkArgs {
     #[arg(long, id = "update_link_description", value_name = "DESCRIPTION")]
     pub description: Option<String>,
     /// New UTC expiry (ISO 8601, ending in `Z`), e.g.
-    /// `2026-09-15T00:00:00Z`. Must be in the future.
+    /// `2030-09-15T00:00:00Z`. Must be in the future.
     #[arg(long, id = "update_link_expires_on", value_name = "EXPIRES_ON",
           value_parser = parse_utc_expiry)]
     pub expires_on: Option<String>,
+    /// `key=value` metadata to merge into the stored map. Repeat the flag for
+    /// several pairs. A named key is added or replaced and the other keys are
+    /// kept; `--clear metadata` or `--metadata ""` removes the whole map. An
+    /// empty value after `=` stores an empty string.
+    #[arg(
+        long = "metadata",
+        id = "update_link_metadata",
+        value_name = "KEY=VALUE"
+    )]
+    pub metadata: Vec<String>,
+    /// New tax as a plain amount, e.g. `1.00`. Sent with `--tax-mode`.
+    #[arg(long, value_parser = parse_amount_patch, id = "update_link_tax_amount",
+          value_name = "TAX_AMOUNT", allow_negative_numbers = true)]
+    pub tax_amount: Option<PatchNumber>,
+    /// New tax as a percentage, e.g. `8.5` for 8.5%. Sent with `--tax-mode`.
+    #[arg(long, value_parser = parse_rate_patch, id = "update_link_tax_rate",
+          value_name = "TAX_RATE", allow_negative_numbers = true)]
+    pub tax_rate: Option<PatchNumber>,
+    /// New tax mode, `exclusive` or `inclusive`. Sent with exactly one of
+    /// `--tax-rate` or `--tax-amount`, and cleared with them.
+    #[arg(long, value_parser = parse_tax_mode_patch, id = "update_link_tax_mode",
+          value_name = "TAX_MODE")]
+    pub tax_mode: Option<TaxModePatch>,
+    /// Ask for faster ACH processing: `--ach-faster-processing` or
+    /// `--ach-faster-processing false`. Requires `--ach-enabled` (true), and
+    /// the merchant's ACH settings must allow it.
+    #[arg(long, id = "update_ach_faster_processing", value_name = "ACH_FASTER_PROCESSING",
+          num_args = 0..=1, default_missing_value = "true",
+          requires = "update_ach_enabled")]
+    pub ach_faster_processing: Option<bool>,
     /// Clear a field back to nothing. Repeat the flag for several fields.
     ///
     /// An empty value does the same: `--description ""` and
@@ -311,6 +406,8 @@ pub struct SharePaymentLinkArgs {
     /// The customer has consented to receive it (required).
     #[arg(long = "consent", id = "link_consent")]
     pub has_customer_consent: bool,
+    #[command(flatten)]
+    pub idempotency: crate::cli::common::IdempotencyArgs,
 }
 
 /// The `paymentMethods` object, which is the one required field.
@@ -319,7 +416,7 @@ pub struct SharePaymentLinkArgs {
 /// offering that method with the account's defaults, so `enabled` is what a
 /// bare switch sets and a processor id is an extra rather than a
 /// precondition.
-fn payment_methods_for_create(args: &CreatePaymentLinkArgs) -> Result<Value> {
+fn payment_methods_for_create(args: &CreatePaymentLinkArgs) -> Result<Map<String, Value>> {
     let methods = common::payment_methods(
         (
             common::offered(args.card_enabled, &args.card_processor_id),
@@ -336,7 +433,7 @@ fn payment_methods_for_create(args: &CreatePaymentLinkArgs) -> Result<Value> {
              --ach-enabled, or a processor id for either"
         );
     }
-    Ok(Value::Object(methods))
+    Ok(methods)
 }
 
 /// Build the `CreatePaymentLinkRequestDto` body.
@@ -352,7 +449,11 @@ pub fn build_create_payment_link_body(args: &CreatePaymentLinkArgs) -> Result<Va
     let mut body = Map::new();
     // The schema-required field is reported first, so a caller who supplied
     // neither hears about the documented one before the undocumented one.
-    body.insert("paymentMethods".into(), payment_methods_for_create(args)?);
+    let mut methods = payment_methods_for_create(args)?;
+    if args.ach_faster_processing {
+        common::set_ach_faster_processing(&mut methods, true);
+    }
+    body.insert("paymentMethods".into(), Value::Object(methods));
     if args
         .currency_code
         .as_ref()
@@ -382,6 +483,11 @@ pub fn build_create_payment_link_body(args: &CreatePaymentLinkArgs) -> Result<Va
     common::put_str(&mut body, "name", &args.name);
     common::put_str(&mut body, "description", &args.description);
     common::put_str(&mut body, "expiresOn", &args.expires_on);
+    if let Some(v) = args.mode {
+        body.insert("mode".into(), serde_json::json!(v));
+    }
+    common::put_metadata(&mut body, &args.metadata)?;
+    common::put_tax(&mut body, args.tax_amount, args.tax_rate, args.tax_mode)?;
     Ok(Value::Object(body))
 }
 
@@ -398,10 +504,19 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
     }
     let mut body = Map::new();
 
-    let methods = common::payment_methods(
+    let mut methods = common::payment_methods(
         (args.card_enabled, &args.card_processor_id),
         (args.ach_enabled, &args.ach_processor_id),
     )?;
+    if args.ach_faster_processing.is_some() && args.ach_enabled == Some(false) {
+        anyhow::bail!(
+            "--ach-faster-processing refines an ACH offer and cannot be combined \
+             with --ach-enabled false"
+        );
+    }
+    if let Some(v) = args.ach_faster_processing {
+        common::set_ach_faster_processing(&mut methods, v);
+    }
     if !methods.is_empty() {
         body.insert("paymentMethods".into(), Value::Object(methods));
     }
@@ -431,6 +546,29 @@ pub fn build_update_payment_link_body(args: &UpdatePaymentLinkArgs) -> Result<Va
     common::put_patch(&mut body, "name", &args.name);
     common::put_patch(&mut body, "description", &args.description);
     common::put_patch(&mut body, "expiresOn", &args.expires_on);
+    for (key, value) in [("taxAmount", args.tax_amount), ("taxRate", args.tax_rate)] {
+        if let Some(v) = common::patch_number(value, to_amount_number)? {
+            body.insert(key.into(), v);
+        }
+    }
+    match args.tax_mode {
+        Some(TaxModePatch::Set(v)) => {
+            body.insert("taxMode".into(), serde_json::json!(v));
+        }
+        Some(TaxModePatch::Clear) => {
+            body.insert("taxMode".into(), Value::Null);
+        }
+        None => {}
+    }
+    // An empty value is the removal; the pairs otherwise merge into the stored map.
+    if args.metadata == [""] {
+        body.insert("metadata".into(), Value::Null);
+    } else if !args.metadata.is_empty() {
+        body.insert(
+            "metadata".into(),
+            Value::Object(common::metadata_map(&args.metadata)?),
+        );
+    }
 
     for field in &args.clear {
         let key = field.wire();
@@ -560,9 +698,15 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
     match command {
         PaymentLinksCommand::Create(args) => {
             let body = build_create_payment_link_body(&args)?;
+            money::note_fractional_rates(&[("--tax-rate", args.tax_rate)]);
             let resp = ctx
                 .api
-                .request(Method::POST, "/v2/payment-links", &[], Some(body))
+                .request_keyed(
+                    Method::POST,
+                    "/v2/payment-links",
+                    Some(body),
+                    args.idempotency.key()?,
+                )
                 .await?;
             render::one(
                 ctx,
@@ -601,6 +745,10 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
         }
         PaymentLinksCommand::Update(args) => {
             let body = build_update_payment_link_body(&args)?;
+            money::note_fractional_rates(&[(
+                "--tax-rate",
+                args.tax_rate.and_then(PatchNumber::set),
+            )]);
             let resp = ctx
                 .api
                 .request(
@@ -637,13 +785,13 @@ pub async fn dispatch(ctx: &Ctx, command: PaymentLinksCommand) -> Result<()> {
             let body = build_share_payment_link_body(&args)?;
             let resp = ctx
                 .api
-                .request(
+                .request_keyed(
                     Method::POST,
                     ApiPath::from("/v2/payment-links")
                         .id(&args.payment_link_id)?
                         .seg("share"),
-                    &[],
                     Some(body),
+                    args.idempotency.key()?,
                 )
                 .await?;
             // 204 with no body, so the confirmation comes from the request.

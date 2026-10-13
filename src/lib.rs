@@ -400,6 +400,7 @@ fn unconfirmed_destructive_command(command: &Command) -> Option<String> {
                 PaymentSessionsCommand::Cancel {
                     payment_session_id,
                     yes: false,
+                    ..
                 },
         } => (
             "cancellation",
@@ -410,6 +411,7 @@ fn unconfirmed_destructive_command(command: &Command) -> Option<String> {
                 PosCommand::Cancel {
                     pos_transaction_id,
                     yes: false,
+                    ..
                 },
         } => ("cancellation", format!("pos cancel {pos_transaction_id}")),
         _ => return None,

@@ -15,6 +15,9 @@ Options:
       --amount <AMOUNT>
           Refund part of a settled card transaction. Refused for an unsettled or ACH transaction, which the API reverses in full. Omit for a full reversal
 
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
+
   -h, --help
           Print help (see a summary with '-h')
 

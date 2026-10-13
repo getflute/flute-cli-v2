@@ -200,3 +200,27 @@ fn live_card_sale_with_customer() {
     ]);
     assert!(v["data"]["transactionId"].is_string(), "{v}");
 }
+
+/// The API accepts a card charge that carries no billing address, although the
+/// published request schema requires one, and answers with a transaction.
+#[test]
+#[ignore = "live sandbox; opt in with --ignored"]
+fn live_card_sale_without_billing_address() {
+    let v = json(&[
+        "transactions",
+        "create",
+        "--payment-processor-id",
+        &card_processor_id(),
+        "--amount",
+        &unique_amount(),
+        "--card",
+        "4111111111111111",
+        "--cvv",
+        "123",
+        "--exp",
+        "12/2032",
+        "--reference-id",
+        &unique_reference_id(),
+    ]);
+    assert!(v["data"]["transactionId"].is_string(), "{v}");
+}

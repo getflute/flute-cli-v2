@@ -667,6 +667,8 @@ async fn transaction_create_level_three_exchange_matches_the_contract() {
             "PO-1",
             "--l3-shipping",
             "4.99",
+            "--l3-duty-rate",
+            "2.5",
             "--l3-product",
             "productName=Widget,productDescription=A widget,productCode=W-1,\
              unitPrice=9.99,measurementUnit=EA,quantity=2,taxAmount=0.82,\
@@ -2013,26 +2015,11 @@ async fn a_credit_needs_exactly_one_instrument() {
     );
 }
 
-/// A saved instrument credits through `paymentMethodId`, and
-/// `creditDetails.cardData` declares **no** `captureMethod` — a credit is not
-/// an authorization.
+/// `creditDetails.cardData` declares no saved-card id, and the API answers a
+/// credit that carries one with a 400, so it is refused before the wire.
 #[tokio::test]
-async fn a_saved_card_credit_sends_no_capture_method() {
+async fn a_saved_card_credit_issues_no_request() {
     let server = support::mock_with_token().await;
-    Mock::given(method("POST"))
-        .and(path("/v2/transactions/credit"))
-        .and(body_json(serde_json::json!({
-            "paymentProcessorId": PP,
-            "baseAmount": support::spec::amount("10.50"),
-            "referenceId": "credit-5",
-            "creditDetails": {"cardData": {"paymentMethodId": CARD_PM}}
-        })))
-        .respond_with(ResponseTemplate::new(200).set_body_json(
-            serde_json::json!({"transactionId": "txn_1", "transactionStatus": "Approved"}),
-        ))
-        .mount(&server)
-        .await;
-
     support::bin(&server)
         .args([
             "transactions",
@@ -2049,7 +2036,18 @@ async fn a_saved_card_credit_sends_no_capture_method() {
             CARD_PM,
         ])
         .assert()
-        .success();
+        .code(3)
+        .stderr(predicate::str::contains("--card"))
+        .stderr(predicate::str::contains("--instrument ach"));
+    assert!(
+        server
+            .received_requests()
+            .await
+            .unwrap()
+            .iter()
+            .all(|r| r.url.path() == "/oauth2/token"),
+        "a client-side refusal must not reach the API"
+    );
 }
 
 /// And a credit carries the same default, from the same shared flag.

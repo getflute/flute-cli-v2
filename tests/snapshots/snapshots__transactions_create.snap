@@ -122,6 +122,9 @@ Options:
       --l3-shipping <SHIPPING_CHARGES>
           Level-3 shipping charges
 
+      --l3-duty-rate <DUTY_RATE>
+          Level-3 duty charges rate as a percentage, e.g. `2.5` for 2.5%. The transaction read does not report it back
+
       --l3-product <PRODUCT>
           Level-3 product line item, as comma-separated `key=value` pairs. Repeat the flag for multiple products.
           
@@ -170,6 +173,9 @@ Options:
 
       --shipping-country <COUNTRY>
           Shipping country code (e.g. `US`)
+
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
 
   -h, --help
           Print help (see a summary with '-h')

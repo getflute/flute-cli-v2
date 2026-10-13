@@ -10,7 +10,7 @@ Commands:
   create            Charge a card or bank account immediately (POST /v2/transactions)
   capture           Capture a previously authorised transaction (POST /v2/transactions/{transactionId}/capture)
   reversal          Void or refund a transaction (POST /v2/transactions/{transactionId}/reversal)
-  credit            Card or ACH credit payment (POST /v2/transactions/credit)
+  credit            Card or ACH credit (POST /v2/transactions/credit). A card needs `--card`, `--exp` and `--cvv`; only a saved bank account can be credited by id
   tip-adjust        Adjust the tip on a transaction (POST /v2/transactions/{transactionId}/tip-adjustment)
   ach-hold          Place an ACH transaction on hold (POST /v2/transactions/{transactionId}/ach-hold)
   ach-release       Release an ACH transaction from hold (POST /v2/transactions/{transactionId}/ach-release)

@@ -55,8 +55,19 @@ pub enum TerminalsCommand {
 pub struct ListTerminalsArgs {
     #[command(flatten)]
     pub pagination: PaginationArgs,
-    /// Sort results by this field name.
-    #[arg(long, id = "terminal_sort_by", value_name = "SORT_BY")]
+    /// Sort results by this field.
+    #[arg(
+        long,
+        id = "terminal_sort_by",
+        value_name = "SORT_BY",
+        value_parser = [
+            "createdOn",
+            "merchantCompanyName",
+            "serialNumber",
+            "terminalManufacturer",
+            "terminalModel",
+        ]
+    )]
     pub sort_by: Option<String>,
     /// Sort ascending. With neither `--asc` nor `--desc`, the server's default
     /// order applies.

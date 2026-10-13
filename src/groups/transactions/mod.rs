@@ -29,10 +29,16 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                 ("--discount-rate", args.discount_rate),
                 ("--surcharge-rate", args.surcharge_rate),
                 ("--l2-tax-rate", args.sales_tax_rate),
+                ("--l3-duty-rate", args.duty_rate),
             ]);
             let resp = ctx
                 .api
-                .request(Method::POST, "/v2/transactions", &[], Some(body))
+                .request_keyed(
+                    Method::POST,
+                    "/v2/transactions",
+                    Some(body),
+                    args.idempotency.key()?,
+                )
                 .await?;
             let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
             render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
@@ -90,15 +96,18 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
         TransactionsCommand::Capture {
             transaction_id,
             amount,
+            idempotency,
         } => {
             let body = build_capture_body(amount)?;
-            action(ctx, &transaction_id, "capture", body).await
+            action(ctx, &transaction_id, "capture", body, idempotency.key()?).await
         }
         TransactionsCommand::Reversal {
             transaction_id,
             amount,
+            idempotency,
         } => {
             let body = build_reversal_body(amount)?;
+            let key = idempotency.key()?;
             // The state can still change between this read and the reversal;
             // the check stops the common case, not a race.
             if amount.is_some() {
@@ -113,22 +122,41 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
                     .await?;
                 refuse_a_partial_reversal_the_api_ignores(&common::body_of(resp.body)?)?;
             }
-            action(ctx, &transaction_id, "reversal", body).await
+            action(ctx, &transaction_id, "reversal", body, key).await
         }
         TransactionsCommand::TipAdjust {
             transaction_id,
             tip_amount,
             tip_rate,
+            idempotency,
         } => {
             money::note_fractional_rates(&[("--tip-rate", tip_rate)]);
             let body = build_tip_adjustment_body(tip_amount, tip_rate)?;
-            action(ctx, &transaction_id, "tip-adjustment", Some(body)).await
+            action(
+                ctx,
+                &transaction_id,
+                "tip-adjustment",
+                Some(body),
+                idempotency.key()?,
+            )
+            .await
         }
-        TransactionsCommand::AchHold { transaction_id } => {
-            action(ctx, &transaction_id, "ach-hold", None).await
-        }
-        TransactionsCommand::AchRelease { transaction_id } => {
-            action(ctx, &transaction_id, "ach-release", None).await
+        TransactionsCommand::AchHold {
+            transaction_id,
+            idempotency,
+        } => action(ctx, &transaction_id, "ach-hold", None, idempotency.key()?).await,
+        TransactionsCommand::AchRelease {
+            transaction_id,
+            idempotency,
+        } => {
+            action(
+                ctx,
+                &transaction_id,
+                "ach-release",
+                None,
+                idempotency.key()?,
+            )
+            .await
         }
         TransactionsCommand::ShareReceipt(args) => {
             let body = build_share_receipt_body(&args)?;
@@ -157,7 +185,12 @@ pub async fn dispatch(ctx: &Ctx, command: TransactionsCommand) -> Result<()> {
             let body = build_credit_body(&args)?;
             let resp = ctx
                 .api
-                .request(Method::POST, "/v2/transactions/credit", &[], Some(body))
+                .request_keyed(
+                    Method::POST,
+                    "/v2/transactions/credit",
+                    Some(body),
+                    args.idempotency.key()?,
+                )
                 .await?;
             let data = unwrap_single_transaction(common::body_of(resp.body)?)?;
             render::one(ctx, &TRANSACTION, &data, resp.correlation_id)
@@ -196,16 +229,17 @@ async fn action(
     transaction_id: &str,
     verb: &'static str,
     body: Option<Value>,
+    idempotency_key: Option<&str>,
 ) -> Result<()> {
     let resp = ctx
         .api
-        .request(
+        .request_keyed(
             Method::POST,
             ApiPath::from("/v2/transactions")
                 .id(transaction_id)?
                 .seg(verb),
-            &[],
             body,
+            idempotency_key,
         )
         .await?;
     let data = unwrap_single_transaction(common::body_of(resp.body)?)?;

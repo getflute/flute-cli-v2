@@ -171,7 +171,7 @@ pub static CONTRACTS: &[Contract] = &[
                             ("pageSize".into(), "5".into()),
                             ("email".into(), "ada@example.com".into()),
                             ("asc".into(), "false".into()),
-                            ("sortBy".into(), "lastName".into()),
+                            ("orderBy".into(), "lastName".into()),
                         ],
                         ..req("GET", "/v2/customers")
                     },
@@ -717,6 +717,7 @@ pub static CONTRACTS: &[Contract] = &[
                                 "invoiceNumber": "INV1",
                                 "purchaseOrder": "PO-1",
                                 "shippingCharges": amount("4.99"),
+                                "dutyChargesRate": amount("2.5"),
                                 "products": [{
                                     "productName": "Widget",
                                     "productDescription": "A widget",
@@ -982,7 +983,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "processedAmount": amount("10.50"),
                         "currencyCode": "USD"}))),
                 },
-                live: Live::Test("live_tip_adjustment_needs_terminal"),
+                live: Live::Test("live_tip_adjustment_attended"),
             },
             Variant {
                 name: "rate",
@@ -1004,7 +1005,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "processedAmount": amount("10.50"),
                         "currencyCode": "USD"}))),
                 },
-                live: Live::Test("live_tip_adjustment_needs_terminal"),
+                live: Live::Test("live_tip_adjustment_attended"),
             },
         ],
     },
@@ -1214,6 +1215,94 @@ pub static CONTRACTS: &[Contract] = &[
                         "currencyCode": "USD"}))),
                 },
                 live: Live::Test("live_card_credit"),
+            },
+        ],
+    },
+    Contract {
+        operation_id: "flute-v2-post-transactions-reversal",
+        route: "POST /v2/transactions/reversal",
+        mapping: Mapping::Excluded(
+            "documented, answers 405 on the API; the per-transaction reversal is the operation",
+        ),
+        variants: &[],
+    },
+    Contract {
+        operation_id: "flute-v2-post-pos-transactions-reversal",
+        route: "POST /v2/pos/transactions/reversal",
+        mapping: Mapping::Command("pos reversal"),
+        variants: &[
+            Variant {
+                // `waitForAcceptanceByTerminal` is present for the reason it
+                // is on `pos create`: `false` is a decision.
+                name: "referenced",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                            "posDeviceId": "POS-DEVICE-001",
+                            "referenceId": "REF-POS-REV-1",
+                            "originalTransactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
+                            "waitForAcceptanceByTerminal": false})),
+                        ..req("POST", "/v2/pos/transactions/reversal")
+                    },
+                    response: ok(Some(json!({
+                        "posTransactionId": "7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05",
+                        "posTransactionStatus": "InProgress",
+                        "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                        "posDeviceId": "POS-DEVICE-001",
+                        "referenceId": "REF-POS-REV-1"}))),
+                },
+                live: Live::Skip("sandbox account has no terminals"),
+            },
+            Variant {
+                // No original transaction, so the amount and the currency
+                // are what the refund is.
+                name: "unreferenced, fully specified",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                            "posDeviceId": "POS-DEVICE-001",
+                            "referenceId": "REF-POS-REV-1",
+                            "reversalAmount": amount("12.50"),
+                            "currencyCode": "USD",
+                            "paymentProcessorId": "8db2ff47-b143-4adb-ab58-a11111111111",
+                            "customerId": "588f57a5-fe6a-4844-851e-e98914e81980",
+                            "readingMethod": "Regular",
+                            "initiationChannel": "Deeplink",
+                            "waitForAcceptanceByTerminal": false})),
+                        ..req("POST", "/v2/pos/transactions/reversal")
+                    },
+                    response: ok(Some(json!({
+                        "posTransactionId": "7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05",
+                        "posTransactionStatus": "InProgress",
+                        "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                        "posDeviceId": "POS-DEVICE-001",
+                        "referenceId": "REF-POS-REV-1"}))),
+                },
+                live: Live::Skip("sandbox account has no terminals"),
+            },
+            Variant {
+                // The create half of `--wait`, as on `pos create`.
+                name: "waiting for terminal acceptance",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                            "posDeviceId": "POS-DEVICE-001",
+                            "referenceId": "REF-POS-REV-1",
+                            "originalTransactionId": "90d084d6-55b8-4fb8-b658-861534d07f9a",
+                            "waitForAcceptanceByTerminal": true})),
+                        ..req("POST", "/v2/pos/transactions/reversal")
+                    },
+                    response: ok(Some(json!({
+                        "posTransactionId": "7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05",
+                        "posTransactionStatus": "InProgress",
+                        "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
+                        "posDeviceId": "POS-DEVICE-001",
+                        "referenceId": "REF-POS-REV-1"}))),
+                },
+                live: Live::Skip("sandbox account has no terminals"),
             },
         ],
     },
@@ -1905,6 +1994,56 @@ pub static CONTRACTS: &[Contract] = &[
                 },
                 live: Live::Test("live_payment_link_create_get_update_delete"),
             },
+            Variant {
+                name: "mode, metadata and tax",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "paymentMethods": {"card": {"enabled": true}},
+                            "currencyCode": "USD",
+                            "mode": "PaymentAndSave",
+                            "metadata": {"k": "https://x.example/?a=b"},
+                            "taxRate": amount("8.5"),
+                            "taxMode": "Exclusive"})),
+                        ..req("POST", "/v2/payment-links")
+                    },
+                    response: ok(Some(json!({
+                        "paymentLinkId": "3f8b2c1d-6e40-4a92-b7c5-1d2e3f4a5b60",
+                        "linkType": "SingleUse",
+                        "paymentMethods": {"card": {"enabled": true}},
+                        "currencyCode": "USD",
+                        "paymentLinkStatus": "Active",
+                        "shortUrl": "https://pay.example.com/l/abc123",
+                        "paymentCount": 0,
+                        "totalCollectedAmount": amount("0"),
+                        "createdOn": "2026-08-12T09:15:22.100Z",
+                        "modifiedOn": "2026-08-12T09:15:22.100Z"}))),
+                },
+                live: Live::Skip("no live scenario sends these fields yet"),
+            },
+            Variant {
+                name: "faster ACH",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "paymentMethods": {"ach": {"enabled": true, "fasterProcessing": true}},
+                            "currencyCode": "USD"})),
+                        ..req("POST", "/v2/payment-links")
+                    },
+                    response: ok(Some(json!({
+                        "paymentLinkId": "3f8b2c1d-6e40-4a92-b7c5-1d2e3f4a5b60",
+                        "linkType": "SingleUse",
+                        "paymentMethods": {"ach": {"enabled": true}},
+                        "currencyCode": "USD",
+                        "paymentLinkStatus": "Active",
+                        "shortUrl": "https://pay.example.com/l/abc123",
+                        "paymentCount": 0,
+                        "totalCollectedAmount": amount("0"),
+                        "createdOn": "2026-08-12T09:15:22.100Z",
+                        "modifiedOn": "2026-08-12T09:15:22.100Z"}))),
+                },
+                live: Live::Skip("the sandbox merchant's ACH settings refuse faster processing"),
+            },
         ],
     },
     Contract {
@@ -2197,6 +2336,37 @@ pub static CONTRACTS: &[Contract] = &[
                             "ach": {"enabled": true}}}))),
                 },
                 live: Live::Test("live_payment_session_metadata_round_trip"),
+            },
+            Variant {
+                name: "tax",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "amount": amount("20.00"),
+                            "taxRate": amount("5"),
+                            "taxMode": "Exclusive"})),
+                        ..req("POST", "/v2/payment-sessions")
+                    },
+                    response: ok(Some(json!({
+                        "id": "9c1f7a3e-2b58-4d06-8e93-4a5b6c7d8e90",
+                        "paymentMethods": {"card": {"enabled": true}}}))),
+                },
+                live: Live::Skip("no live scenario sends these fields yet"),
+            },
+            Variant {
+                name: "faster ACH",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "amount": amount("20.00"),
+                            "paymentMethods": {"ach": {"enabled": true, "fasterProcessing": true}}})),
+                        ..req("POST", "/v2/payment-sessions")
+                    },
+                    response: ok(Some(json!({
+                        "id": "9c1f7a3e-2b58-4d06-8e93-4a5b6c7d8e90",
+                        "paymentMethods": {"ach": {"enabled": true}}}))),
+                },
+                live: Live::Skip("the sandbox merchant's ACH settings refuse faster processing"),
             },
         ],
     },

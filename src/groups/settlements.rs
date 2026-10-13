@@ -44,12 +44,15 @@ pub enum SettlementsCommand {
     ///
     /// This is a batch-level operation, not a per-transaction
     /// one. It closes and settles the processor's entire open batch. Use
-    /// `--payment-processor-id` to identify the processor.
+    /// `--payment-processor-id` to identify the processor. Batch close is for
+    /// card processors.
     Close {
         /// UUID of the payment processor whose open batch should be settled
         /// (required).
         #[arg(long)]
         payment_processor_id: String,
+        #[command(flatten)]
+        idempotency: crate::cli::common::IdempotencyArgs,
     },
 }
 
@@ -70,10 +73,12 @@ pub struct ListBatchesArgs {
     /// Sort ascending. The default here is descending.
     #[arg(long)]
     pub asc: bool,
-    /// Filter results created from this date-time inclusive (ISO 8601).
+    /// Filter results created from this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter starts at the beginning of that day.
     #[arg(long = "from", id = "batch_from", value_name = "FROM_DATE")]
     pub from_date: Option<String>,
-    /// Filter results created up to this date-time inclusive (ISO 8601).
+    /// Filter results created up to this date (ISO 8601). A time is accepted but the
+    /// API ignores it: the filter includes that whole day.
     #[arg(long = "to", id = "batch_to", value_name = "TO_DATE")]
     pub to_date: Option<String>,
     /// Filter by settlement batch ID. Repeat the flag for several batches.
@@ -230,11 +235,11 @@ pub static SETTLEMENT: Resource = Resource {
 
 /// `SettleTransactionsResponseDto` declares one property, `batchStatus`, and
 /// carries no batch id — so a close cannot be rendered as a settlement, and
-/// the resulting status is the only thing `quiet` has to print.
+/// `quiet` has nothing to print.
 pub static BATCH_CLOSURE: Resource = Resource {
     object: "batch_closure",
     object_list: "batch_closures",
-    id: "/batchStatus",
+    id: "",
     detail: &["/batchStatus"],
     columns: &[Column {
         header: "STATUS",
@@ -280,15 +285,16 @@ pub async fn dispatch(ctx: &Ctx, command: SettlementsCommand) -> Result<()> {
         }
         SettlementsCommand::Close {
             payment_processor_id,
+            idempotency,
         } => {
             let body = build_close_batch_body(&payment_processor_id)?;
             let resp = ctx
                 .api
-                .request(
+                .request_keyed(
                     Method::POST,
                     "/v2/settlements/batches/close",
-                    &[],
                     Some(body),
+                    idempotency.key()?,
                 )
                 .await?;
             render::one(

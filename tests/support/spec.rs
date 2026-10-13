@@ -528,6 +528,17 @@ pub enum Rule {
         keywords: &'static [&'static str],
     },
 
+    /// Drop this one name from the operation's top-level request `required`
+    /// list before validating.
+    ///
+    /// The property stays declared and keeps every constraint; only the
+    /// obligation to send it is suspended. The name must be in `required`,
+    /// or the rule is stale.
+    RequestRequiredField {
+        operations: &'static [&'static str],
+        field: &'static str,
+    },
+
     /// Validate the **response** body against another declared component
     /// schema instead of the operation's own declared response schema.
     ///
@@ -563,22 +574,13 @@ const SINGLE_TRANSACTION_RESPONSES: &[&str] = &[
 
 pub static DIVERGENCES: &[Divergence] = &[
     Divergence {
-        name: "captureMethod on the create-transaction card body",
-        rule: Rule::RequestField {
+        name: "billingAddress in the create-transaction required list",
+        rule: Rule::RequestRequiredField {
             operations: &["flute-v2-post-transactions"],
-            pointer: "/transactionDetails/cardData/captureMethod",
+            field: "billingAddress",
         },
-        evidence: "live_card_auth_manual_capture",
-        removal: "published CardDataDto includes captureMethod",
-    },
-    Divergence {
-        name: "customerId on the create-transaction body",
-        rule: Rule::RequestField {
-            operations: &["flute-v2-post-transactions"],
-            pointer: "/customerId",
-        },
-        evidence: "live_card_sale_with_customer",
-        removal: "published CreateTransactionRequestDto includes customerId",
+        evidence: "live_card_sale_without_billing_address",
+        removal: "published CreateTransactionRequestDto does not require billingAddress",
     },
     Divergence {
         // `SendReceiptRequestDto.shareBy` is described as an enum of words
@@ -597,27 +599,6 @@ pub static DIVERGENCES: &[Divergence] = &[
         evidence: "live_share_receipt_attended",
         removal: "SendReceiptRequestDto.shareBy declares the enum its description \
                   documents instead of an E.164 pattern",
-    },
-    Divergence {
-        // `CreatePaymentSessionRequestDto.amount` declares `minimum: 0.01`,
-        // and its own description says the amount "must be zero" for a
-        // `SaveMethod` session — the documented value is invalid against the
-        // declared bound. Nothing else in the schema can express a vault-only
-        // session, and an absent amount is documented as meaning something
-        // different (flexible, set at checkout).
-        //
-        // The CLI sends what the description documents, so the bound is
-        // dropped from that one property before validating. The type,
-        // `additionalProperties` and every other property still apply.
-        name: "the minimum on CreatePaymentSessionRequestDto.amount",
-        rule: Rule::RequestFieldConstraint {
-            operations: &["flute-v2-post-payment-sessions"],
-            pointer: "/amount",
-            keywords: &["minimum"],
-        },
-        evidence: "live_payment_session_vault_only_sends_a_zero_amount",
-        removal: "CreatePaymentSessionRequestDto.amount admits the zero its own \
-                  description requires for a SaveMethod session",
     },
     Divergence {
         // The seven writes declare `PageOfGetTransactionResponseDto`, and
@@ -684,6 +665,7 @@ pub fn response_shape_divergence(operation_id: &str) -> Option<&'static str> {
         }
         Rule::RequestField { .. }
         | Rule::RequestFieldConstraint { .. }
+        | Rule::RequestRequiredField { .. }
         | Rule::ResponseField { .. } => None,
     })
 }
@@ -725,6 +707,24 @@ pub fn strip_request_divergences(operation_id: &str, body: &Value) -> Value {
 pub fn relax_request_constraints(operation_id: &str, schema: &Value) -> Value {
     let mut out = resolve(schema).clone();
     for d in DIVERGENCES {
+        if let Rule::RequestRequiredField { operations, field } = &d.rule {
+            if operations.contains(&operation_id) {
+                let required = out
+                    .get_mut("required")
+                    .and_then(Value::as_array_mut)
+                    .unwrap_or_else(|| {
+                        panic!("{}: {operation_id} declares no required list", d.name)
+                    });
+                let before = required.len();
+                required.retain(|r| r != field);
+                assert!(
+                    required.len() < before,
+                    "{}: {field} is not required by {operation_id}, so the rule is stale",
+                    d.name
+                );
+            }
+            continue;
+        }
         let Rule::RequestFieldConstraint {
             operations,
             pointer,
@@ -956,9 +956,16 @@ fn declared_enum(schema: &Value, what: &str) -> BTreeSet<String> {
 /// A field the operation does not declare, or declares without an `enum`, is a
 /// stale row rather than an empty vocabulary, so it panics.
 pub fn request_enum(operation_id: &str, field: &str) -> BTreeSet<String> {
+    let what = format!("{operation_id} {field}");
+    declared_enum(&request_param_schema(operation_id, field), &what)
+}
+
+/// The declared schema of one request field: `?name` for a query parameter,
+/// otherwise a pointer into the request body.
+pub fn request_param_schema(operation_id: &str, field: &str) -> Value {
     let (_, _, op) = operation(operation_id);
     let what = format!("{operation_id} {field}");
-    let schema = match field.strip_prefix('?') {
+    match field.strip_prefix('?') {
         Some(name) => resolved_parameters(op)
             .into_iter()
             .find(|p| p["in"] == "query" && p["name"] == name)
@@ -968,8 +975,7 @@ pub fn request_enum(operation_id: &str, field: &str) -> BTreeSet<String> {
             .and_then(|schema| schema_at(schema, field))
             .unwrap_or_else(|| panic!("{what} is not a declared request field"))
             .clone(),
-    };
-    declared_enum(&schema, &what)
+    }
 }
 
 /// The same, at a pointer into the declared 2xx response body.

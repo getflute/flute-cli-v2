@@ -10,12 +10,13 @@ Options:
       --page-index <PAGE_INDEX>      Page number to fetch. Zero-based
       --page-size <PAGE_SIZE>        Maximum results per page (1-100). Omit it to use the server's default
       --all                          Fetch every page until the collection is exhausted
-      --sort-by <SORT_BY>            Sort results by this field name
-      --desc                         Sort descending
+      --sort-by <SORT_BY>            Sort results by this field [possible values: createdOn, name]
+      --asc                          Sort ascending, by `--sort-by` or else by creation date
+      --desc                         Sort descending, by `--sort-by` or else by creation date
       --search <SEARCH>              Match payment methods whose label (the `--name` they were given) contains this text, case-sensitively
       --customer-id <CUSTOMER_ID>    Filter by customer UUID
-      --created-from <CREATED_FROM>  Filter results created from this date-time inclusive (ISO 8601)
-      --created-to <CREATED_TO>      Filter results created up to this date-time inclusive (ISO 8601)
+      --created-from <CREATED_FROM>  Filter results created from this date (ISO 8601). A time is accepted but the API ignores it: the filter starts at the beginning of that day
+      --created-to <CREATED_TO>      Filter results created up to this date (ISO 8601). A time is accepted but the API ignores it: the filter includes that whole day
   -h, --help                         Print help
 
 Global options:

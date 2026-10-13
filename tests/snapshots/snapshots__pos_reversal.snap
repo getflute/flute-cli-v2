@@ -1,0 +1,73 @@
+---
+source: tests/snapshots.rs
+expression: help_for(&args)
+---
+Reverse a POS transaction, or refund with no original transaction (POST /v2/pos/transactions/reversal).
+
+A void or a referenced credit-card refund completes on the API; a debit-card referenced refund or an unreferenced one waits for the card on the terminal. `--wait` and Ctrl-C behave as on `pos create`.
+
+Usage: flute2 pos reversal [OPTIONS] --terminal-id <TERMINAL_ID> --pos-device-id <POS_DEVICE_ID> --reference-id <REFERENCE_ID>
+
+Options:
+      --terminal-id <TERMINAL_ID>
+          Terminal UUID that handles the reversal (required)
+
+      --pos-device-id <POS_DEVICE_ID>
+          POS device ID (required)
+
+      --reference-id <REFERENCE_ID>
+          Merchant-assigned reference ID, unique for the merchant (required)
+
+      --original-transaction-id <ORIGINAL_TRANSACTION_ID>
+          Transaction UUID to reverse: the id `transactions get` takes, which a POS transaction carries as `linkedTransaction.transactionId`, not a POS transaction id. Omit for an unreferenced refund, which needs `--amount` and `--currency-code`
+
+      --amount <AMOUNT>
+          Amount to reverse. Plain decimal, e.g. `12.50`. Caps a refund of an original transaction; omit to reverse the full amount. Ignored on a void
+
+      --currency-code <CURRENCY_CODE>
+          Currency code, e.g. `USD`
+
+      --payment-processor-id <PAYMENT_PROCESSOR_ID>
+          Payment processor UUID. Defaults to the account's own
+
+      --customer-id <CUSTOMER_ID>
+          Customer UUID
+
+      --reading-method <READING_METHOD>
+          Reading method: `keyed-entry` or `regular`. Omit to let the server decide
+          
+          [possible values: keyed-entry, regular]
+
+      --initiation-channel <INITIATION_CHANNEL>
+          Initiation channel: `cloud` or `deeplink`. `deeplink` cannot be combined with `--wait`
+          
+          [possible values: cloud, deeplink]
+
+      --wait
+          Long-poll for terminal acceptance, then poll GET /v2/pos/transactions/{posTransactionId} every 2 seconds until the transaction leaves `InProgress` or the timeout expires
+
+      --wait-timeout <WAIT_TIMEOUT>
+          Seconds to wait for the reversal and the poll together before giving up (default 120, at most 86400). Requires `--wait`
+          
+          [default: 120]
+
+      --idempotency-key <KEY>
+          Send this key as `Idempotency-Key`: a retry with the same key and arguments returns the first result instead of repeating the operation
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Global options:
+      --profile <PROFILE>
+          Active profile (environment). `sandbox` (default) or `production`/`prod`
+          
+          [env: FLUTE2_PROFILE=]
+
+      --output <OUTPUT>
+          Output format: table (default), json, or quiet (id only). When omitted, falls back to the `FLUTE2_OUTPUT` env var, then to the `output` key in ~/.flute2/config.toml, then to `table`
+          
+          [env: FLUTE2_OUTPUT=]
+          [possible values: table, json, quiet]
+
+      --debug
+          Print HTTP request/response traces to stderr. Card and bank-account numbers are masked to the last 4 digits; CVV/security codes are removed

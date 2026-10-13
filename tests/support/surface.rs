@@ -98,7 +98,6 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-transactions-credit", "/contactInfo/email", Flag("--contact-email")),
     ("flute-v2-post-transactions-credit", "/contactInfo/mobilePhoneNumber", Flag("--contact-phone")),
     ("flute-v2-post-transactions-credit", "/contactInfo/hasSmsConsent", Flag("--contact-sms-consent")),
-    ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodId", Flag("--payment-method-id/--instrument")),
     ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/cardNumber", Flag("--card")),
     ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/securityCode", Flag("--cvv")),
     ("flute-v2-post-transactions-credit", "/creditDetails/cardData/paymentMethodDetails/expirationMonth", Flag("--exp")),
@@ -148,10 +147,8 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-transactions-calculate-amount", "/surchargeRate", Flag("--surcharge-rate")),
     ("flute-v2-get-payment-methods", "?pageIndex", Flag("--page-index")),
     ("flute-v2-get-payment-methods", "?pageSize", Flag("--page-size")),
-    // As on `customers list`: the API defaults `asc` to true, so the
-    // flag names the non-default direction.
-    ("flute-v2-get-payment-methods", "?asc", Flag("--desc")),
-    ("flute-v2-get-payment-methods", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-payment-methods", "?asc", Flag("--asc/--desc")),
+    ("flute-v2-get-payment-methods", "?orderBy", Flag("--sort-by")),
     ("flute-v2-get-payment-methods", "?search", Flag("--search")),
     ("flute-v2-get-payment-methods", "?createdFrom", Flag("--created-from")),
     ("flute-v2-get-payment-methods", "?createdTo", Flag("--created-to")),
@@ -179,11 +176,8 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-payment-methods-paymentMethodId-set-default", "?customerId", Flag("--customer-id")),
     ("flute-v2-get-customers", "?pageIndex", Flag("--page-index")),
     ("flute-v2-get-customers", "?pageSize", Flag("--page-size")),
-    // The API defaults `asc` to true and a bare clap switch cannot
-    // express false, so the flag names the non-default direction and the
-    // parameter is sent only when it is asked for.
-    ("flute-v2-get-customers", "?asc", Flag("--desc")),
-    ("flute-v2-get-customers", "?sortBy", Flag("--sort-by")),
+    ("flute-v2-get-customers", "?asc", Flag("--asc/--desc")),
+    ("flute-v2-get-customers", "?orderBy", Flag("--sort-by")),
     ("flute-v2-get-customers", "?fullName", Flag("--full-name")),
     ("flute-v2-get-customers", "?email", Flag("--email")),
     ("flute-v2-get-customers", "?companyName", Flag("--company-name")),
@@ -298,15 +292,25 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-transactions", "/extraAmounts/tipAmount", Flag("--tip-amount")),
     ("flute-v2-post-transactions", "/extraAmounts/tipRate", Flag("--tip-rate")),
     ("flute-v2-post-transactions", "/isCustomerInitiatedTransaction", Flag("--customer-initiated")),
+    ("flute-v2-post-transactions", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-transactions", "/transactionDetails/cardData/captureMethod", Flag("--capture-method")),
     ("flute-v2-post-transactions", "/pricingType", Flag("--pricing-type")),
-    // The server has no member for it. A charge carrying the field is
-    // rejected outright — not ignored — so a flag here could only ever
-    // break the request it was added to. The declaration is doubly
-    // suspect: it also puts `maxLength` on a `number`. Restore the flag
-    // when a live charge carrying `dutyCharges` succeeds.
-    ("flute-v2-post-transactions", "/transactionEnhancedData/dutyCharges", Excluded(
-        "the API rejects it: no member of TransactionEnhancedDataDto maps to              dutyCharges, though the schema declares it",
-        )),
+    ("flute-v2-post-payment-links", "/metadata", Flag("--metadata")),
+    ("flute-v2-post-payment-links", "/mode", Flag("--mode")),
+    ("flute-v2-post-payment-links", "/paymentMethods/ach/fasterProcessing", Flag("--ach-faster-processing")),
+    ("flute-v2-post-payment-links", "/taxAmount", Flag("--tax-amount")),
+    ("flute-v2-post-payment-links", "/taxMode", Flag("--tax-mode")),
+    ("flute-v2-post-payment-links", "/taxRate", Flag("--tax-rate")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/metadata", Flag("--metadata")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/paymentMethods/ach/fasterProcessing", Flag("--ach-faster-processing")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/taxAmount", Flag("--tax-amount")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/taxMode", Flag("--tax-mode")),
+    ("flute-v2-patch-payment-links-paymentLinkId", "/taxRate", Flag("--tax-rate")),
+    ("flute-v2-post-payment-sessions", "/paymentMethods/ach/fasterProcessing", Flag("--ach-faster-processing")),
+    ("flute-v2-post-payment-sessions", "/taxAmount", Flag("--tax-amount")),
+    ("flute-v2-post-payment-sessions", "/taxMode", Flag("--tax-mode")),
+    ("flute-v2-post-payment-sessions", "/taxRate", Flag("--tax-rate")),
+    ("flute-v2-post-transactions", "/transactionEnhancedData/dutyChargesRate", Flag("--l3-duty-rate")),
     ("flute-v2-post-transactions", "/transactionEnhancedData/invoiceNumber", Flag("--l3-invoice")),
     ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/discountRate", Flag("--l3-product")),
     ("flute-v2-post-transactions", "/transactionEnhancedData/products/[]/measurementUnit", Flag("--l3-product")),
@@ -338,6 +342,18 @@ const ROWS: &[Row] = &[
     ("flute-v2-post-pos-transactions", "/requestPaymentMethodStorageConsent", Flag("--request-storage-consent")),
     ("flute-v2-post-pos-transactions", "/extraAmounts/tipAmount", Flag("--tip-amount")),
     ("flute-v2-post-pos-transactions", "/extraAmounts/tipRate", Flag("--tip-rate")),
+    ("flute-v2-post-pos-transactions-reversal", "/terminalId", Flag("--terminal-id")),
+    ("flute-v2-post-pos-transactions-reversal", "/posDeviceId", Flag("--pos-device-id")),
+    ("flute-v2-post-pos-transactions-reversal", "/referenceId", Flag("--reference-id")),
+    ("flute-v2-post-pos-transactions-reversal", "/originalTransactionId", Flag("--original-transaction-id")),
+    ("flute-v2-post-pos-transactions-reversal", "/reversalAmount", Flag("--amount")),
+    ("flute-v2-post-pos-transactions-reversal", "/currencyCode", Flag("--currency-code")),
+    ("flute-v2-post-pos-transactions-reversal", "/paymentProcessorId", Flag("--payment-processor-id")),
+    ("flute-v2-post-pos-transactions-reversal", "/customerId", Flag("--customer-id")),
+    ("flute-v2-post-pos-transactions-reversal", "/readingMethod", Flag("--reading-method")),
+    ("flute-v2-post-pos-transactions-reversal", "/initiationChannel", Flag("--initiation-channel")),
+    // Driven by --wait and always sent, as on `pos create`.
+    ("flute-v2-post-pos-transactions-reversal", "/waitForAcceptanceByTerminal", Flag("--wait")),
     ("flute-v2-post-pos-transactions-posTransactionId-print-receipt", "/terminalId", Flag("--terminal-id")),
     ("flute-v2-get-pos-transactions", "?pageIndex", Flag("--page-index")),
     ("flute-v2-get-pos-transactions", "?pageSize", Flag("--page-size")),

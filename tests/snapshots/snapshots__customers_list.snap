@@ -10,14 +10,15 @@ Options:
       --page-index <PAGE_INDEX>       Page number to fetch. Zero-based
       --page-size <PAGE_SIZE>         Maximum results per page (1-100). Omit it to use the server's default
       --all                           Fetch every page until the collection is exhausted
-      --sort-by <SORT_BY>             Sort results by this field name
-      --desc                          Sort descending. Without it, results come back newest first
+      --sort-by <SORT_BY>             Sort results by this field [possible values: companyName, createdOn, email, firstName, lastName, lastTransactionDate, mobilePhoneNumber, paymentMethodsCount]
+      --asc                           Sort ascending, by `--sort-by` or else by creation date. With neither `--asc` nor `--desc`, results come back newest first
+      --desc                          Sort descending, by `--sort-by` or else by creation date. This is the order the server applies without a flag
       --full-name <FULL_NAME>         Filter by full name
       --email <EMAIL>                 Filter by email address
       --company-name <COMPANY_NAME>   Filter by company name
       --mobile <MOBILE_PHONE_NUMBER>  Filter by mobile number
-      --created-from <CREATED_FROM>   Filter results created from this date-time inclusive (ISO 8601)
-      --created-to <CREATED_TO>       Filter results created up to this date-time inclusive (ISO 8601)
+      --created-from <CREATED_FROM>   Filter results created from this date (ISO 8601). The API does not apply this filter
+      --created-to <CREATED_TO>       Filter results created up to this date (ISO 8601). The API does not apply this filter
   -h, --help                          Print help
 
 Global options:

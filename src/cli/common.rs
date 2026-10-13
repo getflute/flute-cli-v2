@@ -5,7 +5,7 @@
 //! between groups.
 
 use crate::api::{ApiClient, ApiError};
-use crate::cli::money::PatchNumber;
+use crate::cli::money::{PatchNumber, to_amount_number};
 use crate::cli::render::{self, Resource};
 use anyhow::Result;
 use rust_decimal::Decimal;
@@ -22,6 +22,36 @@ pub struct PaginationArgs {
     /// Fetch every page until the collection is exhausted.
     #[arg(long, id = "all")]
     pub all: bool,
+}
+
+/// The `Idempotency-Key` header, on the writes whose operation declares it.
+#[derive(clap::Args, Debug, Default, Clone)]
+pub struct IdempotencyArgs {
+    /// Send this key as `Idempotency-Key`: a retry with the same key and
+    /// arguments returns the first result instead of repeating the operation.
+    #[arg(long, id = "idempotency_key", value_name = "KEY")]
+    pub idempotency_key: Option<String>,
+}
+
+impl IdempotencyArgs {
+    /// The key to send, or `None` for no header.
+    ///
+    /// An empty key is a value that went missing, such as an unset shell
+    /// variable. A key outside printable ASCII is refused as well: a control
+    /// character or a non-ASCII byte would otherwise fail as a transport error
+    /// with nothing sent, and a tab is refused with them, so the rule is
+    /// printable ASCII alone.
+    pub fn key(&self) -> Result<Option<&str>> {
+        if let Some(key) = &self.idempotency_key {
+            reject_empty_id("--idempotency-key", key)?;
+            if !key.bytes().all(|b| (b' '..=b'~').contains(&b)) {
+                anyhow::bail!(
+                    "--idempotency-key must be printable ASCII; this one cannot be sent as a header"
+                );
+            }
+        }
+        Ok(self.idempotency_key.as_deref())
+    }
 }
 
 /// An empty value clears a field; `None` leaves it alone.
@@ -171,6 +201,76 @@ pub fn push_id(
         query.push((key, v.clone()));
     }
     Ok(())
+}
+
+/// Parse one `--metadata` value into a key and a value.
+///
+/// Only the **first** `=` separates them: metadata is arbitrary, and a query
+/// string or a URL as a value is ordinary rather than exotic.
+pub fn metadata_pair(raw: &str) -> Result<(String, String)> {
+    let Some((key, value)) = raw.split_once('=') else {
+        anyhow::bail!("--metadata takes key=value pairs; '{raw}' has no '='");
+    };
+    let key = key.trim();
+    if key.is_empty() {
+        anyhow::bail!("--metadata '{raw}' has an empty key");
+    }
+    Ok((key.to_string(), value.to_string()))
+}
+
+/// Whether the tax is added to the amount or already inside it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum, serde::Serialize)]
+pub enum TaxMode {
+    Exclusive,
+    Inclusive,
+}
+
+/// The `metadata` object from every `--metadata` value.
+pub fn metadata_map(raw: &[String]) -> Result<Map<String, Value>> {
+    raw.iter()
+        .map(|r| metadata_pair(r).map(|(k, v)| (k, Value::String(v))))
+        .collect()
+}
+
+/// Put `metadata` on a create body when any `--metadata` was given.
+pub fn put_metadata(body: &mut Map<String, Value>, raw: &[String]) -> Result<()> {
+    let metadata = metadata_map(raw)?;
+    if !metadata.is_empty() {
+        body.insert("metadata".into(), Value::Object(metadata));
+    }
+    Ok(())
+}
+
+/// Put the tax fields a payment link or session create was given. The
+/// pairing — `taxMode` with exactly one of the other two — is the API's to
+/// enforce.
+pub fn put_tax(
+    body: &mut Map<String, Value>,
+    amount: Option<Decimal>,
+    rate: Option<Decimal>,
+    mode: Option<TaxMode>,
+) -> Result<()> {
+    if let Some(v) = amount {
+        body.insert("taxAmount".into(), to_amount_number(v)?);
+    }
+    if let Some(v) = rate {
+        body.insert("taxRate".into(), to_amount_number(v)?);
+    }
+    if let Some(v) = mode {
+        body.insert("taxMode".into(), serde_json::json!(v));
+    }
+    Ok(())
+}
+
+/// Set `paymentMethods.ach.fasterProcessing`, adding the `ach` object when
+/// no other flag has named it.
+pub fn set_ach_faster_processing(methods: &mut Map<String, Value>, faster: bool) {
+    if let Value::Object(ach) = methods
+        .entry("ach")
+        .or_insert_with(|| Value::Object(Map::new()))
+    {
+        ach.insert("fasterProcessing".into(), Value::Bool(faster));
+    }
 }
 
 /// The `paymentMethods` object from the card and ACH `(enabled, processor id)`
@@ -425,7 +525,11 @@ pub async fn delete(
         .await
     {
         Ok(resp) => render::confirmed(ctx, resource, id, verb, done, resp.correlation_id),
-        Err(ApiError::Api { status: 404, .. }) => render::absent(ctx, resource, id, verb, absent),
+        Err(ApiError::Api {
+            status: 404,
+            correlation_id,
+            ..
+        }) => render::absent(ctx, resource, id, verb, absent, correlation_id),
         Err(e) => Err(e.into()),
     }
 }

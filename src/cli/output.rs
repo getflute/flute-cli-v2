@@ -104,7 +104,7 @@ impl ErrorJson {
                 status: None,
                 correlation_id: None,
             },
-            Some(ApiError::Auth(m)) => Self {
+            Some(ApiError::Auth(m) | ApiError::TokenEndpoint(m)) => Self {
                 kind: "auth",
                 message: m.clone(),
                 status: None,
@@ -172,7 +172,7 @@ pub fn exit_code_for(err: &anyhow::Error) -> i32 {
     }
     match err.downcast_ref::<ApiError>() {
         Some(ApiError::Api { status, .. }) => exit_code_for_api(*status),
-        Some(ApiError::Auth(_)) => 2,
+        Some(ApiError::Auth(_) | ApiError::TokenEndpoint(_)) => 2,
         Some(ApiError::Decode(_) | ApiError::Transport(_)) => 1,
         Some(ApiError::Client(_)) => 3,
         // An untyped error is client-side — bad input, usage, config — which

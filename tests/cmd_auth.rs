@@ -97,6 +97,43 @@ async fn status_that_cannot_reach_the_server_fails_instead_of_reporting_false() 
     }
 }
 
+/// The token endpoint refusing the credentials — 400, 401 or 403 — is the
+/// answer the command exists to give; any other 4xx from it names no verdict
+/// on them, so it fails the command, exit 2, instead of reporting them bad.
+#[tokio::test]
+async fn status_reports_false_only_when_the_token_endpoint_refuses_the_credentials() {
+    for (status, refused) in [
+        (400u16, true),
+        (401, true),
+        (403, true),
+        (404, false),
+        (405, false),
+        (408, false),
+        (422, false),
+    ] {
+        let server = wiremock::MockServer::start().await;
+        wiremock::Mock::given(wiremock::matchers::method("POST"))
+            .and(wiremock::matchers::path("/oauth2/token"))
+            .respond_with(wiremock::ResponseTemplate::new(status))
+            .mount(&server)
+            .await;
+
+        let out = support::bin(&server)
+            .args(["--output", "json", "auth", "status"])
+            .assert()
+            .code(if refused { 0 } else { 2 })
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        if refused {
+            assert_eq!(v["data"]["authenticated"], false, "{status}: {v}");
+        } else {
+            assert_eq!(v["kind"], "auth", "{status}: {v}");
+        }
+    }
+}
+
 /// A server fault is not an answer about the credentials either.
 #[tokio::test]
 async fn status_answered_with_a_server_error_fails_instead_of_reporting_false() {

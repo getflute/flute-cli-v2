@@ -76,10 +76,28 @@ pub enum CustomersCommand {
 pub struct ListCustomersArgs {
     #[command(flatten)]
     pub pagination: PaginationArgs,
-    /// Sort results by this field name.
-    #[arg(long)]
+    /// Sort results by this field.
+    #[arg(
+        long,
+        value_name = "SORT_BY",
+        value_parser = [
+            "companyName",
+            "createdOn",
+            "email",
+            "firstName",
+            "lastName",
+            "lastTransactionDate",
+            "mobilePhoneNumber",
+            "paymentMethodsCount",
+        ]
+    )]
     pub sort_by: Option<String>,
-    /// Sort descending. Without it, results come back newest first.
+    /// Sort ascending, by `--sort-by` or else by creation date. With neither
+    /// `--asc` nor `--desc`, results come back newest first.
+    #[arg(long, conflicts_with = "desc")]
+    pub asc: bool,
+    /// Sort descending, by `--sort-by` or else by creation date. This is the
+    /// order the server applies without a flag.
     #[arg(long)]
     pub desc: bool,
     /// Filter by full name.
@@ -98,10 +116,12 @@ pub struct ListCustomersArgs {
         value_name = "MOBILE_PHONE_NUMBER"
     )]
     pub mobile_phone_number: Option<String>,
-    /// Filter results created from this date-time inclusive (ISO 8601).
+    /// Filter results created from this date (ISO 8601). The API does not apply
+    /// this filter.
     #[arg(long)]
     pub created_from: Option<String>,
-    /// Filter results created up to this date-time inclusive (ISO 8601).
+    /// Filter results created up to this date (ISO 8601). The API does not apply
+    /// this filter.
     #[arg(long)]
     pub created_to: Option<String>,
 }
@@ -157,12 +177,18 @@ pub struct UpdateCustomerArgs {
 pub fn build_list_customers_query(args: &ListCustomersArgs) -> Result<Vec<(&'static str, String)>> {
     args.pagination.validate()?;
     let mut query = args.pagination.query();
-    // Only the non-default direction is sent: the API's `asc` defaults to
-    // true, so sending it on every call would say nothing.
-    if args.desc {
+    if args.asc {
+        query.push(("asc", "true".into()));
+    } else if args.desc {
         query.push(("asc", "false".into()));
     }
-    common::push_str(&mut query, "sortBy", &args.sort_by);
+    // The server ignores a direction that names no field, so a direction
+    // alone sorts by creation date, the field its default order uses.
+    let order_by = args
+        .sort_by
+        .clone()
+        .or_else(|| (args.asc || args.desc).then(|| "createdOn".to_string()));
+    common::push_str(&mut query, "orderBy", &order_by);
     common::push_str(&mut query, "fullName", &args.full_name);
     common::push_str(&mut query, "email", &args.email);
     common::push_str(&mut query, "companyName", &args.company_name);
@@ -749,6 +775,7 @@ mod tests {
                 all: false,
             },
             sort_by: Some("lastName".into()),
+            asc: false,
             desc: true,
             full_name: Some("Ada Lovelace".into()),
             email: Some("ada@example.com".into()),
@@ -765,7 +792,7 @@ mod tests {
                 "pageIndex",
                 "pageSize",
                 "asc",
-                "sortBy",
+                "orderBy",
                 "fullName",
                 "email",
                 "companyName",
@@ -777,14 +804,42 @@ mod tests {
         assert_eq!(q.iter().find(|(k, _)| *k == "asc").unwrap().1, "false");
     }
 
-    /// `asc` defaults to true server-side, so sending it on every call would
-    /// say nothing. Only the reversed direction is expressed.
+    /// `--asc` and `--desc` each send their direction; with neither, `asc`
+    /// is left to the server.
     #[test]
-    fn ascending_is_the_default_and_sends_no_asc_parameter() {
-        let mut args = list_args();
-        args.desc = false;
-        let q = build_list_customers_query(&args).unwrap();
-        assert!(q.iter().all(|(k, _)| *k != "asc"), "{q:?}");
+    fn each_direction_flag_sends_asc_and_neither_sends_none() {
+        let asc = |asc, desc| {
+            let mut args = list_args();
+            args.asc = asc;
+            args.desc = desc;
+            let q = build_list_customers_query(&args).unwrap();
+            q.iter().find(|(k, _)| *k == "asc").map(|(_, v)| v.clone())
+        };
+        assert_eq!(asc(true, false).as_deref(), Some("true"));
+        assert_eq!(asc(false, true).as_deref(), Some("false"));
+        assert_eq!(asc(false, false), None);
+    }
+
+    /// The server ignores a direction that names no field, so a direction
+    /// alone sorts by creation date, the field its default order uses.
+    #[test]
+    fn a_direction_without_sort_by_sorts_by_created_on() {
+        let order_by = |sort_by: Option<&str>, asc, desc| {
+            let args = ListCustomersArgs {
+                sort_by: sort_by.map(str::to_string),
+                asc,
+                desc,
+                ..Default::default()
+            };
+            let q = build_list_customers_query(&args).unwrap();
+            q.iter()
+                .find(|(k, _)| *k == "orderBy")
+                .map(|(_, v)| v.clone())
+        };
+        assert_eq!(order_by(None, true, false).as_deref(), Some("createdOn"));
+        assert_eq!(order_by(None, false, true).as_deref(), Some("createdOn"));
+        assert_eq!(order_by(Some("name"), true, false).as_deref(), Some("name"));
+        assert_eq!(order_by(None, false, false), None);
     }
 
     /// An empty filter string is not a filter.

@@ -16,32 +16,12 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_pos_create_get_cancel_needs_terminal() {
-    let created = json(&[
-        "pos",
-        "create",
-        "--terminal-id",
-        &terminal_id(),
-        "--pos-device-id",
-        &pos_device_id(),
-        "--amount",
-        &unique_amount(),
-        "--currency-code",
-        "USD",
-        "--reference-id",
-        &unique_reference_id(),
-    ]);
-    let id = created["data"]["posTransactionId"]
-        .as_str()
-        .expect("create returned no posTransactionId")
-        .to_string();
+    let id = pos_create(&["--reference-id", &unique_reference_id()]);
 
     let fetched = json(&["pos", "get", &id]);
     assert_eq!(fetched["data"]["posTransactionId"], id);
 
-    live_bin()
-        .args(["pos", "cancel", &id, "--yes"])
-        .assert()
-        .success();
+    pos_cancel(&id);
 }
 
 /// **The evidence that `referenceId` is optional.**
@@ -52,21 +32,8 @@ fn live_pos_create_get_cancel_needs_terminal() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_pos_create_without_a_reference_id_needs_terminal() {
-    live_bin()
-        .args([
-            "pos",
-            "create",
-            "--terminal-id",
-            &terminal_id(),
-            "--pos-device-id",
-            &pos_device_id(),
-            "--amount",
-            &unique_amount(),
-            "--currency-code",
-            "USD",
-        ])
-        .assert()
-        .success();
+    let id = pos_create(&[]);
+    pos_cancel(&id);
 }
 
 /// **Needs a person at the terminal.** Accept or decline the prompt this
@@ -113,30 +80,13 @@ fn live_pos_create_with_wait_ends_on_a_terminal_status_attended() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_pos_cancel_twice_reports_the_second_as_a_state_error_needs_terminal() {
-    let created = json(&[
-        "pos",
-        "create",
-        "--terminal-id",
-        &terminal_id(),
-        "--pos-device-id",
-        &pos_device_id(),
-        "--amount",
-        &unique_amount(),
-        "--currency-code",
-        "USD",
-        "--reference-id",
-        &unique_reference_id(),
-    ]);
-    let id = created["data"]["posTransactionId"].as_str().unwrap();
+    let id = pos_create(&["--reference-id", &unique_reference_id()]);
+    pos_cancel(&id);
     live_bin()
-        .args(["pos", "cancel", id, "--yes"])
-        .assert()
-        .success();
-    live_bin()
-        .args(["pos", "cancel", id, "--yes"])
+        .args(["pos", "cancel", &id, "--yes"])
         .assert()
         .code(3);
-    let fetched = json(&["pos", "get", id]);
+    let fetched = json(&["pos", "get", &id]);
     assert_eq!(fetched["data"]["posTransactionStatus"], "Cancelled");
 }
 
@@ -157,15 +107,17 @@ fn live_pos_list_filtered_by_status() {
     assert!(listed["data"].is_array(), "{listed}");
 }
 
-/// **Needs a terminal with paper, and somebody watching it.** The receipt print
-/// answers an empty 200 whether or not paper comes out — a terminal reporting
+/// **Needs a terminal with paper, and somebody at it.** The API prints a
+/// receipt only for a `Completed` transaction, so the sale is made on the
+/// terminal first — present a card when it prompts. The print answers an
+/// empty 200 whether or not paper comes out — a terminal reporting
 /// `printerStatus: NotNormal` with no paper loaded answers the same — so exit 0
 /// shows only that the request was accepted. Whether it printed is read off the
 /// device.
 #[test]
 #[ignore = "live sandbox, and prints on a real device; opt in with --ignored"]
 fn live_pos_print_receipt_attended() {
-    let created = json(&[
+    let sale = json(&[
         "pos",
         "create",
         "--terminal-id",
@@ -178,8 +130,12 @@ fn live_pos_print_receipt_attended() {
         "USD",
         "--reference-id",
         &unique_reference_id(),
+        "--wait",
+        "--wait-timeout",
+        "180",
     ]);
-    let id = created["data"]["posTransactionId"].as_str().unwrap();
+    assert_eq!(sale["data"]["posTransactionStatus"], "Completed", "{sale}");
+    let id = sale["data"]["posTransactionId"].as_str().unwrap();
 
     live_bin()
         .args(["pos", "print-receipt", id, "--terminal-id", &terminal_id()])
@@ -198,22 +154,9 @@ fn live_pos_print_receipt_attended() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_pos_get_uses_the_declared_status_key_needs_terminal() {
-    let created = json(&[
-        "pos",
-        "create",
-        "--terminal-id",
-        &terminal_id(),
-        "--pos-device-id",
-        &pos_device_id(),
-        "--amount",
-        &unique_amount(),
-        "--currency-code",
-        "USD",
-        "--reference-id",
-        &unique_reference_id(),
-    ]);
-    let id = created["data"]["posTransactionId"].as_str().unwrap();
-    let fetched = json(&["pos", "get", id]);
+    let id = pos_create(&["--reference-id", &unique_reference_id()]);
+    let fetched = json(&["pos", "get", &id]);
+    pos_cancel(&id);
     assert!(
         fetched["data"].get("posTransactionStatus").is_some(),
         "the get response carries no posTransactionStatus: {}",

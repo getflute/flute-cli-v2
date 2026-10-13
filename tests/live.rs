@@ -7,7 +7,8 @@
 //!
 //! This crate builds only under the `live` feature, so a plain `cargo test`
 //! stays hermetic and offline, and every test here is `#[ignore]`d as well.
-//! Opt in with:
+//! Opt in with `scripts/live.sh`, which runs the unattended tiers each on the
+//! credentials it needs (`--help` lists them), or by hand:
 //!
 //! ```sh
 //! source .flute2-live.env
@@ -229,6 +230,12 @@ pub const AVS_DOES_NOT_MATCH: [&str; 6] = [
 /// is no base-URL override, so this reaches the real API — and the keychain is
 /// **off**, so it reads credentials from the environment.
 ///
+/// The one way to aim the run elsewhere is `FLUTE2_LIVE_API_BASE_URL` with
+/// `FLUTE2_LIVE_OAUTH_URL`, passed on as the CLI's two overrides — how the
+/// terminal scenarios reach an environment with a terminal provisioned. A
+/// stray `FLUTE2_API_BASE_URL` in the shell is still removed, so only a value
+/// set for this suite can redirect it.
+///
 /// The keychain is out of reach rather than merely unused: every scenario
 /// spawns its own process, a macOS keychain grant is bound to the *binary*,
 /// and `cargo test` rebuilds. A rebuilt binary holds no grant, so a reachable
@@ -259,6 +266,15 @@ pub fn live_bin() -> assert_cmd::Command {
         .env("FLUTE2_NO_KEYCHAIN", "1")
         .env("FLUTE2_PROFILE", "sandbox")
         .env("FLUTE2_NO_UPDATE_CHECK", "1");
+    if let Ok(api) = std::env::var("FLUTE2_LIVE_API_BASE_URL") {
+        let oauth = required(
+            "FLUTE2_LIVE_OAUTH_URL",
+            "it is set alongside FLUTE2_LIVE_API_BASE_URL: a token from one \
+             environment is refused by the other's API.",
+        );
+        c.env("FLUTE2_API_BASE_URL", api)
+            .env("FLUTE2_OAUTH_URL", oauth);
+    }
     c
 }
 
@@ -274,6 +290,61 @@ pub fn json(args: &[&str]) -> serde_json::Value {
         .stdout
         .clone();
     serde_json::from_slice(&out).expect("the live response was not a JSON envelope")
+}
+
+/// `pos create` on the scenario terminal, with the given extra arguments,
+/// returning the created transaction's id.
+///
+/// A terminal holds one transaction at a time, and after a cancel it goes on
+/// refusing a create with "Transaction is already in progress" for tens of
+/// seconds while its status already reads `Ready`. Back-to-back scenarios land
+/// in that window, so a refusal saying so is retried for up to a minute;
+/// every other failure fails the scenario at once.
+pub fn pos_create(extra: &[&str]) -> String {
+    let (terminal, device, amount) = (terminal_id(), pos_device_id(), unique_amount());
+    let mut args = vec![
+        "--output",
+        "json",
+        "pos",
+        "create",
+        "--terminal-id",
+        &terminal,
+        "--pos-device-id",
+        &device,
+        "--amount",
+        &amount,
+        "--currency-code",
+        "USD",
+    ];
+    args.extend_from_slice(extra);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    loop {
+        let out = live_bin().args(&args).output().unwrap();
+        let v: serde_json::Value =
+            serde_json::from_slice(&out.stdout).expect("the live response was not a JSON envelope");
+        if out.status.success() {
+            return v["data"]["posTransactionId"]
+                .as_str()
+                .expect("create returned no posTransactionId")
+                .to_string();
+        }
+        let busy = v["message"]
+            .as_str()
+            .is_some_and(|m| m.contains("already in progress"));
+        assert!(
+            busy && std::time::Instant::now() < deadline,
+            "pos create failed: {v}"
+        );
+        std::thread::sleep(std::time::Duration::from_secs(5));
+    }
+}
+
+/// Cancel a scenario's POS transaction, so the terminal is free for the next.
+pub fn pos_cancel(id: &str) {
+    live_bin()
+        .args(["pos", "cancel", id, "--yes"])
+        .assert()
+        .success();
 }
 
 /// `referenceId` is part of the duplicate-check key, and differing reference
