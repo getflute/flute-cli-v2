@@ -1,4 +1,10 @@
 //! Live scenarios for `payment-methods`. **Committed.**
+//!
+//! Every scenario that saves a card gives it its own expiry, here and in
+//! `transactions.rs`. The sandbox answers a card and expiry it already holds
+//! with the stored payment method's id, so two scenarios saving the same pair
+//! in parallel share one payment method, and one's delete removes the
+//! other's.
 
 use crate::*;
 
@@ -15,7 +21,7 @@ fn live_payment_method_add_card_get_delete() {
         "--cvv",
         "123",
         "--exp",
-        "12/2033",
+        "01/2033",
         "--name",
         "My Visa Card",
     ]);
@@ -127,7 +133,7 @@ fn live_payment_method_list_for_a_customer() {
         "--cvv",
         "123",
         "--exp",
-        "12/2033",
+        "02/2033",
         "--customer-id",
         &customer_id,
     ]);
@@ -164,7 +170,7 @@ fn live_payment_method_update_name() {
         "--cvv",
         "123",
         "--exp",
-        "12/2033",
+        "03/2033",
         "--name",
         "Before",
     ]);
@@ -206,7 +212,7 @@ fn live_payment_method_set_default() {
         "--cvv",
         "123",
         "--exp",
-        "12/2033",
+        "04/2033",
         "--customer-id",
         &customer_id,
     ]);
@@ -243,7 +249,7 @@ fn live_payment_method_delete_twice_is_still_success() {
         "--cvv",
         "123",
         "--exp",
-        "12/2033",
+        "05/2033",
     ]);
     let id = added["data"]["paymentMethodId"]
         .as_str()

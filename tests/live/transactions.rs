@@ -14,7 +14,7 @@ fn live_saved_card_sale() {
         "--cvv",
         "123",
         "--exp",
-        "12/2033",
+        "06/2033",
     ]);
     let payment_method_id = stored["data"]["paymentMethodId"]
         .as_str()
