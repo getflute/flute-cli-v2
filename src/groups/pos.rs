@@ -642,6 +642,7 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
             money::note_fractional_rates(&[("--tip-rate", args.tip_rate)]);
             submit(
                 ctx,
+                &SALE,
                 "/v2/pos/transactions",
                 body,
                 args.idempotency.key()?,
@@ -654,6 +655,7 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
             let body = build_pos_reversal_body(&args)?;
             submit(
                 ctx,
+                &REVERSAL,
                 "/v2/pos/transactions/reversal",
                 body,
                 args.idempotency.key()?,
@@ -764,10 +766,37 @@ pub async fn dispatch(ctx: &Ctx, command: PosCommand) -> Result<()> {
     }
 }
 
+/// What `submit` is sending, for the messages that name it.
+struct Submission {
+    /// "creating the POS transaction", for "Interrupted while …".
+    doing: &'static str,
+    /// What an interrupted request may have left behind.
+    may_have: &'static str,
+    /// "creating another", for "… before …".
+    again: &'static str,
+    /// "create", for "the … response".
+    response: &'static str,
+}
+
+const SALE: Submission = Submission {
+    doing: "creating the POS transaction",
+    may_have: "It may exist on the terminal",
+    again: "creating another",
+    response: "create",
+};
+
+const REVERSAL: Submission = Submission {
+    doing: "sending the POS reversal",
+    may_have: "It may have been carried out",
+    again: "issuing another",
+    response: "reversal",
+};
+
 /// Send a body that creates a POS transaction — a sale or a reversal — and,
 /// under `--wait`, poll the transaction it answers with.
 async fn submit(
     ctx: &Ctx,
+    what: &Submission,
     route: &'static str,
     body: Value,
     idempotency_key: Option<&str>,
@@ -790,9 +819,14 @@ async fn submit(
     let resp = tokio::select! {
         biased;
         _ = tokio::signal::ctrl_c() => {
+            let retry = if idempotency_key.is_some() {
+                "re-send it with the same `--idempotency-key`, or reconcile"
+            } else {
+                "reconcile"
+            };
             eprintln!(
-                "Interrupted while creating the POS transaction. It may exist on the \
-                 terminal: reconcile with `pos list` before creating another."
+                "Interrupted while {}. {}: {retry} with `pos list` before {}.",
+                what.doing, what.may_have, what.again
             );
             return Err(Reported { code: 130 }.into());
         }
@@ -811,7 +845,10 @@ async fn submit(
         return render::one(ctx, &POS_TRANSACTION, &created, resp.correlation_id);
     }
     let id = render::id_of(&POS_TRANSACTION, &created).ok_or_else(|| {
-        ApiError::Decode("the create response carried no posTransactionId to poll".into())
+        ApiError::Decode(format!(
+            "the {} response carried no posTransactionId to poll",
+            what.response
+        ))
     })?;
 
     let waited = wait_for_a_terminal_status(ctx, &id, deadline, created, resp.correlation_id).await;

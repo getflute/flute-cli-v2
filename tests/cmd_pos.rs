@@ -1575,3 +1575,106 @@ async fn pos_reversal_refuses_an_empty_original_transaction_id() {
         "a client-side refusal must not reach the API"
     );
 }
+
+/// Ctrl-C during a reversal names the reversal, not a sale: the risk is a
+/// second refund. With an `--idempotency-key` it points at re-sending with
+/// that key, which returns the first result rather than refunding twice.
+#[cfg(unix)]
+#[tokio::test]
+async fn pos_reversal_interrupted_names_the_reversal_and_the_key() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/pos/transactions/reversal"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(in_progress())
+                .set_delay(std::time::Duration::from_secs(60)),
+        )
+        .mount(&server)
+        .await;
+
+    let mut child = support::raw_bin_without_credentials()
+        .env("FLUTE2_API_BASE_URL", server.uri())
+        .env("FLUTE2_OAUTH_URL", format!("{}/oauth2/token", server.uri()))
+        .env("FLUTE2_CLIENT_ID", "test-id")
+        .env("FLUTE2_CLIENT_SECRET", "test-secret")
+        .args(reversal(&[
+            "--original-transaction-id",
+            ORIGINAL,
+            "--idempotency-key",
+            "rev-key-1",
+            "--wait",
+        ]))
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("spawning flute2");
+
+    let held = tokio::time::timeout(std::time::Duration::from_secs(20), async {
+        loop {
+            let reqs = server.received_requests().await.unwrap();
+            if reqs
+                .iter()
+                .any(|r| r.url.path() == "/v2/pos/transactions/reversal")
+            {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    })
+    .await;
+    if held.is_err() {
+        child.kill().ok();
+        panic!("the reversal never reached the server");
+    }
+    let sent = std::process::Command::new("kill")
+        .args(["-INT", &child.id().to_string()])
+        .status()
+        .expect("running kill");
+    assert!(sent.success(), "kill -INT failed");
+
+    let out = child.wait_with_output().expect("waiting for flute2");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(130), "stderr was:\n{stderr}");
+    assert!(
+        stderr.contains(
+            "Interrupted while sending the POS reversal. It may have been carried \
+             out: re-send it with the same `--idempotency-key`, or reconcile with \
+             `pos list` before issuing another."
+        ),
+        "stderr was:\n{stderr}"
+    );
+}
+
+/// A reversal answered in progress with no id to poll names the reversal
+/// response in its `decode` failure.
+#[tokio::test]
+async fn pos_reversal_wait_without_an_id_names_the_reversal_response() {
+    let server = support::mock_with_token().await;
+    Mock::given(method("POST"))
+        .and(path("/v2/pos/transactions/reversal"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(serde_json::json!({"posTransactionStatus": "InProgress"})),
+        )
+        .mount(&server)
+        .await;
+
+    let out = support::bin(&server)
+        .args(["--output", "json"])
+        .args(reversal(&["--original-transaction-id", ORIGINAL, "--wait"]))
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(v["kind"], "decode", "{v}");
+    assert!(
+        v["message"]
+            .as_str()
+            .unwrap()
+            .contains("the reversal response carried no posTransactionId"),
+        "{v}"
+    );
+}

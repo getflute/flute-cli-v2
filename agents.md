@@ -688,7 +688,10 @@ flute2 pos print-receipt [OPTIONS] --terminal-id <TERMINAL_ID> <POS_TRANSACTION_
   is a `transport` failure, exit 1.
 - **Ctrl-C during the create request** exits 130 with stdout empty in every
   output mode and one stderr line: the transaction may exist on the terminal,
-  so reconcile with `pos list` before creating another.
+  so reconcile with `pos list` before creating another. On `pos reversal` the
+  line says the reversal may have been carried out. With an
+  `--idempotency-key`, it names re-sending with the same key as the other way
+  out.
 - `--wait` with `--initiation-channel deeplink` is refused before the wire: the
   API requires terminal acceptance to be false for that channel.
 - A create response with no `posTransactionStatus` is a `decode` error, exit 1,
