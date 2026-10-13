@@ -186,13 +186,13 @@ fn token_failure(err: anyhow::Error) -> ApiError {
                 status: 400 | 401 | 403,
                 ..
             },
-        ) => ApiError::Auth(refused.to_string()),
+        ) => ApiError::Auth(format!("token request failed: {refused}")),
         Ok(
             other_4xx @ ApiError::Api {
                 status: 400..=428 | 430..=499,
                 ..
             },
-        ) => ApiError::TokenEndpoint(other_4xx.to_string()),
+        ) => ApiError::TokenEndpoint(format!("token request failed: {other_4xx}")),
         Ok(ApiError::Api {
             status,
             correlation_id,

@@ -129,7 +129,7 @@ and appears only when no header arrived.
 | `transport` | connection, DNS or TLS failure, or a **request timeout** — on the API request, the token request or `update`'s release lookup, with the cause named in `message`. A timeout can land after the API received the request and carried it out | only a command in the **Safe to retry** column of [Idempotency](#idempotency) — a keyed write with its same `--idempotency-key` among them — with backoff; any other — reconcile with `list` or `get` first |
 | `auth` | no credentials, one of `FLUTE2_CLIENT_ID` and `FLUTE2_CLIENT_SECRET` set without the other, or the token endpoint answered the ones it was sent with a 4xx other than 429 | no — an operator must configure credentials |
 | `decode` | the API sent something this CLI cannot read: a contract change, or a CLI bug | no — surface it for investigation |
-| `client` | bad arguments, usage error, or client-side validation | no — fix the invocation |
+| `client` | bad arguments, usage error, or client-side validation; also `update`'s release lookup answered with an HTTP error, the status in `message` | no — fix the invocation; for a GitHub 403, set `FLUTE2_GITHUB_TOKEN` |
 
 A **usage error** is a `client` envelope on stdout under `--output json`, and
 clap's own styled text on stderr otherwise — including a group invoked with no

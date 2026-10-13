@@ -616,6 +616,35 @@ fn an_update_that_cannot_reach_github_is_a_transport_failure() {
     );
 }
 
+/// GitHub answering the release lookup with an HTTP error — a 403 rate limit
+/// above all — is not a network failure: the request arrived and was refused,
+/// and retrying does not help where `FLUTE2_GITHUB_TOKEN` does. So it is not
+/// `transport`, and the message carries the status.
+#[tokio::test]
+async fn an_update_that_github_refuses_is_not_a_transport_failure() {
+    let server = wiremock::MockServer::start().await;
+    wiremock::Mock::given(wiremock::matchers::any())
+        .respond_with(wiremock::ResponseTemplate::new(403))
+        .mount(&server)
+        .await;
+    let out = support::bin_without_credentials()
+        .env("FLUTE2_INSTALLER_GHE_BASE_URL", server.uri())
+        .args(["--output", "json", "update"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out)
+        .unwrap_or_else(|e| panic!("stdout is not one envelope: {e}: {out:?}"));
+    assert!(
+        !server.received_requests().await.unwrap().is_empty(),
+        "the lookup never reached the stub"
+    );
+    assert_ne!(v["kind"], "transport", "{v}");
+    assert!(v["message"].as_str().unwrap().contains("403"), "{v}");
+}
+
 /// With an install receipt, `update` looks the release up through the
 /// installer path. A network failure there is a transport failure too, and
 /// stdout carries the envelope alone.
@@ -735,6 +764,13 @@ async fn a_token_endpoint_4xx_is_an_auth_failure_and_sends_no_delete() {
             .clone();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         assert_eq!(v["kind"], "auth", "{status}: {v}");
+        assert!(
+            v["message"]
+                .as_str()
+                .unwrap()
+                .starts_with("token request failed: "),
+            "{status}: {v}"
+        );
         assert!(
             server
                 .received_requests()

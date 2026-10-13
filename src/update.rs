@@ -77,16 +77,31 @@ fn no_receipt_notice(latest: &str) -> String {
     }
 }
 
+/// Classify a failed release lookup or update. Only a request that got no
+/// HTTP answer — connection, DNS, TLS, timeout — is `transport`. An answer
+/// GitHub refused, a 403 rate limit among them, arrived and was declined:
+/// retrying does not change it, `FLUTE2_GITHUB_TOKEN` can, so it keeps the
+/// generic classification with the status in its message.
+fn update_failure(e: axoupdater::AxoupdateError, context: &str) -> anyhow::Error {
+    let network = matches!(&e, axoupdater::AxoupdateError::Reqwest(r) if r.status().is_none());
+    let msg = format!("{context}{}", crate::api::with_causes(e));
+    if network {
+        anyhow::Error::from(crate::api::ApiError::Transport(msg))
+    } else {
+        anyhow::anyhow!(msg)
+    }
+}
+
 /// "Already on latest" and "no receipt" are informational, not failures.
 pub async fn run() -> Result<()> {
     let (mut updater, has_receipt) = make_updater();
 
     if !has_receipt {
         let latest = updater.query_new_version().await.map_err(|e| {
-            crate::api::ApiError::Transport(format!(
-                "failed to query GitHub Releases for the latest version: {}",
-                crate::api::with_causes(e)
-            ))
+            update_failure(
+                e,
+                "failed to query GitHub Releases for the latest version: ",
+            )
         })?;
         match latest {
             Some(v) => println!("{}", no_receipt_notice(&v.to_string())),
@@ -99,15 +114,7 @@ pub async fn run() -> Result<()> {
     }
 
     eprintln!("Checking for updates\u{2026}");
-    let updated = updater.run().await.map_err(|e| {
-        let network = matches!(e, axoupdater::AxoupdateError::Reqwest(_));
-        let msg = crate::api::with_causes(e);
-        if network {
-            anyhow::Error::from(crate::api::ApiError::Transport(msg))
-        } else {
-            anyhow::anyhow!(msg)
-        }
-    })?;
+    let updated = updater.run().await.map_err(|e| update_failure(e, ""))?;
     match updated {
         Some(result) => println!("Updated to {}.", result.new_version),
         None => println!(

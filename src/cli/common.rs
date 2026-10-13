@@ -5,7 +5,7 @@
 //! between groups.
 
 use crate::api::{ApiClient, ApiError};
-use crate::cli::money::PatchNumber;
+use crate::cli::money::{PatchNumber, to_amount_number};
 use crate::cli::render::{self, Resource};
 use anyhow::Result;
 use rust_decimal::Decimal;
@@ -230,6 +230,36 @@ pub fn metadata_map(raw: &[String]) -> Result<Map<String, Value>> {
     raw.iter()
         .map(|r| metadata_pair(r).map(|(k, v)| (k, Value::String(v))))
         .collect()
+}
+
+/// Put `metadata` on a create body when any `--metadata` was given.
+pub fn put_metadata(body: &mut Map<String, Value>, raw: &[String]) -> Result<()> {
+    let metadata = metadata_map(raw)?;
+    if !metadata.is_empty() {
+        body.insert("metadata".into(), Value::Object(metadata));
+    }
+    Ok(())
+}
+
+/// Put the tax fields a payment link or session create was given. The
+/// pairing — `taxMode` with exactly one of the other two — is the API's to
+/// enforce.
+pub fn put_tax(
+    body: &mut Map<String, Value>,
+    amount: Option<Decimal>,
+    rate: Option<Decimal>,
+    mode: Option<TaxMode>,
+) -> Result<()> {
+    if let Some(v) = amount {
+        body.insert("taxAmount".into(), to_amount_number(v)?);
+    }
+    if let Some(v) = rate {
+        body.insert("taxRate".into(), to_amount_number(v)?);
+    }
+    if let Some(v) = mode {
+        body.insert("taxMode".into(), serde_json::json!(v));
+    }
+    Ok(())
 }
 
 /// Set `paymentMethods.ach.fasterProcessing`, adding the `ach` object when

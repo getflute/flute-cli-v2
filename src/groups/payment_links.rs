@@ -486,19 +486,8 @@ pub fn build_create_payment_link_body(args: &CreatePaymentLinkArgs) -> Result<Va
     if let Some(v) = args.mode {
         body.insert("mode".into(), serde_json::json!(v));
     }
-    let metadata = common::metadata_map(&args.metadata)?;
-    if !metadata.is_empty() {
-        body.insert("metadata".into(), Value::Object(metadata));
-    }
-    if let Some(v) = args.tax_amount {
-        body.insert("taxAmount".into(), to_amount_number(v)?);
-    }
-    if let Some(v) = args.tax_rate {
-        body.insert("taxRate".into(), to_amount_number(v)?);
-    }
-    if let Some(v) = args.tax_mode {
-        body.insert("taxMode".into(), serde_json::json!(v));
-    }
+    common::put_metadata(&mut body, &args.metadata)?;
+    common::put_tax(&mut body, args.tax_amount, args.tax_rate, args.tax_mode)?;
     Ok(Value::Object(body))
 }
 

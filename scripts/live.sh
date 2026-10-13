@@ -25,8 +25,6 @@
 # nothing leaks from the shell or from the previous pass.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
-
 sandbox="" partner="" terminal=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -41,6 +39,13 @@ done
 for f in "$sandbox" "$partner" "$terminal"; do
   [ -z "$f" ] || [ -r "$f" ] || { echo "cannot read $f" >&2; exit 3; }
 done
+
+# A relative FILE names a file in the caller's directory, so it is resolved
+# before the script moves to the repo root.
+absolute() { case "$1" in ''|/*) printf '%s' "$1" ;; *) printf '%s/%s' "$PWD" "$1" ;; esac; }
+sandbox=$(absolute "$sandbox") partner=$(absolute "$partner") terminal=$(absolute "$terminal")
+
+cd "$(dirname "$0")/.."
 
 cargo test --locked --features live --test live --no-run --quiet
 

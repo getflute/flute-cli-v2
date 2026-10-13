@@ -237,10 +237,7 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
     );
     common::put_str(&mut body, "expiresAt", &args.expires_at);
 
-    let metadata = common::metadata_map(&args.metadata)?;
-    if !metadata.is_empty() {
-        body.insert("metadata".into(), Value::Object(metadata));
-    }
+    common::put_metadata(&mut body, &args.metadata)?;
 
     let mut methods = common::payment_methods(
         (
@@ -258,15 +255,7 @@ pub fn build_create_payment_session_body(args: &CreatePaymentSessionArgs) -> Res
     if !methods.is_empty() {
         body.insert("paymentMethods".into(), Value::Object(methods));
     }
-    if let Some(v) = args.tax_amount {
-        body.insert("taxAmount".into(), to_amount_number(v)?);
-    }
-    if let Some(v) = args.tax_rate {
-        body.insert("taxRate".into(), to_amount_number(v)?);
-    }
-    if let Some(v) = args.tax_mode {
-        body.insert("taxMode".into(), serde_json::json!(v));
-    }
+    common::put_tax(&mut body, args.tax_amount, args.tax_rate, args.tax_mode)?;
     if !args.mode.unwrap_or_default().charges() {
         refuse_checkout_flags(args)?;
     }
