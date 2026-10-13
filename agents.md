@@ -809,9 +809,10 @@ flute2 auth token [OPTIONS]
 
 `auth status` is a **live** check: it calls the API, so `authenticated` is true
 only when the stored credentials actually round-trip. It is false when there
-are no credentials or the server refuses them; a check that gets no answer
-about them — the server is unreachable or fails — exits non-zero with the
-usual failure envelope instead.
+are no credentials, the token endpoint refuses them with a 400, 401 or 403, or
+the API answers 401 or 403; a check that gets no answer about them — the server
+is unreachable or fails, or the token endpoint answers any other 4xx — exits
+non-zero with the usual failure envelope instead.
 
 ## Pagination
 

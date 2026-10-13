@@ -41,6 +41,13 @@ pub enum ApiError {
     #[error("auth error: {0}")]
     Auth(String),
 
+    /// The token endpoint answered a 4xx that is not a verdict on the
+    /// credentials (404, 405, 408, 422, ...). It reports as `auth`, exit 2,
+    /// like [`Self::Auth`], but `auth status` cannot read it as "not
+    /// authenticated": the credentials were never checked.
+    #[error("auth error: {0}")]
+    TokenEndpoint(String),
+
     #[error("invalid response: {0}")]
     Decode(String),
 

@@ -169,6 +169,10 @@ fn resolve(profile: &Profile, var: &str, fallback: &str) -> anyhow::Result<Strin
 /// authorisation failure an operator has to go and fix: a token endpoint that
 /// answers 404 or 405 is not one the credentials can work against, and the
 /// command must not go on to treat that as an answer about its own resource.
+/// A 400, 401 or 403 refuses the credentials themselves and is
+/// [`ApiError::Auth`]; any other 4xx never got as far as checking them and is
+/// [`ApiError::TokenEndpoint`], which `auth status` does not report as
+/// unauthenticated.
 /// A request that never reached it is a transport failure, a 5xx or a 429
 /// from it is a server answer to retry with backoff, and a success it cannot
 /// read is a decode failure: none of those says anything about the
@@ -179,10 +183,16 @@ fn token_failure(err: anyhow::Error) -> ApiError {
     match err.downcast::<ApiError>() {
         Ok(
             refused @ ApiError::Api {
-                status: 400..=428 | 430..=499,
+                status: 400 | 401 | 403,
                 ..
             },
         ) => ApiError::Auth(refused.to_string()),
+        Ok(
+            other_4xx @ ApiError::Api {
+                status: 400..=428 | 430..=499,
+                ..
+            },
+        ) => ApiError::TokenEndpoint(other_4xx.to_string()),
         Ok(ApiError::Api {
             status,
             correlation_id,
