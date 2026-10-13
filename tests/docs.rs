@@ -109,16 +109,14 @@ fn the_reinstall_hint_and_the_readme_name_one_installer() {
         );
     }
 
-    // The release publishes the formula to no tap, so a `brew install` line in
-    // either document names a formula nobody can resolve.
+    // The release publishes the formula to the v2 tap, and both documents
+    // install from that tap and no other.
+    let brew = "brew install getflute/flute-cli-v2/flute2";
     for (document, text) in [
         ("the reinstall hint", hint.as_str()),
         ("readme.md", readme.as_str()),
     ] {
-        assert!(
-            !text.contains("brew install"),
-            "{document} installs from a Homebrew tap"
-        );
+        assert!(text.contains(brew), "{document} does not name `{brew}`");
     }
 }
 
