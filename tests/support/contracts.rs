@@ -983,7 +983,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "processedAmount": amount("10.50"),
                         "currencyCode": "USD"}))),
                 },
-                live: Live::Test("live_tip_adjustment_needs_terminal"),
+                live: Live::Test("live_tip_adjustment_attended"),
             },
             Variant {
                 name: "rate",
@@ -1005,7 +1005,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "processedAmount": amount("10.50"),
                         "currencyCode": "USD"}))),
                 },
-                live: Live::Test("live_tip_adjustment_needs_terminal"),
+                live: Live::Test("live_tip_adjustment_attended"),
             },
         ],
     },

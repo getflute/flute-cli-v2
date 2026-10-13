@@ -455,8 +455,9 @@ fn live_partial_reversal_of_an_unsettled_sale_is_refused() {
     assert_eq!(v["data"]["transactionStatus"], "Voided", "{v}");
 }
 
-/// **Attended: the endpoint needs a card-present transaction and a merchant
-/// with tips switched on, and this sandbox account has neither.**
+/// **Attended: the endpoint needs a card-present transaction — a card at the
+/// terminal — and a merchant with tips switched on, and this sandbox account
+/// has neither.**
 ///
 /// The operation documents three preconditions. Transaction state is not the
 /// blocker — an `Authorized` charge, which it names as valid, answers 409 just
@@ -469,7 +470,7 @@ fn live_partial_reversal_of_an_unsettled_sale_is_refused() {
 /// unmet precondition has to be read off the account rather than the response.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_tip_adjustment_needs_terminal() {
+fn live_tip_adjustment_attended() {
     let sale = json(&[
         "transactions",
         "create",

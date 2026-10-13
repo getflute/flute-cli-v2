@@ -7,7 +7,8 @@
 //!
 //! This crate builds only under the `live` feature, so a plain `cargo test`
 //! stays hermetic and offline, and every test here is `#[ignore]`d as well.
-//! Opt in with:
+//! Opt in with `scripts/live.sh`, which runs the unattended tiers each on the
+//! credentials it needs (`--help` lists them), or by hand:
 //!
 //! ```sh
 //! source .flute2-live.env
