@@ -455,47 +455,39 @@ fn live_partial_reversal_of_an_unsettled_sale_is_refused() {
     assert_eq!(v["data"]["transactionStatus"], "Voided", "{v}");
 }
 
-/// **Attended: the endpoint needs a card-present transaction — a card at the
-/// terminal — and a merchant with tips switched on, and this sandbox account
-/// has neither.**
+/// **Attended: the endpoint needs a card-present transaction and a merchant
+/// with tips switched on.** The sale is made on the terminal — somebody
+/// presents a card when it prompts — and the tip is adjusted on the card
+/// transaction it produced, `linkedTransaction.transactionId`.
 ///
-/// The operation documents three preconditions. Transaction state is not the
-/// blocker — an `Authorized` charge, which it names as valid, answers 409 just
-/// as a captured one does. The other two are out of a test's reach: a
-/// card-present transaction needs a physical terminal, and
-/// `settings payment-config` reports `isTipsEnabled: false` for this account,
-/// which the operation requires alongside `IsTipAdjustmentEnabled`.
-///
-/// The 409 names none of them — it is the generic `ConflictException`, so the
-/// unmet precondition has to be read off the account rather than the response.
+/// The 409 a transaction that does not qualify answers names no reason: it is
+/// the generic `ConflictException`, so an unmet precondition has to be read
+/// off the account rather than the response. `settings payment-config`
+/// reports `isTipsEnabled`.
 #[test]
-#[ignore = "live sandbox; opt in with --ignored"]
+#[ignore = "live sandbox, and needs a card at the terminal; opt in with --ignored"]
 fn live_tip_adjustment_attended() {
     let sale = json(&[
-        "transactions",
+        "pos",
         "create",
-        "--payment-processor-id",
-        &card_processor_id(),
+        "--terminal-id",
+        &terminal_id(),
+        "--pos-device-id",
+        &pos_device_id(),
         "--amount",
         &unique_amount(),
-        "--card",
-        "4111111111111111",
-        "--cvv",
-        "123",
-        "--exp",
-        "12/2032",
-        // The address the sandbox's AVS fixture approves; without it the
-        // charge is declined and the assertion below means nothing.
-        "--billing-line1",
-        "123 Test St",
-        "--billing-postal-code",
-        "10001",
-        "--billing-country",
-        "US",
+        "--currency-code",
+        "USD",
         "--reference-id",
         &unique_reference_id(),
+        "--wait",
+        "--wait-timeout",
+        "180",
     ]);
-    let id = sale["data"]["transactionId"].as_str().unwrap();
+    assert_eq!(sale["data"]["posTransactionStatus"], "Completed", "{sale}");
+    let id = sale["data"]["linkedTransaction"]["transactionId"]
+        .as_str()
+        .expect("the completed sale carried no linkedTransaction.transactionId");
     let v = json(&[
         "transactions",
         "tip-adjust",

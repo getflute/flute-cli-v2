@@ -107,15 +107,17 @@ fn live_pos_list_filtered_by_status() {
     assert!(listed["data"].is_array(), "{listed}");
 }
 
-/// **Needs a terminal with paper, and somebody watching it.** The receipt print
-/// answers an empty 200 whether or not paper comes out — a terminal reporting
+/// **Needs a terminal with paper, and somebody at it.** The API prints a
+/// receipt only for a `Completed` transaction, so the sale is made on the
+/// terminal first — present a card when it prompts. The print answers an
+/// empty 200 whether or not paper comes out — a terminal reporting
 /// `printerStatus: NotNormal` with no paper loaded answers the same — so exit 0
 /// shows only that the request was accepted. Whether it printed is read off the
 /// device.
 #[test]
 #[ignore = "live sandbox, and prints on a real device; opt in with --ignored"]
 fn live_pos_print_receipt_attended() {
-    let created = json(&[
+    let sale = json(&[
         "pos",
         "create",
         "--terminal-id",
@@ -128,8 +130,12 @@ fn live_pos_print_receipt_attended() {
         "USD",
         "--reference-id",
         &unique_reference_id(),
+        "--wait",
+        "--wait-timeout",
+        "180",
     ]);
-    let id = created["data"]["posTransactionId"].as_str().unwrap();
+    assert_eq!(sale["data"]["posTransactionStatus"], "Completed", "{sale}");
+    let id = sale["data"]["posTransactionId"].as_str().unwrap();
 
     live_bin()
         .args(["pos", "print-receipt", id, "--terminal-id", &terminal_id()])
