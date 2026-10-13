@@ -104,12 +104,14 @@ fn live_customer_delete_twice_is_still_success() {
 }
 
 /// `--all` exhausts the collection, so the count it returns cannot be smaller
-/// than one page of it.
+/// than one page of it. The walk runs oldest first: other scenarios create
+/// customers in parallel, and newest first each one shifts every later page by
+/// a row, so a one-row page repeats the one before it.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_customer_list_all_exhausts_the_collection() {
     let one_page = json(&["customers", "list", "--page-size", "1"]);
-    let all = json(&["customers", "list", "--all", "--page-size", "1"]);
+    let all = json(&["customers", "list", "--all", "--asc", "--page-size", "1"]);
     let page_items = one_page["data"].as_array().unwrap().len();
     let all_items = all["data"].as_array().unwrap().len();
     assert!(all_items >= page_items, "{all_items} < {page_items}");
