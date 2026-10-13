@@ -1554,6 +1554,30 @@ async fn an_empty_idempotency_key_is_refused_before_the_wire() {
     assert!(keys_sent(&server).await.is_empty());
 }
 
+/// A key a header cannot carry intact is refused rather than failing as a
+/// transport error that reads as a request which may have been carried out.
+#[tokio::test]
+async fn a_key_that_is_not_printable_ascii_is_refused_before_the_wire() {
+    for key in ["a\u{1}b", "a\tb", "clé"] {
+        let server = answers_every_request().await;
+        let out = support::bin(&server)
+            .args(["--output", "json", "settlements", "close"])
+            .args(["--payment-processor-id", "pp-1", "--idempotency-key", key])
+            .assert()
+            .code(3)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "client", "{key:?}: {v}");
+        assert!(
+            v["message"].as_str().unwrap().contains("printable ASCII"),
+            "{key:?}: {v}"
+        );
+        assert!(keys_sent(&server).await.is_empty(), "{key:?}");
+    }
+}
+
 /// A key reused with different arguments is the server's 422, reported as
 /// any other validation failure.
 #[tokio::test]
@@ -1610,6 +1634,16 @@ fn a_write_without_a_declared_key_refuses_the_flag() {
             "4111111111111111",
             "--exp",
             "12/30",
+        ],
+        &[
+            "payment-methods",
+            "add-ach",
+            "--account",
+            "123456789",
+            "--routing",
+            "021000021",
+            "--account-holder-type",
+            "personal",
         ],
         &["api-keys", "create", "--merchant-id", "m-1", "--name", "n"],
     ] {

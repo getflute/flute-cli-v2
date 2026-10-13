@@ -213,9 +213,12 @@ was deleted; `quiet` prints the identifier, as it does on success. A caller
 that must know the resource existed reads `found`.
 
 **The cancels are not in this rule.** A cancelled `pos` transaction or payment
-session still exists, and a second cancel answers 400, exit 3. The only 404 a
-cancel meets is an id the server never had, which is exit 4 like any other
-not-found. Reconcile with `get` before re-issuing a cancel.
+session still exists, and a second cancel without an idempotency key answers
+400, exit 3. A repeat with the key the first cancel carried returns the first
+result instead — observed on the sandbox for `payment-sessions cancel`; `pos
+cancel` was not exercised. See [Idempotency](#idempotency). The only 404 a cancel meets
+is an id the server never had, which is exit 4 like any other not-found.
+Reconcile with `get` before re-issuing a cancel that carried no key.
 
 Every other 404 is exit 4, on a write as much as on a read: a `capture`, an
 `update` or a `share` against an id the server does not have exits 4, not 0.
@@ -650,7 +653,9 @@ flute2 payment-sessions cancel [OPTIONS] <PAYMENT_SESSION_ID>
   back `paymentMethods: null`.
 - `--metadata key=value` is repeatable and splits on the **first** `=`, so a URL
   or a query string survives as a value.
-- `cancel` requires `--yes`. A second cancel is a 400, exit 3, and a 404 is exit 4.
+- `cancel` requires `--yes`. A second cancel without an idempotency key is a
+  400, exit 3; one with the key the first cancel carried returns the first
+  result. A 404 is exit 4.
 
 ### `pos`
 
@@ -901,9 +906,9 @@ value is refused — exit 3, nothing sent — whatever else the update carries.
 
 | Safe to retry | Not safe to retry |
 |---|---|
-| every `get`, `list`, `status` and `inspect` | a keyed write sent without `--idempotency-key` |
+| every `get`, `list`, `status` and `inspect` | a keyed write sent without `--idempotency-key` — a repeat `pos cancel` or `payment-sessions cancel` answers 400, exit 3; reconcile with `get` |
 | `customers delete`, `payment-methods delete`, `payment-links delete`, `api-keys revoke` — a repeat 404 is exit 0 with `found: false` | `customers create`, `payment-methods add-card`, `payment-methods add-ach`, `api-keys create` — they take no key |
-| a keyed write re-sent with the same `--idempotency-key` and the same arguments | |
+| a keyed write re-sent with the same `--idempotency-key` and the same arguments — the cancels included | |
 
 **The keyed writes** are the fifteen whose operation declares the
 `Idempotency-Key` header: `transactions create`, `credit`, `capture`,
@@ -914,23 +919,28 @@ sends it as that header, on the request and on the CLI's own retry after a
 401. Without the flag no header is sent; the CLI generates no key.
 
 - **The same key and the same arguments return the first result** instead of
-  repeating the operation: one charge, one transaction id. How long the server
-  holds a key is not documented.
+  repeating the operation: one charge, one transaction id. The reference
+  declares the header on all fifteen. Observed on the sandbox, the replay
+  happens on `transactions create`, `capture` and `ach-hold`, and on
+  `payment-sessions create` and `cancel`; the other ten were not exercised.
+  How long the server holds a key is not documented.
 - **The same key with different arguments is a 422**, `kind: "api"`, exit 3:
   a key names one request.
-- **A key is shared across every keyed command for the merchant**, not scoped
-  to one: a key spent on `transactions create` answers 422 on
-  `payment-sessions create`. Use a fresh key — a UUID is the usual choice — for
-  each distinct operation, and reuse it only to retry that operation.
+- **A key is not scoped to one command.** Observed on the sandbox, a key spent
+  on `transactions create` answers 422 on `payment-sessions create`. Use a
+  fresh key — a UUID is the usual choice — for each distinct operation, and
+  reuse it only to retry that operation.
 - The server takes any non-empty key of at most 255 characters and answers a
-  longer one with a 400 naming the header. An empty key is refused before the
-  wire, `client`, exit 3.
+  longer one with a 400 naming the header. An empty key, and one with any
+  character outside printable ASCII — a tab, a control character, a non-ASCII
+  letter — are refused before the wire, `client`, exit 3.
 - The key is not echoed in the envelope: the caller chose it and already holds
   it.
 
 A `transport` failure or a 5xx on something not safe to retry is ambiguous:
-the request may have been carried out. **Re-send a keyed write with the same
-key, or `list` or `get` to reconcile before re-issuing.**
+the request may have been carried out. A key de-duplicates only when the
+first attempt carried it: **a write first sent with a key can be re-sent with
+that key; anything else — `list` or `get` to reconcile before re-issuing.**
 
 **Use a unique `--reference-id`.** It is the merchant's own identifier and part
 of the API's duplicate-check key, not the retry mechanism: the same card and
@@ -963,10 +973,10 @@ never happened. `transactions get <id>` is the lookup that survives them.
 | Read one transaction | `flute2 --output json transactions get <id>` |
 | Walk every transaction | `flute2 --output json transactions list --all` |
 | Vault a card for a customer | `flute2 … customers create --first-name … --last-name … --billing-line1 … --billing-postal-code … --billing-country …`, then `payment-methods add-card --customer-id <id> --card … --exp …` |
-| Charge a vaulted card | `flute2 … transactions create --payment-method-id <id> --instrument card --customer-id <id> --payment-processor-id <id> --amount … --reference-id <unique>` |
+| Charge a vaulted card | `flute2 … transactions create --payment-method-id <id> --instrument card --customer-id <id> --payment-processor-id <id> --amount … --reference-id <unique> --idempotency-key <uuid>` |
 | Start a terminal sale | `flute2 --output json pos create --terminal-id <id> --pos-device-id <dev> --amount 10.50 --currency-code USD --idempotency-key <uuid> --wait` |
-| Reverse a terminal sale | `flute2 --output json pos reversal --terminal-id <id> --pos-device-id <dev> --reference-id <unique> --original-transaction-id <transactionId> --wait` — the sale's `linkedTransaction.transactionId`, not its `posTransactionId` |
-| Take a payment on a hosted page | `flute2 --output json payment-sessions create --amount 10.50 --card-enabled` |
+| Reverse a terminal sale | `flute2 --output json pos reversal --terminal-id <id> --pos-device-id <dev> --reference-id <unique> --original-transaction-id <transactionId> --idempotency-key <uuid> --wait` — the sale's `linkedTransaction.transactionId`, not its `posTransactionId` |
+| Take a payment on a hosted page | `flute2 --output json payment-sessions create --amount 10.50 --card-enabled --idempotency-key <uuid>` |
 | Issue a merchant API key | `flute2 --output json api-keys create --merchant-id <id> --name "<name>"` — save the one-shot secret; needs partner credentials |
 
 **A card charge needs a billing address.** When address verification is on for

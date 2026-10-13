@@ -37,12 +37,14 @@ impl IdempotencyArgs {
     /// The key to send, or `None` for no header.
     ///
     /// An empty key is a value that went missing, such as an unset shell
-    /// variable, and one a header cannot carry would fail as a transport
-    /// error with nothing sent; both are refused here instead.
+    /// variable. A key outside printable ASCII is refused as well: a control
+    /// character or a non-ASCII byte would otherwise fail as a transport error
+    /// with nothing sent, and a tab is refused with them, so the rule is
+    /// printable ASCII alone.
     pub fn key(&self) -> Result<Option<&str>> {
         if let Some(key) = &self.idempotency_key {
             reject_empty_id("--idempotency-key", key)?;
-            if reqwest::header::HeaderValue::from_str(key).is_err() {
+            if !key.bytes().all(|b| (b' '..=b'~').contains(&b)) {
                 anyhow::bail!(
                     "--idempotency-key must be printable ASCII; this one cannot be sent as a header"
                 );
