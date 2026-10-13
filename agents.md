@@ -215,9 +215,10 @@ that must know the resource existed reads `found`.
 **The cancels are not in this rule.** A cancelled `pos` transaction or payment
 session still exists, and a second cancel without an idempotency key answers
 400, exit 3. A repeat with the key the first cancel carried returns the first
-result instead — observed on the sandbox for `payment-sessions cancel`; `pos
-cancel` was not exercised. See [Idempotency](#idempotency). The only 404 a cancel meets
-is an id the server never had, which is exit 4 like any other not-found.
+result instead — observed on the sandbox for `payment-sessions cancel`;
+`pos cancel` was not exercised. See [Idempotency](#idempotency). The only 404
+a cancel meets is an id the server never had, which is exit 4 like any other
+not-found.
 Reconcile with `get` before re-issuing a cancel that carried no key.
 
 Every other 404 is exit 4, on a write as much as on a read: a `capture`, an

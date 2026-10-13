@@ -286,7 +286,7 @@ Errors (non-zero exit) are also written to **stdout** as structured JSON when `-
 |---|---|
 | `0` | Success, **including a declined payment** and a 404 on a delete or revoke |
 | `1` | General: transport, an unreadable response — including a `pos create --wait` or `pos reversal --wait` response with no `posTransactionStatus` — a server 5xx, an expired `--wait-timeout` |
-| `2` | Auth failure (401/403 or missing credentials) |
+| `2` | Auth failure: 401/403, a token-endpoint 4xx other than 429, or missing credentials |
 | `3` | Validation / bad input — server 400/422, client-side refusals, or CLI usage/parse errors |
 | `4` | Not found: a 404 that was not mapped to success |
 | `130` | Interrupted — Ctrl-C during a `pos create` or `pos reversal` request or its `--wait` poll |
