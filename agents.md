@@ -1006,8 +1006,9 @@ refused as a duplicate.
   progress.
 - **Don't retry a money-moving write without its `--idempotency-key`.** Re-send
   it with the same key and arguments, or reconcile with `list` or `get` first.
-- **Don't reuse an idempotency key for a different operation.** It answers 422,
-  whichever command it was spent on.
+- **Don't reuse an idempotency key for a different operation.** The same
+  command with different arguments answers 422, and so did a key spent on
+  `transactions create` and reused on `payment-sessions create`.
 - **Don't rely on 402, 409 or 429 having a dedicated exit code.** They exit 1
   today and may not tomorrow.
 - **Don't expect `devices` or `subscriptions`** — see

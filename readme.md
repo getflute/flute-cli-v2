@@ -215,7 +215,7 @@ Run `flute2 <group> --help` for a group's commands, and `flute2 <group> <command
 
 ### Destructive commands need `--yes`
 
-`customers delete`, `payment-methods delete`, `payment-links delete`, `payment-sessions cancel`, `pos cancel` and `api-keys revoke` refuse without it, and refuse **before** issuing a request. Repeating one that already happened is success for the four deletes and revokes: a 404 exits 0, with `found: false` in the confirmation because the server cannot say whether the resource ever existed. The two cancels differ, because a cancelled resource still exists: a second cancel is a 400 state error and exits 3, and a 404 is an unknown id and exits 4.
+`customers delete`, `payment-methods delete`, `payment-links delete`, `payment-sessions cancel`, `pos cancel` and `api-keys revoke` refuse without it, and refuse **before** issuing a request. Repeating one that already happened is success for the four deletes and revokes: a 404 exits 0, with `found: false` in the confirmation because the server cannot say whether the resource ever existed. The two cancels differ, because a cancelled resource still exists: a second cancel without an idempotency key is a 400 state error and exits 3, and a 404 is an unknown id and exits 4.
 
 ### Pagination
 
