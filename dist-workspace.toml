@@ -25,12 +25,13 @@ install-updater = false
 # **No `conflicts_with` on the Homebrew formula.** v1 and v2 are installed
 # side by side on purpose: `devices` and `subscriptions` exist only in v1, so a
 # formula that refused to coexist would take working commands away.
-#
-# No `tap` and no `publish-jobs`: without them cargo-dist attaches the formula
-# to the release page rather than pushing it to a tap. Publishing to
-# `getflute/homebrew-flute-cli-v2` needs a `HOMEBREW_TAP_TOKEN` secret on this
-# repository, a fine-grained PAT with Contents: write on the tap, and a first
-# commit on the tap for the publish job to check out.
+
+# Homebrew tap to publish the formula to on every release. The HOMEBREW_TAP_TOKEN
+# secret on this repository carries a fine-grained PAT with Contents: write on
+# the tap, and the tap needs a first commit for the publish job to check out.
+# Without this block, cargo-dist only attaches the .rb file to the Release page.
+tap = "getflute/homebrew-flute-cli-v2"
+publish-jobs = ["homebrew"]
 
 # `keyring`'s linux-native backend links against libdbus-1, so the Ubuntu
 # runner needs the headers or the build fails inside libdbus-sys.

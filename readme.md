@@ -8,11 +8,19 @@
 
 ## Install
 
+**Homebrew (macOS / Linux)**
+
+```sh
+brew install getflute/flute-cli-v2/flute2
+```
+
 **Shell script (macOS / Linux — installs from GitHub Releases)**
 
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/getflute/flute-cli-v2/releases/latest/download/flute2-installer.sh | sh
 ```
+
+The script installs `flute2` in `~/.cargo/bin` and adds that directory to your shell profile. Open a new terminal, or run `source ~/.cargo/env`, then verify with `flute2 version`. Homebrew installs it in `/opt/homebrew/bin` on Apple silicon.
 
 **PowerShell (Windows — installs from GitHub Releases)**
 
@@ -23,8 +31,6 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/getflute/flute-cli
 The installer drops `flute2.exe` in `%USERPROFILE%\.cargo\bin` and adds that directory to your user `PATH`. Open a new terminal afterwards so the updated `PATH` takes effect, then verify with `flute2 version`.
 
 A release builds `aarch64-apple-darwin` (Apple silicon macOS), `x86_64-pc-windows-msvc` (Windows), and `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` (Linux). Every other platform builds from source, Intel macOS among them.
-
-The Homebrew formula is attached to each release page rather than published to a tap, so install it from the page's `.rb` asset.
 
 **From source**
 

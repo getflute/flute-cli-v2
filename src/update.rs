@@ -54,6 +54,7 @@ pub fn reinstall_hint() -> String {
     format!(
         "Reinstall using one of:\n  \
          curl -LsSf https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/latest/download/{APP_NAME}-installer.sh | sh\n  \
+         brew install {REPO_OWNER}/{REPO_NAME}/{APP_NAME}\n  \
          irm https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/latest/download/{APP_NAME}-installer.ps1 | iex"
     )
 }
@@ -142,6 +143,7 @@ mod tests {
         let hint = reinstall_hint();
         assert!(hint.contains("flute2-installer.sh"));
         assert!(hint.contains("flute2-installer.ps1"));
+        assert!(hint.contains("brew install getflute/flute-cli-v2/flute2"));
 
         // `flute2` contains `flute`, so the check is for the v1 names
         // specifically rather than for the substring.
