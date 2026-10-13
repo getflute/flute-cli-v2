@@ -42,11 +42,9 @@ fn live_terminal_list_filtered_by_mode_and_connection() {
     assert!(listed["data"].is_array(), "{listed}");
 }
 
-/// The other half of the enum question: what the runtime actually *reports*.
-///
-/// The fixtures send `Active`, because the response schema declares it and an
-/// example is not normative. If the runtime answers `Ready`, the response
-/// enum is wrong rather than its example, and both fixtures change.
+/// What the runtime reports for a terminal's status: `Ready`, `Busy` or
+/// `Offline`, the values `--status` filters on. The published response
+/// schemas declare `Active` in place of `Ready`; the API does not send it.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_terminal_status_reports_a_declared_status_needs_terminal() {
@@ -56,10 +54,9 @@ fn live_terminal_status_reports_a_declared_status_needs_terminal() {
         .as_str()
         .expect("the status response carried no terminalStatus");
     assert!(
-        ["Active", "Busy", "Offline"].contains(&reported),
-        "terminalStatus was {reported}, which GetTerminalStatusResponseDto does \
-         not declare. The response enum and its own example disagree, and this \
-         is which one the runtime follows."
+        ["Ready", "Busy", "Offline"].contains(&reported),
+        "terminalStatus was {reported}, outside the three values the CLI \
+         documents and filters on."
     );
 }
 

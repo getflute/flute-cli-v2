@@ -291,6 +291,61 @@ pub fn json(args: &[&str]) -> serde_json::Value {
     serde_json::from_slice(&out).expect("the live response was not a JSON envelope")
 }
 
+/// `pos create` on the scenario terminal, with the given extra arguments,
+/// returning the created transaction's id.
+///
+/// A terminal holds one transaction at a time, and after a cancel it goes on
+/// refusing a create with "Transaction is already in progress" for tens of
+/// seconds while its status already reads `Ready`. Back-to-back scenarios land
+/// in that window, so a refusal saying so is retried for up to a minute;
+/// every other failure fails the scenario at once.
+pub fn pos_create(extra: &[&str]) -> String {
+    let (terminal, device, amount) = (terminal_id(), pos_device_id(), unique_amount());
+    let mut args = vec![
+        "--output",
+        "json",
+        "pos",
+        "create",
+        "--terminal-id",
+        &terminal,
+        "--pos-device-id",
+        &device,
+        "--amount",
+        &amount,
+        "--currency-code",
+        "USD",
+    ];
+    args.extend_from_slice(extra);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    loop {
+        let out = live_bin().args(&args).output().unwrap();
+        let v: serde_json::Value =
+            serde_json::from_slice(&out.stdout).expect("the live response was not a JSON envelope");
+        if out.status.success() {
+            return v["data"]["posTransactionId"]
+                .as_str()
+                .expect("create returned no posTransactionId")
+                .to_string();
+        }
+        let busy = v["message"]
+            .as_str()
+            .is_some_and(|m| m.contains("already in progress"));
+        assert!(
+            busy && std::time::Instant::now() < deadline,
+            "pos create failed: {v}"
+        );
+        std::thread::sleep(std::time::Duration::from_secs(5));
+    }
+}
+
+/// Cancel a scenario's POS transaction, so the terminal is free for the next.
+pub fn pos_cancel(id: &str) {
+    live_bin()
+        .args(["pos", "cancel", id, "--yes"])
+        .assert()
+        .success();
+}
+
 /// `referenceId` is part of the duplicate-check key, and differing reference
 /// ids let the same card and amount be charged again. So the
 /// dependable way to avoid a false duplicate is a fresh reference id, not a
