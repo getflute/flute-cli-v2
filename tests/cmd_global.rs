@@ -685,6 +685,49 @@ fn an_update_with_a_receipt_that_cannot_reach_github_is_a_transport_failure() {
     assert_eq!(v["kind"], "transport", "{v}");
 }
 
+/// With an install receipt the lookup runs through the installer path, and a
+/// refusal from GitHub there is not a network failure either.
+#[tokio::test]
+async fn an_update_with_a_receipt_that_github_refuses_is_not_a_transport_failure() {
+    let server = wiremock::MockServer::start().await;
+    wiremock::Mock::given(wiremock::matchers::any())
+        .respond_with(wiremock::ResponseTemplate::new(403))
+        .mount(&server)
+        .await;
+    let dir = tempfile::tempdir().unwrap();
+    let exe = std::fs::canonicalize(assert_cmd::cargo::cargo_bin("flute2")).unwrap();
+    std::fs::write(
+        dir.path().join("flute2-receipt.json"),
+        serde_json::json!({
+            "install_prefix": exe.parent().unwrap().to_str().unwrap(),
+            "binaries": ["flute2"],
+            "source": {"release_type": "github", "owner": "getflute",
+                       "name": "flute-cli-v2", "app_name": "flute2"},
+            "version": "0.0.1",
+            "provider": {"source": "cargo-dist", "version": "0.30.0"},
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let out = support::bin_without_credentials()
+        .env("AXOUPDATER_CONFIG_PATH", dir.path())
+        .env("FLUTE2_INSTALLER_GHE_BASE_URL", server.uri())
+        .args(["--output", "json", "update"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let v: serde_json::Value = serde_json::from_slice(&out)
+        .unwrap_or_else(|e| panic!("stdout is not one envelope: {e}: {out:?}"));
+    assert!(
+        !server.received_requests().await.unwrap().is_empty(),
+        "the lookup never reached the stub"
+    );
+    assert_ne!(v["kind"], "transport", "{v}");
+    assert!(v["message"].as_str().unwrap().contains("403"), "{v}");
+}
+
 /// The token endpoint answering 401 is the other half of the split: the
 /// credentials reached it and were refused, which is exit 2 and an operator's
 /// problem.
