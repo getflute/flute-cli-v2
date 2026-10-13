@@ -461,12 +461,22 @@ fn live_partial_reversal_of_an_unsettled_sale_is_refused() {
 /// transaction it produced, `linkedTransaction.transactionId`.
 ///
 /// The 409 a transaction that does not qualify answers names no reason: it is
-/// the generic `ConflictException`, so an unmet precondition has to be read
-/// off the account rather than the response. `settings payment-config`
-/// reports `isTipsEnabled`.
+/// the generic `ConflictException`, "Transition is not allowed: Captured ->
+/// TipAdjustment". `settings payment-config` lists `TipAdjustment` among its
+/// `availableTransactionTypes` only when the merchant has both tips and tip
+/// adjustment switched on, so the scenario reads that first and stops before
+/// anybody is asked for a card.
 #[test]
 #[ignore = "live sandbox, and needs a card at the terminal; opt in with --ignored"]
 fn live_tip_adjustment_attended() {
+    let config = json(&["settings", "payment-config"]);
+    assert!(
+        config["data"]["availableTransactionTypes"]
+            .as_array()
+            .is_some_and(|types| types.iter().any(|t| t == "TipAdjustment")),
+        "this merchant does not allow tip adjustment: availableTransactionTypes is {}",
+        config["data"]["availableTransactionTypes"]
+    );
     let sale = json(&[
         "pos",
         "create",
