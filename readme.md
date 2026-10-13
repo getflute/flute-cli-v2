@@ -20,6 +20,8 @@ brew install getflute/flute-cli-v2/flute2
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/getflute/flute-cli-v2/releases/latest/download/flute2-installer.sh | sh
 ```
 
+The script installs `flute2` in `~/.cargo/bin` and adds that directory to your shell profile. Open a new terminal, or run `source ~/.cargo/env`, then verify with `flute2 version`. Homebrew installs it in `/opt/homebrew/bin` on Apple silicon.
+
 **PowerShell (Windows — installs from GitHub Releases)**
 
 ```powershell
