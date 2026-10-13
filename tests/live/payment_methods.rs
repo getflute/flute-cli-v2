@@ -1,10 +1,10 @@
 //! Live scenarios for `payment-methods`. **Committed.**
 //!
-//! Every scenario that saves a card gives it its own expiry, here and in
-//! `transactions.rs`. The sandbox answers a card and expiry it already holds
-//! with the stored payment method's id, so two scenarios saving the same pair
-//! in parallel share one payment method, and one's delete removes the
-//! other's.
+//! Every scenario that saves a card gives it its own expiry, and every one
+//! that saves a bank account its own account number, here and in
+//! `transactions.rs`. The sandbox answers an instrument it already holds with
+//! the stored payment method's id, so two scenarios saving the same one in
+//! parallel share one payment method, and one's delete removes the other's.
 
 use crate::*;
 
@@ -49,7 +49,7 @@ fn live_payment_method_add_ach_business() {
         "payment-methods",
         "add-ach",
         "--account",
-        "123456789",
+        "123456781",
         "--routing",
         "021000021",
         "--account-type",
@@ -84,7 +84,7 @@ fn live_payment_method_type_matches_the_declared_enum() {
         "payment-methods",
         "add-ach",
         "--account",
-        "123456789",
+        "123456782",
         "--routing",
         "021000021",
         "--account-type",
