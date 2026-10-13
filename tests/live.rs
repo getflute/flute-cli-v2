@@ -229,6 +229,12 @@ pub const AVS_DOES_NOT_MATCH: [&str; 6] = [
 /// is no base-URL override, so this reaches the real API — and the keychain is
 /// **off**, so it reads credentials from the environment.
 ///
+/// The one way to aim the run elsewhere is `FLUTE2_LIVE_API_BASE_URL` with
+/// `FLUTE2_LIVE_OAUTH_URL`, passed on as the CLI's two overrides — how the
+/// terminal scenarios reach an environment with a terminal provisioned. A
+/// stray `FLUTE2_API_BASE_URL` in the shell is still removed, so only a value
+/// set for this suite can redirect it.
+///
 /// The keychain is out of reach rather than merely unused: every scenario
 /// spawns its own process, a macOS keychain grant is bound to the *binary*,
 /// and `cargo test` rebuilds. A rebuilt binary holds no grant, so a reachable
@@ -259,6 +265,15 @@ pub fn live_bin() -> assert_cmd::Command {
         .env("FLUTE2_NO_KEYCHAIN", "1")
         .env("FLUTE2_PROFILE", "sandbox")
         .env("FLUTE2_NO_UPDATE_CHECK", "1");
+    if let Ok(api) = std::env::var("FLUTE2_LIVE_API_BASE_URL") {
+        let oauth = required(
+            "FLUTE2_LIVE_OAUTH_URL",
+            "it is set alongside FLUTE2_LIVE_API_BASE_URL: a token from one \
+             environment is refused by the other's API.",
+        );
+        c.env("FLUTE2_API_BASE_URL", api)
+            .env("FLUTE2_OAUTH_URL", oauth);
+    }
     c
 }
 
