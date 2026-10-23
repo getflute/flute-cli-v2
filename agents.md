@@ -830,7 +830,12 @@ flute2 applications list [OPTIONS]
 - `list` returns newest first and is paginated. `--status` filters on the
   onboarding status, and `--created-from`/`--created-to` take a `YYYY-MM-DD`
   date. `quiet` prints each application's `id`.
-- **The group needs partner credentials.** A merchant token answers 403.
+- **The group needs partner credentials.** A merchant token answers 403 with
+  a message saying a partner token is needed.
+- **The account needs access to the feature as well.** An account without it
+  answers 403 "You do not have permission to access this functionality.
+  Please contact your account manager." on partner credentials too: exit 2,
+  and the account manager, not a different key, is the way out.
 
 ### `pricing-templates`
 
@@ -841,7 +846,8 @@ flute2 pricing-templates list [OPTIONS]
 The partner's pricing templates, for an application's `pricingTemplateIds`.
 **Not paginated**: every template comes back at once, so it takes no
 pagination flags and its envelope carries no `page_info`. Needs partner
-credentials; a merchant token answers 403.
+credentials and access to the feature, as `applications` does: either one
+missing is a 403.
 
 ### `users`
 
@@ -852,12 +858,14 @@ flute2 users split-profiles [OPTIONS] <USER_ID>
 ```
 
 - `list` is paginated and filters by `--user-type partner|merchant|applicant`
-  and `--email`. The reference says it takes a merchant token as well as a
-  partner one; observed on the sandbox, a merchant token answers 403.
+  and `--email`. It takes a merchant token as well as a partner one, and a
+  merchant token lists only that merchant's users.
 - `schedule-as` and `split-profiles` list a partner user's Schedule A pricing
   schedules and Split Profiles, the values `applications create` takes. Each
   is **not paginated**: no pagination flags, no `page_info`. A user outside
   the partner account answers 404, exit 4. Both need partner credentials.
+- Every verb needs the account to have access to the feature. Without it the
+  answer is the 403 that names the account manager, whatever the token.
 
 ### Utility
 

@@ -1,8 +1,8 @@
 //! Live scenarios for `users`. **Committed.**
 //!
-//! Reads only. Every scenario carries `_needs_partner`: the reference says
-//! `users list` takes a merchant token too, and the sandbox answers a
-//! merchant token 403.
+//! Reads only. Every scenario carries `_needs_partner`: `schedule-as` and
+//! `split-profiles` need a partner user, and every verb needs an account with
+//! access to the feature, which the merchant account the suite runs as lacks.
 
 use crate::*;
 
