@@ -46,9 +46,10 @@
 //!   `terminals list` is what says whether one is, and until it answers a row
 //!   these panic on the unset `FLUTE2_LIVE_TERMINAL_ID` rather than reporting
 //!   an API defect.
-//! - `_needs_partner` — needs partner credentials. The `api-keys` endpoints
-//!   refuse a merchant token, so on the merchant credentials the rest of the
-//!   suite uses these fail for a reason that is not the CLI's.
+//! - `_needs_partner` — needs partner credentials. The `api-keys`,
+//!   `applications`, `pricing-templates` and `users` endpoints refuse a
+//!   merchant token, so on the merchant credentials the rest of the suite
+//!   uses these fail for a reason that is not the CLI's.
 //! - `_irreversible` — cannot be undone, and changes what later scenarios
 //!   see. Closing a settlement batch. Run it last or not at all.
 //!
@@ -104,6 +105,12 @@ mod payment_sessions;
 #[path = "live/api_keys.rs"]
 mod api_keys;
 
+#[path = "live/applications.rs"]
+mod applications;
+
+#[path = "live/users.rs"]
+mod users;
+
 #[path = "live/slice.rs"]
 mod slice;
 
@@ -156,6 +163,13 @@ pub fn merchant_id() -> String {
         "FLUTE2_LIVE_MERCHANT_ID",
         "`./target/debug/flute2 terminals list` shows merchantId on every row, and \
          so does `./target/debug/flute2 api-keys list`.",
+    )
+}
+pub fn partner_user_id() -> String {
+    required(
+        "FLUTE2_LIVE_PARTNER_USER_ID",
+        "with partner credentials, `./target/debug/flute2 users list --user-type \
+         partner` lists the partner account's users; take one's id.",
     )
 }
 pub fn terminal_id() -> String {

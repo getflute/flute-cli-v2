@@ -13,12 +13,7 @@ fn live_terminal_list_first_page() {
     assert!(listed["data"].is_array(), "{listed}");
 }
 
-/// **The evidence for the two `terminalStatus` enums.**
-///
-/// The query parameter declares `Ready`, `Busy`, `Offline`; the response
-/// declares `Active`, `Busy`, `Offline`. `Ready` and `Active` cannot both be
-/// the same state's name, and this is the half that shows whether the
-/// *filter* accepts the value it declares.
+/// The filter accepts the `terminalStatus` value it declares.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_terminal_list_filtered_by_the_declared_query_status() {
@@ -43,8 +38,7 @@ fn live_terminal_list_filtered_by_mode_and_connection() {
 }
 
 /// What the runtime reports for a terminal's status: `Ready`, `Busy` or
-/// `Offline`, the values `--status` filters on. The published response
-/// schemas declare `Active` in place of `Ready`; the API does not send it.
+/// `Offline`, the values `--status` filters on.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_terminal_status_reports_a_declared_status_needs_terminal() {

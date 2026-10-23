@@ -337,6 +337,7 @@ fn is_full_secret_key(lower_key: &str) -> bool {
         "session_token",
         "taxid",
         "tax_id",
+        "ssn",
     ];
     if EXACT.contains(&field_name(lower_key)) {
         return true;
@@ -371,7 +372,14 @@ fn is_request_identifier_key(lower_key: &str) -> bool {
 fn is_account_like_key(lower_key: &str) -> bool {
     matches!(
         field_name(lower_key),
-        "cardnumber" | "accountnumber" | "pan" | "routingnumber"
+        "cardnumber"
+            | "accountnumber"
+            | "pan"
+            | "routingnumber"
+            | "account"
+            | "routing"
+            | "billingaccount"
+            | "billingrouting"
     )
 }
 
@@ -594,6 +602,27 @@ mod tests {
         let out = redact(r#"{"taxId":"987654321"}"#);
         assert!(!out.contains("987654321"), "{out}");
         assert!(out.contains("taxId"), "{out}");
+    }
+
+    /// A Social Security number is nine digits too, and a merchant
+    /// application carries one per owner and signer.
+    #[test]
+    fn removes_a_social_security_number_entirely() {
+        let out = redact(r#"{"owner1":{"ssn":"123456789"}}"#);
+        assert!(!out.contains("123456789"), "{out}");
+        assert!(out.contains("ssn"), "{out}");
+    }
+
+    /// A merchant application names its bank fields `account`, `routing`,
+    /// `billingAccount` and `billingRouting`, and keeps the last four as an
+    /// ACH account number does.
+    #[test]
+    fn masks_a_merchant_applications_bank_fields() {
+        for key in ["account", "routing", "billingAccount", "billingRouting"] {
+            let out = redact(&format!(r#"{{"{key}":"021000021"}}"#));
+            assert!(!out.contains("021000021"), "{key}: {out}");
+            assert!(out.contains("0021"), "{key}: {out}");
+        }
     }
 
     #[test]

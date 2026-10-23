@@ -3,8 +3,6 @@
 //! Two reads and no writes, which makes this the one group whose whole surface
 //! is query parameters. Both operations report a `terminalStatus` of `Ready`,
 //! `Busy` or `Offline`, the same three values the query parameter filters on.
-//! The published response schemas declare `Active` in place of `Ready`; the
-//! API answers `Ready`, and refuses `Active` as a filter value.
 
 use crate::Ctx;
 use crate::api::ApiPath;
@@ -297,19 +295,12 @@ mod tests {
         assert_eq!(value("sortOrder"), "desc");
     }
 
-    /// The filter takes the enum the **query parameter** declares. `Active`
-    /// is a response value and is not offered here, because sending it would
-    /// be a filter the parameter does not document.
+    /// The filter sends the enum the query parameter declares.
     #[test]
-    fn the_status_filter_uses_the_query_enum_not_the_response_enum() {
+    fn the_status_filter_sends_the_declared_query_values() {
         assert_eq!(serde_json::json!(TerminalStatusFilter::Ready), "Ready");
-        for variant in [
-            TerminalStatusFilter::Ready,
-            TerminalStatusFilter::Busy,
-            TerminalStatusFilter::Offline,
-        ] {
-            assert_ne!(serde_json::json!(variant), "Active");
-        }
+        assert_eq!(serde_json::json!(TerminalStatusFilter::Busy), "Busy");
+        assert_eq!(serde_json::json!(TerminalStatusFilter::Offline), "Offline");
     }
 
     /// Each direction is sent explicitly, and neither flag sends nothing.

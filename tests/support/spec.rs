@@ -584,21 +584,21 @@ pub static DIVERGENCES: &[Divergence] = &[
     },
     Divergence {
         // `SendReceiptRequestDto.shareBy` is described as an enum of words
-        // and declares `format: E.164` with a pattern its own example fails.
+        // and declares a phone-number pattern its own example fails.
         // The pattern is a copy of the neighbouring `recipient` constraint.
         //
         // The CLI sends what the description documents, so the constraint is
         // dropped from that one property before validation. Everything else in
         // the body, `recipient` included, still has to validate.
-        name: "the E.164 pattern on SendReceiptRequestDto.shareBy",
+        name: "the phone-number pattern on SendReceiptRequestDto.shareBy",
         rule: Rule::RequestFieldConstraint {
             operations: &["flute-v2-post-transactions-transactionId-share-receipt"],
             pointer: "/shareBy",
-            keywords: &["pattern", "format"],
+            keywords: &["pattern"],
         },
         evidence: "live_share_receipt_attended",
         removal: "SendReceiptRequestDto.shareBy declares the enum its description \
-                  documents instead of an E.164 pattern",
+                  documents instead of a phone-number pattern",
     },
     Divergence {
         // The seven writes declare `PageOfGetTransactionResponseDto`, and
@@ -629,15 +629,6 @@ pub static DIVERGENCES: &[Divergence] = &[
         },
         evidence: "live_card_sale_auto_capture",
         removal: "AmountBreakdownDto declares taxAmount",
-    },
-    Divergence {
-        name: "amount on a single transaction's events",
-        rule: Rule::ResponseField {
-            operations: SINGLE_TRANSACTION_RESPONSES,
-            pointer: "/transactionEvents/[]/amount",
-        },
-        evidence: "live_card_sale_auto_capture",
-        removal: "the transactionEvents items declare amount",
     },
 ];
 

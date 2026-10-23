@@ -110,7 +110,7 @@ async fn the_two_terminal_reads_carry_their_own_envelope_names() {
         .clone();
     let status: serde_json::Value = serde_json::from_slice(&status).unwrap();
     assert_eq!(status["object"], "terminal_status");
-    assert_eq!(status["data"]["terminalStatus"], "Active");
+    assert_eq!(status["data"]["terminalStatus"], "Ready");
 }
 
 /// The serial number and the two live states are what a caller picking a

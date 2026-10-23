@@ -1219,14 +1219,6 @@ pub static CONTRACTS: &[Contract] = &[
         ],
     },
     Contract {
-        operation_id: "flute-v2-post-transactions-reversal",
-        route: "POST /v2/transactions/reversal",
-        mapping: Mapping::Excluded(
-            "documented, answers 405 on the API; the per-transaction reversal is the operation",
-        ),
-        variants: &[],
-    },
-    Contract {
         operation_id: "flute-v2-post-pos-transactions-reversal",
         route: "POST /v2/pos/transactions/reversal",
         mapping: Mapping::Command("pos reversal"),
@@ -1579,10 +1571,6 @@ pub static CONTRACTS: &[Contract] = &[
                 name: "first page, server defaults",
                 exchange: || Exchange {
                     request: req("GET", "/v2/terminals"),
-                    // `terminalStatus` is `Active` here and `Ready` in the
-                    // operation's own example: the response enum declares
-                    // `Active`, `Busy`, `Offline`, and a schema is normative
-                    // where an example is not.
                     response: ok(Some(json!({
                         "items": [{
                             "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
@@ -1592,7 +1580,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "terminalManufacturer": "Sunmi",
                             "terminalModel": "SunmiP2",
                             "terminalMode": "SemiIntegrated",
-                            "terminalStatus": "Active",
+                            "terminalStatus": "Ready",
                             "connectionStatus": "Online",
                             "lastSeenOn": "2026-08-11T18:44:45.638Z"}],
                         "pageInfo": {
@@ -1602,10 +1590,7 @@ pub static CONTRACTS: &[Contract] = &[
                 live: Live::Test("live_terminal_list_first_page"),
             },
             Variant {
-                // All nine declared parameters at once. `terminalStatus`
-                // takes `Ready` here, because the *query* parameter declares
-                // `Ready`, `Busy`, `Offline` — a different enum from the
-                // response field of the same name.
+                // All nine declared parameters at once.
                 name: "every filter",
                 exchange: || Exchange {
                     request: RequestFixture {
@@ -1650,7 +1635,7 @@ pub static CONTRACTS: &[Contract] = &[
                 response: ok(Some(json!({
                     "terminalId": "b1d4c0a7-3e18-4a6f-8c25-9f7e6d5b4a31",
                     "merchantId": "8db2ff47-b143-4adb-ab58-a11111111111",
-                    "terminalStatus": "Active",
+                    "terminalStatus": "Ready",
                     "lastSeenOn": "2026-08-11T18:44:45.645Z",
                     "debitPinKey": "Injected",
                     "terminalAppVersion": "1.0.0",
@@ -2525,6 +2510,248 @@ pub static CONTRACTS: &[Contract] = &[
                 },
             },
             live: Live::Test("live_api_key_revoke_twice_is_still_success_needs_partner"),
+        }],
+    },
+    Contract {
+        operation_id: "flute-v2-post-applications",
+        route: "POST /v2/applications",
+        mapping: Mapping::Command("applications create"),
+        variants: &[
+            Variant {
+                // The seven required fields, each from its own flag.
+                name: "required only",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "deliveryMethod": "PartnerDirect",
+                            "email": "marcus@example.com",
+                            "partnerUserId": "3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90",
+                            "processorId": 7,
+                            "scheduleAId": "5c1e8f2a-9b3d-4a7e-8f6c-1d2b3e4f5a60",
+                            "splitProfileId": "a7d3e9b1-4c2f-4e8a-9b6d-0f1e2d3c4b5a",
+                            "businessInformation": {"dbaName": "Corner Coffee"}})),
+                        ..req("POST", "/v2/applications")
+                    },
+                    response: ok(Some(json!({
+                        "applicationId": "8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d",
+                        "applicationUrl": "https://dashboard.flute.com/onboarding/register?invite_token=019c76de-cbd3-788d-8cb0-f829e90a0623",
+                        "metadata": null,
+                        "deliveryMethod": "PartnerDirect",
+                        "createdOn": "2026-09-29T14:02:11.000Z"}))),
+                },
+                live: Live::Skip(
+                    "applications exist only in production, where a create invites a real merchant",
+                ),
+            },
+            Variant {
+                // The rest of the application from `--file`, merged under the
+                // seven flags: `businessInformation` keeps the file's fields
+                // beside the flag's `dbaName`.
+                name: "from a file",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        body: Some(json!({
+                            "deliveryMethod": "Iframe",
+                            "email": "marcus@example.com",
+                            "partnerUserId": "3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90",
+                            "processorId": 7,
+                            "scheduleAId": "5c1e8f2a-9b3d-4a7e-8f6c-1d2b3e4f5a60",
+                            "splitProfileId": "a7d3e9b1-4c2f-4e8a-9b6d-0f1e2d3c4b5a",
+                            "pricingTemplateIds": ["0d6e2f1a-3b4c-4d5e-8f7a-9b0c1d2e3f40"],
+                            "metadata": {"locationId": "loc_00441"},
+                            "businessInformation": {
+                                "dbaName": "Corner Coffee",
+                                "legalName": "Corner Coffee LLC",
+                                "taxId": "123456789",
+                                "bankInfo": {
+                                    "routing": "021000021",
+                                    "account": "000123456789"}},
+                            "owner1": {
+                                "firstName": "Marcus",
+                                "lastName": "Reed",
+                                "ssn": "123456789",
+                                "ownership": 100}})),
+                        ..req("POST", "/v2/applications")
+                    },
+                    response: ok(Some(json!({
+                        "applicationId": "8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d",
+                        "applicationUrl": "https://dashboard.flute.com/onboarding/register?invite_token=019c76de-cbd3-788d-8cb0-f829e90a0623",
+                        "metadata": {"locationId": "loc_00441"},
+                        "deliveryMethod": "Iframe",
+                        "createdOn": "2026-09-29T14:02:11.000Z"}))),
+                },
+                live: Live::Skip(
+                    "applications exist only in production, where a create invites a real merchant",
+                ),
+            },
+        ],
+    },
+    Contract {
+        operation_id: "flute-v2-get-applications",
+        route: "GET /v2/applications",
+        mapping: Mapping::Command("applications list"),
+        variants: &[
+            Variant {
+                name: "first page, server defaults",
+                exchange: || Exchange {
+                    request: req("GET", "/v2/applications"),
+                    response: ok(Some(json!({
+                        "items": [{
+                            "id": "8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d",
+                            "applicationNumber": 4711,
+                            "businessName": "Corner Coffee",
+                            "mid": "932129304958123",
+                            "merchantId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                            "processor": "Processor Name",
+                            "sponsor": "Sponsor Bank Name",
+                            "partner": "Acme Partners",
+                            "partnerUser": {"firstName": "Ada", "lastName": "Lovelace"},
+                            "applicationStatus": "Active",
+                            "applicationStatusStartedAt": "2026-06-22T16:30:00.000Z",
+                            "createdOn": "2026-06-15T10:00:00.000Z",
+                            "invitedBy": "Jane Doe",
+                            "sentAt": "2026-06-15T10:05:00.000Z",
+                            "metadata": {"locationId": "loc_00441"}}],
+                        "pageInfo": {
+                            "pageIndex": 0, "pageSize": 20, "totalItems": 1,
+                            "totalPages": 1, "hasMore": false}}))),
+                },
+                live: Live::Test("live_application_list_first_page_needs_partner"),
+            },
+            Variant {
+                name: "every filter",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        query: vec![
+                            ("pageIndex".into(), "1".into()),
+                            ("pageSize".into(), "5".into()),
+                            ("applicationStatus".into(), "InformationNeeded".into()),
+                            (
+                                "applicationId".into(),
+                                "8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d".into(),
+                            ),
+                            ("createdFrom".into(), "2026-06-01".into()),
+                            ("createdTo".into(), "2026-06-30".into()),
+                        ],
+                        ..req("GET", "/v2/applications")
+                    },
+                    response: ok(Some(json!({
+                        "items": [],
+                        "pageInfo": {"hasMore": false}}))),
+                },
+                live: Live::Test("live_application_list_filtered_needs_partner"),
+            },
+        ],
+    },
+    Contract {
+        operation_id: "flute-v2-get-pricing-templates",
+        route: "GET /v2/pricing-templates",
+        mapping: Mapping::Command("pricing-templates list"),
+        variants: &[Variant {
+            // Not paginated: every template in one response.
+            name: "default",
+            exchange: || Exchange {
+                request: req("GET", "/v2/pricing-templates"),
+                response: ok(Some(json!({
+                    "items": [{
+                        "id": "0d6e2f1a-3b4c-4d5e-8f7a-9b0c1d2e3f40",
+                        "name": "retail-standard",
+                        "displayName": "Retail Standard",
+                        "isDefault": true}]}))),
+            },
+            live: Live::Test("live_pricing_template_list_needs_partner"),
+        }],
+    },
+    Contract {
+        operation_id: "flute-v2-get-users",
+        route: "GET /v2/users",
+        mapping: Mapping::Command("users list"),
+        variants: &[
+            Variant {
+                name: "first page, server defaults",
+                exchange: || Exchange {
+                    request: req("GET", "/v2/users"),
+                    response: ok(Some(json!({
+                        "items": [{
+                            "id": "3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90",
+                            "email": "ada@example.com"}],
+                        "pageInfo": {
+                            "pageIndex": 0, "pageSize": 20, "totalItems": 1,
+                            "totalPages": 1, "hasMore": false}}))),
+                },
+                live: Live::Test("live_user_list_first_page_needs_partner"),
+            },
+            Variant {
+                name: "every filter",
+                exchange: || Exchange {
+                    request: RequestFixture {
+                        query: vec![
+                            ("pageIndex".into(), "1".into()),
+                            ("pageSize".into(), "5".into()),
+                            ("userType".into(), "Partner".into()),
+                            ("email".into(), "ada@example.com".into()),
+                        ],
+                        ..req("GET", "/v2/users")
+                    },
+                    response: ok(Some(json!({
+                        "items": [],
+                        "pageInfo": {"hasMore": false}}))),
+                },
+                live: Live::Test("live_user_list_filtered_needs_partner"),
+            },
+        ],
+    },
+    Contract {
+        operation_id: "flute-v2-get-users-userId-schedule-as",
+        route: "GET /v2/users/{userId}/schedule-as",
+        mapping: Mapping::Command("users schedule-as"),
+        variants: &[Variant {
+            name: "default",
+            exchange: || Exchange {
+                request: RequestFixture {
+                    path_params: vec![(
+                        "userId".into(),
+                        "3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90".into(),
+                    )],
+                    ..req(
+                        "GET",
+                        "/v2/users/3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90/schedule-as",
+                    )
+                },
+                response: ok(Some(json!({
+                    "items": [{
+                        "id": "5c1e8f2a-9b3d-4a7e-8f6c-1d2b3e4f5a60",
+                        "name": "Standard Schedule A",
+                        "processorId": 7}]}))),
+            },
+            live: Live::Test("live_user_schedule_as_and_split_profiles_needs_partner"),
+        }],
+    },
+    Contract {
+        operation_id: "flute-v2-get-users-userId-split-profiles",
+        route: "GET /v2/users/{userId}/split-profiles",
+        mapping: Mapping::Command("users split-profiles"),
+        variants: &[Variant {
+            name: "default",
+            exchange: || Exchange {
+                request: RequestFixture {
+                    path_params: vec![(
+                        "userId".into(),
+                        "3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90".into(),
+                    )],
+                    ..req(
+                        "GET",
+                        "/v2/users/3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90/split-profiles",
+                    )
+                },
+                response: ok(Some(json!({
+                    "items": [{
+                        "id": "a7d3e9b1-4c2f-4e8a-9b6d-0f1e2d3c4b5a",
+                        "name": "Standard Split",
+                        "isHighRisk": false,
+                        "isDefault": true}]}))),
+            },
+            live: Live::Test("live_user_schedule_as_and_split_profiles_needs_partner"),
         }],
     },
     Contract {
