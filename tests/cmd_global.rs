@@ -364,6 +364,9 @@ fn the_root_lists_its_commands_in_the_documented_order() {
             "settlements",
             "settings",
             "api-keys",
+            "applications",
+            "pricing-templates",
+            "users",
             "completion",
             "update",
             "help",
@@ -1430,7 +1433,7 @@ fn customers_sort_by_offers_created_on_and_not_external_id() {
         .code(3);
 }
 
-/// The fifteen writes whose operation declares `Idempotency-Key`, each with
+/// The sixteen writes whose operation declares `Idempotency-Key`, each with
 /// the arguments it needs to reach the wire.
 const KEYED_WRITES: &[&[&str]] = &[
     &[
@@ -1537,6 +1540,24 @@ const KEYED_WRITES: &[&[&str]] = &[
     ],
     &["payment-sessions", "cancel", "ps-1", "--yes"],
     &["settlements", "close", "--payment-processor-id", "pp-1"],
+    &[
+        "applications",
+        "create",
+        "--email",
+        "marcus@example.com",
+        "--delivery-method",
+        "partner-direct",
+        "--partner-user-id",
+        "pu-1",
+        "--processor-id",
+        "7",
+        "--schedule-a-id",
+        "sa-1",
+        "--split-profile-id",
+        "sp-1",
+        "--dba-name",
+        "Corner Coffee",
+    ],
 ];
 
 /// A server that answers every write as in progress and every read as

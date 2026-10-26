@@ -1,0 +1,7 @@
+---
+source: tests/snapshots.rs
+expression: "render::list_table(r.resource, &[object_for(r)])"
+---
+ID                                    NAME                      DISPLAY NAME                  DEFAULT 
+------------------------------------------------------------------------------------------------------
+0d6e2f1a-3b4c-4d5e-8f7a-9b0c1d2e3f40  retail-standard           Retail Standard               yes

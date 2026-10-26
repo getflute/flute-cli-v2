@@ -44,6 +44,7 @@ pub static SURFACE: LazyLock<Vec<Field>> = LazyLock::new(|| {
     ROWS.iter()
         .cloned()
         .chain(addresses)
+        .chain(application_file_rows())
         .map(|(operation_id, field, exposure)| Field {
             operation_id,
             field,
@@ -82,6 +83,36 @@ fn address_rows(op: &'static str) -> Vec<Row> {
         }
     }
     rows
+}
+
+/// The fields of `applications create` that its seven flags set.
+const APPLICATION_FLAGS: &[(&str, &str)] = &[
+    ("/deliveryMethod", "--delivery-method"),
+    ("/email", "--email"),
+    ("/partnerUserId", "--partner-user-id"),
+    ("/processorId", "--processor-id"),
+    ("/scheduleAId", "--schedule-a-id"),
+    ("/splitProfileId", "--split-profile-id"),
+    ("/businessInformation/dbaName", "--dba-name"),
+];
+
+/// One row per leaf of `applications create`: the seven flags, and `--file`
+/// for every other leaf. `--file` is the request body itself, so it reaches
+/// every field the operation declares; the rows are derived from the bundle
+/// because enumerating them by hand would restate it.
+fn application_file_rows() -> Vec<Row> {
+    const OP: &str = "flute-v2-post-applications";
+    super::spec::request_leaves(OP)
+        .into_iter()
+        .map(|leaf| {
+            let flag = APPLICATION_FLAGS
+                .iter()
+                .find(|(field, _)| *field == leaf)
+                .map_or("--file", |(_, flag)| flag);
+            let leaf: &'static str = leaf.leak();
+            (OP, leaf, Flag(flag))
+        })
+        .collect()
 }
 
 #[rustfmt::skip]
@@ -493,4 +524,14 @@ const ROWS: &[Row] = &[
     // declares no `pageInfo`, so there is no pagination to expose here and
     // the shared flags are rejected as unknown.
     ("flute-v2-get-api-keys", "?merchantId", Flag("--merchant-id")),
+    ("flute-v2-get-applications", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-applications", "?pageSize", Flag("--page-size")),
+    ("flute-v2-get-applications", "?applicationStatus", Flag("--status")),
+    ("flute-v2-get-applications", "?applicationId", Flag("--application-id")),
+    ("flute-v2-get-applications", "?createdFrom", Flag("--created-from")),
+    ("flute-v2-get-applications", "?createdTo", Flag("--created-to")),
+    ("flute-v2-get-users", "?pageIndex", Flag("--page-index")),
+    ("flute-v2-get-users", "?pageSize", Flag("--page-size")),
+    ("flute-v2-get-users", "?userType", Flag("--user-type")),
+    ("flute-v2-get-users", "?email", Flag("--email")),
 ];

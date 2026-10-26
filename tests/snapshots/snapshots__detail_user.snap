@@ -1,0 +1,6 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+id:    3b9f2c4e-7a1d-4e6b-9c8f-2d5e1a7b3c90
+email: ada@example.com
