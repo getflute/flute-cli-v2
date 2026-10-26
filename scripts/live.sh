@@ -11,10 +11,16 @@
 # or change what later scenarios see. Run those by name.
 set -euo pipefail
 
-dir="${1:-$PWD}"
-[ -d "$dir" ] || { echo "not a directory: $dir" >&2; exit 3; }
-dir=$(cd "$dir" && pwd)
+case "${1:-}" in
+  -h|--help) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  "") ;;
+  *)
+    [ -d "$1" ] || { echo "not a directory: $1 (see --help)" >&2; exit 3; }
+    FLUTE2_LIVE_DIR=$(cd "$1" && pwd)
+    export FLUTE2_LIVE_DIR
+    ;;
+esac
 
 cd "$(dirname "$0")/.."
-FLUTE2_LIVE_DIR="$dir" exec cargo test --locked --features live --test live -- \
+exec cargo test --locked --features live --test live -- \
   --ignored --test-threads=1 --skip attended --skip irreversible
