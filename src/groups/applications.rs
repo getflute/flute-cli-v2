@@ -98,7 +98,8 @@ pub struct ListApplicationsArgs {
     /// Created on or after this date (YYYY-MM-DD).
     #[arg(long)]
     pub created_from: Option<String>,
-    /// Created on or before this date (YYYY-MM-DD).
+    /// Created before this date (YYYY-MM-DD); the date itself is excluded, so
+    /// June is `--created-from 2026-06-01 --created-to 2026-07-01`.
     #[arg(long)]
     pub created_to: Option<String>,
 }

@@ -829,7 +829,9 @@ flute2 applications list [OPTIONS]
   invites a real merchant. It takes `--idempotency-key`.
 - `list` returns newest first and is paginated. `--status` filters on the
   onboarding status, and `--created-from`/`--created-to` take a `YYYY-MM-DD`
-  date. `quiet` prints each application's `id`.
+  date. `--created-from` includes its date and `--created-to` excludes its
+  own, so June is `--created-from 2026-06-01 --created-to 2026-07-01`.
+  `quiet` prints each application's `id`.
 - **The group needs partner credentials.** A merchant token answers 403 with
   a message saying a partner token is needed.
 - **The account needs access to the feature as well.** An account without it

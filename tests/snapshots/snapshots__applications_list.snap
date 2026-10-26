@@ -20,7 +20,7 @@ Options:
       --created-from <CREATED_FROM>
           Created on or after this date (YYYY-MM-DD)
       --created-to <CREATED_TO>
-          Created on or before this date (YYYY-MM-DD)
+          Created before this date (YYYY-MM-DD); the date itself is excluded, so June is `--created-from 2026-06-01 --created-to 2026-07-01`
   -h, --help
           Print help
 

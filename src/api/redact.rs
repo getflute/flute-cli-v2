@@ -299,8 +299,9 @@ fn continues_a_token(c: char) -> bool {
 ///
 /// Covers card verification values, which PCI-DSS forbids logging at all,
 /// auth credentials, whose last four characters are still leaked entropy, and
-/// government identifiers, which are short enough that no length rule sees
-/// them and identifying enough that a masked tail is still a disclosure. An
+/// personal identifiers — tax ids, SSNs, dates of birth — which are short
+/// enough that no length rule sees them and identifying enough that a masked
+/// tail is still a disclosure. An
 /// exact list first, then conservative stems so a compound name nobody
 /// enumerated — `merchantSecret`, `xAuthToken` — is still caught.
 fn is_full_secret_key(lower_key: &str) -> bool {
@@ -338,6 +339,7 @@ fn is_full_secret_key(lower_key: &str) -> bool {
         "taxid",
         "tax_id",
         "ssn",
+        "dateofbirth",
     ];
     if EXACT.contains(&field_name(lower_key)) {
         return true;
@@ -515,8 +517,9 @@ fn redact_value(value: &Value) -> Value {
         Value::Array(items) => Value::Array(items.iter().map(redact_value).collect()),
         // Every string leaf, whatever its key. A message that quotes the
         // value that caused a failure can carry it under a key that says
-        // nothing, such as `Cause`.
-        Value::String(s) => Value::String(mask_digit_runs(s)),
+        // nothing, such as `Cause`, and a link can carry a credential in its
+        // query, such as `?invite_token=`.
+        Value::String(s) => Value::String(mask_digit_runs(&mask_keyed_values(s))),
         other => other.clone(),
     }
 }
@@ -623,6 +626,26 @@ mod tests {
             assert!(!out.contains("021000021"), "{key}: {out}");
             assert!(out.contains("0021"), "{key}: {out}");
         }
+    }
+
+    /// A link can carry a credential in its query: an application's invite
+    /// URL opens the application to whoever holds it.
+    #[test]
+    fn removes_a_token_carried_in_a_url_query() {
+        let out = redact(
+            r#"{"applicationUrl":"https://dashboard.flute.com/onboarding/register?invite_token=019c76de-cbd3-788d-8cb0-f829e90a0623&email=a%40example.com"}"#,
+        );
+        assert!(!out.contains("019c76de"), "{out}");
+        assert!(out.contains("invite_token="), "{out}");
+        assert!(out.contains("onboarding/register"), "{out}");
+    }
+
+    /// A date of birth identifies a person as surely as the SSN beside it.
+    #[test]
+    fn removes_a_date_of_birth_entirely() {
+        let out = redact(r#"{"owner1":{"dateOfBirth":"1980-04-12"}}"#);
+        assert!(!out.contains("1980"), "{out}");
+        assert!(out.contains("dateOfBirth"), "{out}");
     }
 
     #[test]
