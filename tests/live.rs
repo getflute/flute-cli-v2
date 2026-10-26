@@ -91,12 +91,6 @@ mod payment_sessions;
 #[path = "live/api_keys.rs"]
 mod api_keys;
 
-#[path = "live/applications.rs"]
-mod applications;
-
-#[path = "live/users.rs"]
-mod users;
-
 #[path = "live/slice.rs"]
 mod slice;
 
@@ -245,12 +239,6 @@ pub fn pos_device_id() -> String {
         "FLUTE2_LIVE_POS_DEVICE_ID",
         "the external identifier configured on the terminal itself; v2 declares \
          no device endpoint that could hand it back.",
-    )
-}
-pub fn partner_user_id() -> String {
-    required(
-        "FLUTE2_LIVE_PARTNER_USER_ID",
-        "`flute2 users list --user-type partner` on the partner account.",
     )
 }
 pub fn share_recipient() -> String {

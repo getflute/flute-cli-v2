@@ -551,7 +551,6 @@ async fn dispatch(
     // dispatch owns its arguments rather than cloning them.
     match command {
         Command::ApiKeys { command } => groups::api_keys::dispatch(&ctx, command).await,
-        Command::Applications { command } => groups::applications::dispatch(&ctx, command).await,
         Command::Customers { command } => groups::customers::dispatch(&ctx, command).await,
         Command::PaymentLinks { command } => groups::payment_links::dispatch(&ctx, command).await,
         Command::PaymentMethods { command } => {
@@ -562,14 +561,10 @@ async fn dispatch(
         }
         Command::Ping => groups::ping::dispatch(&ctx).await,
         Command::Pos { command } => groups::pos::dispatch(&ctx, command).await,
-        Command::PricingTemplates { command } => {
-            groups::pricing_templates::dispatch(&ctx, command).await
-        }
         Command::Settings { command } => groups::settings::dispatch(&ctx, command).await,
         Command::Settlements { command } => groups::settlements::dispatch(&ctx, command).await,
         Command::Terminals { command } => groups::terminals::dispatch(&ctx, command).await,
         Command::Transactions { command } => groups::transactions::dispatch(&ctx, command).await,
-        Command::Users { command } => groups::users::dispatch(&ctx, command).await,
         Command::Auth {
             command: AuthCommand::Token,
         } => groups::auth::token(&ctx.api).await,

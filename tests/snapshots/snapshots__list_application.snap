@@ -1,7 +1,0 @@
----
-source: tests/snapshots.rs
-expression: "render::list_table(r.resource, &[object_for(r)])"
----
-ID                                    NUMBER    BUSINESS                      STATUS              CREATED                 
---------------------------------------------------------------------------------------------------------------------------
-8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d  4711      Corner Coffee                 Active              2026-06-15T10:00:00.000Z

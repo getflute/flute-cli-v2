@@ -115,9 +115,6 @@ Every setting follows the same precedence: flag, then environment variable, then
 | `settlements` | `list`, `get`, `close`: settlement batches |
 | `settings` | `payment-config`, `contact-info`, `autofill`, `update-autofill`: account settings |
 | `api-keys` | `create`, `list`, `revoke`: API keys |
-| `applications` | `create`, `list`: merchant applications; `create` takes the rest of an application from `--file` |
-| `pricing-templates` | `list`: pricing templates for applications |
-| `users` | `list`, `schedule-as`, `split-profiles`: users, and a partner user's Schedule As and Split Profiles |
 | `ping` | API health check |
 | `version` | Print the CLI version and active profile |
 | `update` | Update to the latest GitHub Release |

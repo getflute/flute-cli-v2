@@ -1,7 +1,0 @@
----
-source: tests/snapshots.rs
-expression: "render::list_table(r.resource, &[object_for(r)])"
----
-ID                                    DELIVERY        URL                                                         
-------------------------------------------------------------------------------------------------------------------
-8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d  Iframe          https://dashboard.flute.com/onboarding/register?invite_toke…

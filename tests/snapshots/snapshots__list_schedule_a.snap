@@ -1,7 +1,0 @@
----
-source: tests/snapshots.rs
-expression: "render::list_table(r.resource, &[object_for(r)])"
----
-ID                                    NAME                              PROCESSOR 
-----------------------------------------------------------------------------------
-5c1e8f2a-9b3d-4a7e-8f6c-1d2b3e4f5a60  Standard Schedule A               7

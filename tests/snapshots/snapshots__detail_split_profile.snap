@@ -1,8 +1,0 @@
----
-source: tests/snapshots.rs
-expression: "render::detail_table(r.resource, &object_for(r))"
----
-id:         a7d3e9b1-4c2f-4e8a-9b6d-0f1e2d3c4b5a
-name:       Standard Split
-isHighRisk: no
-isDefault:  yes
