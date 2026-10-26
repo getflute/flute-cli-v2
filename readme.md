@@ -26,6 +26,8 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/getflute/flute-cli
 
 Both installers download from GitHub Releases, put `flute2` in `~/.cargo/bin` (`%USERPROFILE%\.cargo\bin` on Windows), and add that directory to your `PATH`. Open a new terminal afterwards and check the install with `flute2 version`.
 
+Releases are built for `aarch64-apple-darwin` (Apple silicon macOS), `x86_64-pc-windows-msvc` (Windows), and `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` (Linux). Other platforms, Intel macOS among them, build from source.
+
 ### From source
 
 ```sh
