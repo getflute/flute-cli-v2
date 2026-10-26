@@ -1328,7 +1328,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "baseAmount": amount("42.75"),
                         "currencyCode": "USD"}))),
                 },
-                live: Live::Test("live_pos_create_without_a_reference_id_needs_terminal"),
+                live: Live::Test("live_pos_create_without_a_reference_id"),
             },
             Variant {
                 name: "fully specified",
@@ -1364,7 +1364,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "extraAmounts": {
                             "tipAmount": amount("5.00")}}))),
                 },
-                live: Live::Test("live_pos_create_get_cancel_needs_terminal"),
+                live: Live::Test("live_pos_create_get_cancel"),
             },
             Variant {
                 // The create half of `--wait`. The get half is a query
@@ -1425,7 +1425,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "currencyCode": "USD",
                         "createdOn": "2026-06-03T21:59:31.891Z"}))),
                 },
-                live: Live::Test("live_pos_get_uses_the_declared_status_key_needs_terminal"),
+                live: Live::Test("live_pos_get_uses_the_declared_status_key"),
             },
             Variant {
                 // The get half of `--wait`: each poll blocks server-side
@@ -1530,9 +1530,7 @@ pub static CONTRACTS: &[Contract] = &[
                     "posTransactionId": "7c9a3d1e-5b42-4f80-9a1c-6d3e2f8b4a05",
                     "posTransactionStatus": "Cancelled"}))),
             },
-            live: Live::Test(
-                "live_pos_cancel_twice_reports_the_second_as_a_state_error_needs_terminal",
-            ),
+            live: Live::Test("live_pos_cancel_twice_reports_the_second_as_a_state_error"),
         }],
     },
     Contract {
@@ -1646,7 +1644,7 @@ pub static CONTRACTS: &[Contract] = &[
                     "batteryLevel": 90,
                     "printerStatus": "Normal"}))),
             },
-            live: Live::Test("live_terminal_status_reports_a_declared_status_needs_terminal"),
+            live: Live::Test("live_terminal_status_reports_a_declared_status"),
         }],
     },
     Contract {
@@ -2444,7 +2442,7 @@ pub static CONTRACTS: &[Contract] = &[
                     "clientId": "aa98aa89-07ae-4a23-b441-48725f0386e6",
                     "clientSecret": "1f80d6e1-9901-48b6-a862-6cfad1612e99"}))),
             },
-            live: Live::Test("live_api_key_create_list_revoke_needs_partner"),
+            live: Live::Test("live_api_key_create_list_revoke"),
         }],
     },
     Contract {
@@ -2465,7 +2463,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "merchantId": "8db2ff47-b143-4adb-ab58-a11111111111",
                             "apiKeyName": "Production API Key"}]}))),
                 },
-                live: Live::Test("live_api_key_list_without_a_merchant_filter_needs_partner"),
+                live: Live::Test("live_api_key_list_without_a_merchant_filter"),
             },
             Variant {
                 name: "for one merchant",
@@ -2483,7 +2481,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "merchantId": "8db2ff47-b143-4adb-ab58-a11111111111",
                             "apiKeyName": "Production API Key"}]}))),
                 },
-                live: Live::Test("live_api_key_create_list_revoke_needs_partner"),
+                live: Live::Test("live_api_key_create_list_revoke"),
             },
         ],
     },
@@ -2509,7 +2507,7 @@ pub static CONTRACTS: &[Contract] = &[
                     body: None,
                 },
             },
-            live: Live::Test("live_api_key_revoke_twice_is_still_success_needs_partner"),
+            live: Live::Test("live_api_key_revoke_twice_is_still_success"),
         }],
     },
     Contract {
@@ -2616,7 +2614,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "pageIndex": 0, "pageSize": 20, "totalItems": 1,
                             "totalPages": 1, "hasMore": false}}))),
                 },
-                live: Live::Test("live_application_list_first_page_needs_partner"),
+                live: Live::Test("live_application_list_first_page"),
             },
             Variant {
                 name: "every filter",
@@ -2639,7 +2637,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "items": [],
                         "pageInfo": {"hasMore": false}}))),
                 },
-                live: Live::Test("live_application_list_filtered_needs_partner"),
+                live: Live::Test("live_application_list_filtered"),
             },
         ],
     },
@@ -2659,7 +2657,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "displayName": "Retail Standard",
                         "isDefault": true}]}))),
             },
-            live: Live::Test("live_pricing_template_list_needs_partner"),
+            live: Live::Test("live_pricing_template_list"),
         }],
     },
     Contract {
@@ -2679,7 +2677,7 @@ pub static CONTRACTS: &[Contract] = &[
                             "pageIndex": 0, "pageSize": 20, "totalItems": 1,
                             "totalPages": 1, "hasMore": false}}))),
                 },
-                live: Live::Test("live_user_list_first_page_needs_partner"),
+                live: Live::Test("live_user_list_first_page"),
             },
             Variant {
                 name: "every filter",
@@ -2697,7 +2695,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "items": [],
                         "pageInfo": {"hasMore": false}}))),
                 },
-                live: Live::Test("live_user_list_filtered_needs_partner"),
+                live: Live::Test("live_user_list_filtered"),
             },
         ],
     },
@@ -2724,7 +2722,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "name": "Standard Schedule A",
                         "processorId": 7}]}))),
             },
-            live: Live::Test("live_user_schedule_as_and_split_profiles_needs_partner"),
+            live: Live::Test("live_user_schedule_as_and_split_profiles"),
         }],
     },
     Contract {
@@ -2751,7 +2749,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "isHighRisk": false,
                         "isDefault": true}]}))),
             },
-            live: Live::Test("live_user_schedule_as_and_split_profiles_needs_partner"),
+            live: Live::Test("live_user_schedule_as_and_split_profiles"),
         }],
     },
     Contract {

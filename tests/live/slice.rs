@@ -6,6 +6,7 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_ping_succeeds() {
+    account(Merchant);
     let v = json(&["ping"]);
     assert_eq!(v["object"], "ping");
     assert_eq!(v["data"]["reachable"], true);
@@ -16,6 +17,7 @@ fn live_ping_succeeds() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_customer_create_get_delete() {
+    account(Merchant);
     let created = json(&[
         "customers",
         "create",
@@ -46,6 +48,7 @@ fn live_customer_create_get_delete() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_sale_auto_capture() {
+    account(Merchant);
     let amount = unique_amount();
     let reference = unique_reference_id();
     let v = json(&[
@@ -124,6 +127,7 @@ fn live_card_sale_auto_capture() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_auth_manual_capture() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "create",
@@ -162,6 +166,7 @@ fn live_card_auth_manual_capture() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_sale_with_customer() {
+    account(Merchant);
     let customer = json(&[
         "customers",
         "create",
@@ -206,6 +211,7 @@ fn live_card_sale_with_customer() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_sale_without_billing_address() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "create",

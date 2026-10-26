@@ -39,6 +39,7 @@ fn first_identified_batch(listed: &serde_json::Value) -> serde_json::Value {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settlement_list_first_page() {
+    account(Merchant);
     let listed = json(&["settlements", "list"]);
     assert_eq!(listed["object"], "settlement_list");
     assert!(listed["data"].is_array(), "{listed}");
@@ -54,6 +55,7 @@ fn live_settlement_list_first_page() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settlement_list_filtered_by_repeated_array_parameters() {
+    account(Merchant);
     let listed = json(&["settlements", "list", "--page-size", "5"]);
     let first = first_identified_batch(&listed);
     let batch_id = first["batchId"].as_str().expect("checked by the finder");
@@ -86,6 +88,7 @@ fn live_settlement_list_filtered_by_repeated_array_parameters() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settlement_get_reads_one_batch_by_id() {
+    account(Merchant);
     let listed = json(&["settlements", "list", "--page-size", "5"]);
     let first = first_identified_batch(&listed);
     let batch_id = first["batchId"].as_str().expect("checked by the finder");
@@ -101,6 +104,7 @@ fn live_settlement_get_reads_one_batch_by_id() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settlement_get_of_an_unknown_batch_exits_four() {
+    account(Merchant);
     live_bin()
         .args(["settlements", "get", "00000000-0000-4000-8000-000000000000"])
         .assert()
@@ -113,6 +117,7 @@ fn live_settlement_get_of_an_unknown_batch_exits_four() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settlement_list_filtered_by_status() {
+    account(Merchant);
     let listed = json(&["settlements", "list", "--status", "open"]);
     assert!(listed["data"].is_array(), "{listed}");
 }
@@ -122,6 +127,7 @@ fn live_settlement_list_filtered_by_status() {
 #[test]
 #[ignore = "live sandbox, and irreversible; opt in with --ignored"]
 fn live_settlement_close_the_open_batch_irreversible() {
+    account(Merchant);
     let closed = json(&[
         "settlements",
         "close",

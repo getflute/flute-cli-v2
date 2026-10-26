@@ -8,6 +8,7 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_session_create_get_cancel() {
+    account(Merchant);
     let created = json(&[
         "payment-sessions",
         "create",
@@ -43,6 +44,7 @@ fn live_payment_session_create_get_cancel() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_session_get_carries_no_identifier() {
+    account(Merchant);
     let created = json(&[
         "payment-sessions",
         "create",
@@ -77,6 +79,7 @@ fn live_payment_session_get_carries_no_identifier() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_session_vault_only_sends_a_zero_amount() {
+    account(Merchant);
     let created = json(&[
         "payment-sessions",
         "create",
@@ -98,6 +101,7 @@ fn live_payment_session_vault_only_sends_a_zero_amount() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_session_with_no_amount_is_flexible() {
+    account(Merchant);
     let created = json(&["payment-sessions", "create"]);
     let id = created["data"]["id"].as_str().unwrap().to_string();
     live_bin()
@@ -122,6 +126,7 @@ fn live_payment_session_with_no_amount_is_flexible() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_session_cancel_twice_reports_the_second_as_a_state_error() {
+    account(Merchant);
     let created = json(&[
         "payment-sessions",
         "create",
@@ -149,6 +154,7 @@ fn live_payment_session_cancel_twice_reports_the_second_as_a_state_error() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_session_metadata_round_trip() {
+    account(Merchant);
     let created = json(&[
         "payment-sessions",
         "create",

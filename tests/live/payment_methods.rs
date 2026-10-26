@@ -13,6 +13,7 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_method_add_card_get_delete() {
+    account(Merchant);
     let added = json(&[
         "payment-methods",
         "add-card",
@@ -45,6 +46,7 @@ fn live_payment_method_add_card_get_delete() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_method_add_ach_business() {
+    account(Merchant);
     let added = json(&[
         "payment-methods",
         "add-ach",
@@ -80,6 +82,7 @@ fn live_payment_method_add_ach_business() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_method_type_matches_the_declared_enum() {
+    account(Merchant);
     let added = json(&[
         "payment-methods",
         "add-ach",
@@ -115,6 +118,7 @@ fn live_payment_method_type_matches_the_declared_enum() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_method_list_for_a_customer() {
+    account(Merchant);
     let customer = json(&[
         "customers",
         "create",
@@ -162,6 +166,7 @@ fn live_payment_method_list_for_a_customer() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_method_update_name() {
+    account(Merchant);
     let added = json(&[
         "payment-methods",
         "add-card",
@@ -195,6 +200,7 @@ fn live_payment_method_update_name() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_method_set_default() {
+    account(Merchant);
     let customer = json(&[
         "customers",
         "create",
@@ -241,6 +247,7 @@ fn live_payment_method_set_default() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_method_delete_twice_is_still_success() {
+    account(Merchant);
     let added = json(&[
         "payment-methods",
         "add-card",

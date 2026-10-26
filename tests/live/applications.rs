@@ -2,13 +2,15 @@
 //!
 //! Reads only. Merchant applications exist only in production, where a create
 //! invites a real merchant, so `applications create` has no live scenario.
-//! Every scenario carries `_needs_partner`.
+//! Every scenario runs as the partner, whose account needs the applications
+//! and user-configuration API permissions.
 
 use crate::*;
 
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_application_list_first_page_needs_partner() {
+fn live_application_list_first_page() {
+    account(Partner);
     let listed = json(&["applications", "list"]);
     assert_eq!(listed["object"], "application_list");
     assert!(listed["data"].is_array(), "{listed}");
@@ -16,7 +18,8 @@ fn live_application_list_first_page_needs_partner() {
 
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_application_list_filtered_needs_partner() {
+fn live_application_list_filtered() {
+    account(Partner);
     let listed = json(&[
         "applications",
         "list",
@@ -32,7 +35,8 @@ fn live_application_list_filtered_needs_partner() {
 
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_pricing_template_list_needs_partner() {
+fn live_pricing_template_list() {
+    account(Partner);
     let listed = json(&["pricing-templates", "list"]);
     assert_eq!(listed["object"], "pricing_template_list");
     assert!(listed["data"].is_array(), "{listed}");

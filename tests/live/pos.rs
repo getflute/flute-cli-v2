@@ -15,7 +15,8 @@ use crate::*;
 /// transaction reads back, and the cancel closes it out.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_pos_create_get_cancel_needs_terminal() {
+fn live_pos_create_get_cancel() {
+    account(Terminal);
     let id = pos_create(&["--reference-id", &unique_reference_id()]);
 
     let fetched = json(&["pos", "get", &id]);
@@ -31,7 +32,8 @@ fn live_pos_create_get_cancel_needs_terminal() {
 /// documentation defect to file, not a flag to force back on.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_pos_create_without_a_reference_id_needs_terminal() {
+fn live_pos_create_without_a_reference_id() {
+    account(Terminal);
     let id = pos_create(&[]);
     pos_cancel(&id);
 }
@@ -47,6 +49,7 @@ fn live_pos_create_without_a_reference_id_needs_terminal() {
 #[test]
 #[ignore = "live sandbox, and needs somebody at the terminal; opt in with --ignored"]
 fn live_pos_create_with_wait_ends_on_a_terminal_status_attended() {
+    account(Terminal);
     let finished = json(&[
         "pos",
         "create",
@@ -79,7 +82,8 @@ fn live_pos_create_with_wait_ends_on_a_terminal_status_attended() {
 /// cancelled.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_pos_cancel_twice_reports_the_second_as_a_state_error_needs_terminal() {
+fn live_pos_cancel_twice_reports_the_second_as_a_state_error() {
+    account(Terminal);
     let id = pos_create(&["--reference-id", &unique_reference_id()]);
     pos_cancel(&id);
     live_bin()
@@ -93,6 +97,7 @@ fn live_pos_cancel_twice_reports_the_second_as_a_state_error_needs_terminal() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_pos_list_first_page() {
+    account(Merchant);
     let listed = json(&["pos", "list"]);
     assert_eq!(listed["object"], "pos_transaction_list");
     assert!(listed["data"].is_array(), "{listed}");
@@ -103,6 +108,7 @@ fn live_pos_list_first_page() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_pos_list_filtered_by_status() {
+    account(Merchant);
     let listed = json(&["pos", "list", "--status", "completed", "--page-size", "5"]);
     assert!(listed["data"].is_array(), "{listed}");
 }
@@ -117,6 +123,7 @@ fn live_pos_list_filtered_by_status() {
 #[test]
 #[ignore = "live sandbox, and prints on a real device; opt in with --ignored"]
 fn live_pos_print_receipt_attended() {
+    account(Terminal);
     let sale = json(&[
         "pos",
         "create",
@@ -153,7 +160,8 @@ fn live_pos_print_receipt_attended() {
 /// sends.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_pos_get_uses_the_declared_status_key_needs_terminal() {
+fn live_pos_get_uses_the_declared_status_key() {
+    account(Terminal);
     let id = pos_create(&["--reference-id", &unique_reference_id()]);
     let fetched = json(&["pos", "get", &id]);
     pos_cancel(&id);

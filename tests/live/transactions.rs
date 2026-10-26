@@ -6,6 +6,7 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_saved_card_sale() {
+    account(Merchant);
     let stored = json(&[
         "payment-methods",
         "add-card",
@@ -50,6 +51,7 @@ fn live_saved_card_sale() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_new_ach_debit_with_the_conditional_requirements() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "create",
@@ -111,6 +113,7 @@ fn live_new_ach_debit_with_the_conditional_requirements() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_saved_ach_debit_for_a_customer_needs_no_billing_address() {
+    account(Merchant);
     // The customer carries what the request would otherwise have to: an ACH
     // debit against an attached method reads the address and phone from here.
     let customer = json(&[
@@ -202,6 +205,7 @@ fn live_saved_ach_debit_for_a_customer_needs_no_billing_address() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_sale_with_level_three_data() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "create",
@@ -250,6 +254,7 @@ fn live_card_sale_with_level_three_data() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_transaction_list_first_page() {
+    account(Merchant);
     let v = json(&["transactions", "list"]);
     assert_eq!(v["object"], "transaction_list");
     assert!(v["data"].is_array(), "{v}");
@@ -261,6 +266,7 @@ fn live_transaction_list_first_page() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_transaction_list_descending_is_accepted() {
+    account(Merchant);
     let v = json(&["transactions", "list", "--desc", "--page-size", "5"]);
     assert!(v["data"].is_array(), "{v}");
 }
@@ -268,6 +274,7 @@ fn live_transaction_list_descending_is_accepted() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_transaction_list_filtered_by_status() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "list",
@@ -294,6 +301,7 @@ fn live_transaction_list_filtered_by_status() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_partial_capture_field_name() {
+    account(Merchant);
     let authorized = json(&[
         "transactions",
         "create",
@@ -343,6 +351,7 @@ fn live_partial_capture_field_name() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_full_capture_sends_no_body() {
+    account(Merchant);
     let authorized = json(&[
         "transactions",
         "create",
@@ -379,6 +388,7 @@ fn live_full_capture_sends_no_body() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_reversal_of_a_sale() {
+    account(Merchant);
     let sale = json(&[
         "transactions",
         "create",
@@ -414,6 +424,7 @@ fn live_reversal_of_a_sale() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_partial_reversal_of_an_unsettled_sale_is_refused() {
+    account(Merchant);
     let sale = json(&[
         "transactions",
         "create",
@@ -469,6 +480,7 @@ fn live_partial_reversal_of_an_unsettled_sale_is_refused() {
 #[test]
 #[ignore = "live sandbox, and needs a card at the terminal; opt in with --ignored"]
 fn live_tip_adjustment_attended() {
+    account(Terminal);
     let config = json(&["settings", "payment-config"]);
     assert!(
         config["data"]["availableTransactionTypes"]
@@ -514,6 +526,7 @@ fn live_tip_adjustment_attended() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_calculate_amount() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "calculate-amount",
@@ -534,6 +547,7 @@ fn live_calculate_amount() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_share_receipt_attended() {
+    account(Merchant);
     let sale = json(&[
         "transactions",
         "create",
@@ -577,6 +591,7 @@ fn live_share_receipt_attended() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_transaction_inspect_reads_the_same_transaction() {
+    account(Merchant);
     let sale = json(&[
         "transactions",
         "create",
@@ -613,6 +628,7 @@ fn live_transaction_inspect_reads_the_same_transaction() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_ach_credit() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "credit",
@@ -662,6 +678,7 @@ fn live_ach_credit() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_card_credit() {
+    account(Merchant);
     let v = json(&[
         "transactions",
         "credit",
@@ -704,6 +721,7 @@ fn live_card_credit() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_a_declined_card_exits_zero_and_reports_why() {
+    account(Merchant);
     let (processor, amount, reference) =
         (card_processor_id(), unique_amount(), unique_reference_id());
     let mut args = vec![
@@ -752,6 +770,7 @@ fn live_a_declined_card_exits_zero_and_reports_why() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_ach_credit_without_a_billing_address() {
+    account(Merchant);
     live_bin()
         .args([
             "transactions",
