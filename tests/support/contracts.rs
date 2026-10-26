@@ -2722,7 +2722,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "name": "Standard Schedule A",
                         "processorId": 7}]}))),
             },
-            live: Live::Test("live_user_schedule_as_and_split_profiles"),
+            live: Live::Test("live_user_schedule_as_and_split_profiles_needs_configured_user"),
         }],
     },
     Contract {
@@ -2749,7 +2749,7 @@ pub static CONTRACTS: &[Contract] = &[
                         "isHighRisk": false,
                         "isDefault": true}]}))),
             },
-            live: Live::Test("live_user_schedule_as_and_split_profiles"),
+            live: Live::Test("live_user_schedule_as_and_split_profiles_needs_configured_user"),
         }],
     },
     Contract {

@@ -11,7 +11,7 @@
 //!
 //! ```sh
 //! cargo test --features live --test live -- --ignored --test-threads=1 \
-//!     --skip attended --skip irreversible
+//!     --skip attended --skip irreversible --skip needs_configured_user
 //! ```
 //!
 //! **Each scenario runs once, as the account it names.** Its first line is
@@ -34,7 +34,7 @@
 //! singleton, changes it, and puts it back. Run in parallel they interfere
 //! with each other and report the interference as an API defect.
 //!
-//! **Two suffixes mark what an unattended run leaves out**, so the exclusion
+//! **Three suffixes mark what an unattended run leaves out**, so the exclusion
 //! is made at the command line rather than by a runtime gate that could
 //! quietly pass:
 //!
@@ -43,6 +43,8 @@
 //!   recipient.
 //! - `_irreversible` — cannot be undone, and changes what later scenarios
 //!   see. Closing a settlement batch. Run it last or not at all.
+//! - `_needs_configured_user` — needs a partner user whose Schedule As and
+//!   Split Profiles are set up, which the onboarding partner's user is not.
 //!
 //! Everything else is reversible and unattended: it creates what it needs and
 //! removes it again. Run the full set only with somebody at the terminal:

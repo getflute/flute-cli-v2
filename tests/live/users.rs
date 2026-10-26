@@ -32,7 +32,9 @@ fn live_user_list_filtered() {
 
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_user_schedule_as_and_split_profiles() {
+/// Needs a partner user whose Schedule As and Split Profiles are set up; for
+/// any other user both commands answer 404.
+fn live_user_schedule_as_and_split_profiles_needs_configured_user() {
     account(OnboardingPartner);
     let user = partner_user_id();
     let schedules = json(&["users", "schedule-as", &user]);
