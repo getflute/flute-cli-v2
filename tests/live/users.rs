@@ -1,15 +1,15 @@
 //! Live scenarios for `users`. **Committed.**
 //!
-//! Reads only. Every scenario runs as the partner: `schedule-as` and
-//! `split-profiles` need a partner user, and every verb needs an account with
-//! the user-configuration API permission.
+//! Reads only. Every scenario runs as the onboarding partner: `schedule-as`
+//! and `split-profiles` need a partner user, and every verb needs an account
+//! with the user-configuration API permission.
 
 use crate::*;
 
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_user_list_first_page() {
-    account(Partner);
+    account(OnboardingPartner);
     let listed = json(&["users", "list"]);
     assert_eq!(listed["object"], "user_list");
     assert!(listed["data"].is_array(), "{listed}");
@@ -18,7 +18,7 @@ fn live_user_list_first_page() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_user_list_filtered() {
-    account(Partner);
+    account(OnboardingPartner);
     let listed = json(&[
         "users",
         "list",
@@ -33,7 +33,7 @@ fn live_user_list_filtered() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_user_schedule_as_and_split_profiles() {
-    account(Partner);
+    account(OnboardingPartner);
     let user = partner_user_id();
     let schedules = json(&["users", "schedule-as", &user]);
     assert_eq!(schedules["object"], "schedule_a_list");

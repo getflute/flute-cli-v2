@@ -15,12 +15,11 @@
 //! ```
 //!
 //! **Each scenario runs once, as the account it names.** Its first line is
-//! `account(Merchant)`, `account(Partner)` or `account(Terminal)`, and every
-//! command it builds after that carries the credentials and ids from that
-//! account's file: `.flute2-live-merchant.env`, `.flute2-live-partner.env` or
-//! `.flute2-live-terminal.env`, in `FLUTE2_LIVE_DIR` or the repository root.
-//! The merchant and partner are production sandbox accounts; the terminal
-//! account is a merchant with a terminal, anywhere but production live.
+//! `account(..)` with one of the [`Account`] variants, and every command it
+//! builds after that carries the credentials and ids from that account's
+//! file, in `FLUTE2_LIVE_DIR` or the repository root. The merchant and
+//! partner are production sandbox accounts; the onboarding partner and the
+//! terminal account may be on another environment, never production live.
 //!
 //! **The credentials never reach the keychain.** A macOS keychain grant is
 //! bound to the *binary*, and `cargo test` rebuilds. A rebuilt
@@ -109,17 +108,22 @@ pub enum Account {
     Merchant,
     /// A production sandbox partner: `.flute2-live-partner.env`.
     Partner,
+    /// A partner with the applications and user-configuration API
+    /// permissions, anywhere but production live:
+    /// `.flute2-live-partner-uat.env`.
+    OnboardingPartner,
     /// A merchant with a semi-integrated terminal, anywhere but production
     /// live: `.flute2-live-terminal.env`.
     Terminal,
 }
-pub use Account::{Merchant, Partner, Terminal};
+pub use Account::{Merchant, OnboardingPartner, Partner, Terminal};
 
 impl Account {
     fn file(self) -> &'static str {
         match self {
             Merchant => ".flute2-live-merchant.env",
             Partner => ".flute2-live-partner.env",
+            OnboardingPartner => ".flute2-live-partner-uat.env",
             Terminal => ".flute2-live-terminal.env",
         }
     }
@@ -133,8 +137,9 @@ thread_local! {
 /// Run the rest of this scenario as `which`, from its file.
 ///
 /// The merchant and partner are production sandbox accounts, so their files
-/// name no other host. The terminal account may be on the production sandbox
-/// or another environment, never production live: its scenarios take cards.
+/// name no other host. The onboarding partner and the terminal account may be
+/// on the production sandbox or another environment, never production live:
+/// one invites merchants and the other takes cards.
 pub fn account(which: Account) {
     let dir =
         std::env::var("FLUTE2_LIVE_DIR").unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").into());
@@ -155,9 +160,9 @@ pub fn account(which: Account) {
              no FLUTE2_LIVE_API_BASE_URL",
             path.display()
         ),
-        Terminal => assert!(
+        OnboardingPartner | Terminal => assert!(
             host.is_none_or(|h| !h.trim_end_matches('/').ends_with("//api.flute.com")),
-            "{}: the terminal account may not be on production live",
+            "{}: the {which:?} account may not be on production live",
             path.display()
         ),
     }
