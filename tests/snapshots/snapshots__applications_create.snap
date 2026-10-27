@@ -24,7 +24,7 @@ Options:
           The partner user the application is attributed to (required). `users list` finds one
 
       --processor-id <PROCESSOR_ID>
-          Processor id (required)
+          Processor id (required), 1 to 2147483647
 
       --schedule-a-id <SCHEDULE_A_ID>
           Schedule A pricing schedule of the partner user (required). `users schedule-as <USER_ID>` lists them

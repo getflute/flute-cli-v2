@@ -308,22 +308,10 @@ pub async fn run(mut cli: Cli) -> (OutputFormat, anyhow::Result<()>) {
     }
     // The resolved mode, so a quiet reached through FLUTE2_OUTPUT or the
     // config file is refused as well as the flag.
-    if output == OutputFormat::Quiet
-        && matches!(
-            command,
-            Command::ApiKeys {
-                command: groups::api_keys::ApiKeysCommand::Create { .. }
-            }
-        )
-    {
-        return (
-            output,
-            Err(anyhow::anyhow!(
-                "api-keys create: the client secret is shown once, and --output quiet \
-                 would print only the client id and discard it. Use --output json \
-                 or --output table."
-            )),
-        );
+    if output == OutputFormat::Quiet {
+        if let Some(refusal) = quiet_discards_the_answer(&command) {
+            return (output, Err(anyhow::anyhow!(refusal)));
+        }
     }
 
     let notify = should_check_for_update(&command, &config, output, stderr_is_terminal());
@@ -340,6 +328,30 @@ pub async fn run(mut cli: Cli) -> (OutputFormat, anyhow::Result<()>) {
         }
     }
     (output, result)
+}
+
+/// The refusal a create earns under `--output quiet` when its response
+/// carries something it never returns again, which the bare identifier would
+/// discard.
+fn quiet_discards_the_answer(command: &Command) -> Option<&'static str> {
+    match command {
+        Command::ApiKeys {
+            command: groups::api_keys::ApiKeysCommand::Create { .. },
+        } => Some(
+            "api-keys create: the client secret is shown once, and --output quiet \
+             would print only the client id and discard it. Use --output json \
+             or --output table.",
+        ),
+        Command::Applications {
+            command: groups::applications::ApplicationsCommand::Create(_),
+        } => Some(
+            "applications create: the applicationUrl the merchant completes the \
+             application at is in this response alone, and --output quiet would \
+             print only the application id and discard it. Use --output json or \
+             --output table.",
+        ),
+        _ => None,
+    }
 }
 
 /// The refusal a destructive command earns when `--yes` is absent.

@@ -90,17 +90,64 @@ async fn application_create_reads_the_file_from_stdin() {
     support::assert_exchange_observed(&server, &ex).await;
 }
 
-/// Quiet prints the new application's id, from `applicationId`.
+/// `applicationUrl` is in the create response alone, and quiet prints only
+/// an identifier, so a quiet create is refused before any request: the
+/// application would exist with its link discarded. Quiet is refused from
+/// the flag and from `FLUTE2_OUTPUT`.
 #[tokio::test]
-async fn application_create_quiet_prints_the_application_id() {
+async fn application_create_is_refused_under_quiet_output() {
     let server = support::mock_with_token().await;
     support::mount(&server, "flute-v2-post-applications", "required only").await;
-    support::bin(&server)
+    let mut from_flag = support::bin(&server);
+    from_flag
         .args(["--output", "quiet"])
-        .args(required("partner-direct"))
-        .assert()
-        .success()
-        .stdout("8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d\n");
+        .args(required("partner-direct"));
+    let mut from_env = support::bin(&server);
+    from_env
+        .env("FLUTE2_OUTPUT", "quiet")
+        .args(required("partner-direct"));
+    for mut command in [from_flag, from_env] {
+        command
+            .assert()
+            .code(3)
+            .stdout(predicate::str::is_empty())
+            .stderr(predicate::str::contains("applicationUrl"))
+            .stderr(predicate::str::contains("--output quiet"));
+    }
+    assert!(
+        server.received_requests().await.unwrap().is_empty(),
+        "a refused create must send nothing, the token request included"
+    );
+}
+
+/// The server reads `processorId` as a positive 32-bit integer, so 0 and
+/// anything above 2147483647 are usage errors with nothing sent.
+#[tokio::test]
+async fn processor_id_outside_the_servers_range_is_refused_before_the_wire() {
+    for value in ["0", "2147483648"] {
+        let server = support::mock_with_token().await;
+        let mut args = required("email");
+        let at = args.iter().position(|a| *a == "--processor-id").unwrap() + 1;
+        args[at] = value;
+        let out = support::bin(&server)
+            .args(["--output", "json"])
+            .args(&args)
+            .assert()
+            .code(3)
+            .get_output()
+            .stdout
+            .clone();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["kind"], "client", "{v}");
+        assert!(
+            v["message"].as_str().unwrap().contains("--processor-id"),
+            "{v}"
+        );
+        assert!(
+            server.received_requests().await.unwrap().is_empty(),
+            "{value} must send nothing"
+        );
+    }
 }
 
 /// Anything but a JSON object is refused before the wire: the file is the

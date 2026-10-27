@@ -64,8 +64,8 @@ pub struct CreateApplicationArgs {
     /// `users list` finds one.
     #[arg(long)]
     pub partner_user_id: String,
-    /// Processor id (required).
-    #[arg(long)]
+    /// Processor id (required), 1 to 2147483647.
+    #[arg(long, value_parser = clap::value_parser!(u32).range(1..=i64::from(i32::MAX)))]
     pub processor_id: u32,
     /// Schedule A pricing schedule of the partner user (required).
     /// `users schedule-as <USER_ID>` lists them.

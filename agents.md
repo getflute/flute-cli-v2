@@ -823,8 +823,13 @@ flute2 applications list [OPTIONS]
   `--split-profile-id` must belong to that user, from `users schedule-as` and
   `users split-profiles`. `pricing-templates list` gives the ids for
   `pricingTemplateIds`.
-- `create` answers with `applicationId` — what `quiet` prints — and the
-  `applicationUrl` the merchant completes the application at.
+- `create` answers with `applicationId` and the `applicationUrl` the
+  merchant completes the application at. No other response carries the URL —
+  `list` does not — so under `quiet` output, from the flag, `FLUTE2_OUTPUT` or
+  the config file, `create` is refused before any request, exit 3, because
+  the identifier alone would discard it.
+- `--processor-id` is 1 to 2147483647, the server's range; any other value is
+  a usage error, exit 3, nothing sent.
 - The reference says applications exist only in production, so a `create`
   invites a real merchant. It takes `--idempotency-key`.
 - `list` returns newest first and is paginated. `--status` filters on the
