@@ -1,3 +1,4 @@
 /target
 CLAUDE.md
 .flute2-live.env
+.flute2-live-*.env

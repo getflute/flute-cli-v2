@@ -1,0 +1,8 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+applicationId:  8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d
+applicationUrl: https://dashboard.flute.com/onboarding/register?invite_token=019c76de-cbd3-788d-8cb0-f829e90a0623
+deliveryMethod: Iframe
+createdOn:      2026-09-29T14:02:11.000Z

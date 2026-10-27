@@ -7,6 +7,7 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_customer_list_first_page() {
+    account(Merchant);
     let v = json(&["customers", "list"]);
     assert_eq!(v["object"], "customer_list");
     assert!(v["data"].is_array(), "data must be the collection: {v}");
@@ -20,6 +21,7 @@ fn live_customer_list_first_page() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_customer_list_filtered_by_email() {
+    account(Merchant);
     let created = json(&[
         "customers",
         "create",
@@ -59,6 +61,7 @@ fn live_customer_list_filtered_by_email() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_customer_update_then_delete() {
+    account(Merchant);
     let created = json(&[
         "customers",
         "create",
@@ -85,6 +88,7 @@ fn live_customer_update_then_delete() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_customer_delete_twice_is_still_success() {
+    account(Merchant);
     let created = json(&[
         "customers",
         "create",
@@ -110,6 +114,7 @@ fn live_customer_delete_twice_is_still_success() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_customer_list_all_exhausts_the_collection() {
+    account(Merchant);
     let one_page = json(&["customers", "list", "--page-size", "1"]);
     let all = json(&["customers", "list", "--all", "--asc", "--page-size", "1"]);
     let page_items = one_page["data"].as_array().unwrap().len();

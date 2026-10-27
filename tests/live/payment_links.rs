@@ -10,6 +10,7 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_link_create_get_update_delete() {
+    account(Merchant);
     let created = json(&[
         "payment-links",
         "create",
@@ -47,6 +48,7 @@ fn live_payment_link_create_get_update_delete() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_link_delete_answers_no_content() {
+    account(Merchant);
     let created = json(&[
         "payment-links",
         "create",
@@ -67,6 +69,7 @@ fn live_payment_link_delete_answers_no_content() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_link_delete_twice_is_still_success() {
+    account(Merchant);
     let created = json(&[
         "payment-links",
         "create",
@@ -85,12 +88,13 @@ fn live_payment_link_delete_twice_is_still_success() {
     }
 }
 
-/// **Sends a real message.** The recipient comes from
-/// `FLUTE2_LIVE_SHARE_RECIPIENT` so this cannot reach anybody who has not
-/// opted in by setting it.
+/// **Sends a real message.** The recipient is the account's
+/// `share_recipient`, so this cannot reach anybody who has not opted in by
+/// setting it.
 #[test]
 #[ignore = "live sandbox, and sends a message; opt in with --ignored"]
 fn live_payment_link_share_attended() {
+    account(Merchant);
     let created = json(&[
         "payment-links",
         "create",
@@ -128,6 +132,7 @@ fn live_payment_link_share_attended() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_link_list_first_page() {
+    account(Merchant);
     let listed = json(&["payment-links", "list"]);
     assert_eq!(listed["object"], "payment_link_list");
     assert!(listed["data"].is_array(), "{listed}");
@@ -136,6 +141,7 @@ fn live_payment_link_list_first_page() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_link_list_filtered() {
+    account(Merchant);
     let listed = json(&[
         "payment-links",
         "list",
@@ -155,6 +161,7 @@ fn live_payment_link_list_filtered() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_link_without_an_amount_is_flexible() {
+    account(Merchant);
     let created = json(&[
         "payment-links",
         "create",
@@ -190,6 +197,7 @@ fn live_payment_link_without_an_amount_is_flexible() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_payment_link_update_can_clear_a_field() {
+    account(Merchant);
     let created = json(&[
         "payment-links",
         "create",

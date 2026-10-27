@@ -26,6 +26,8 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/getflute/flute-cli
 
 Both installers download from GitHub Releases, put `flute2` in `~/.cargo/bin` (`%USERPROFILE%\.cargo\bin` on Windows), and add that directory to your `PATH`. Open a new terminal afterwards and check the install with `flute2 version`.
 
+Releases are built for `aarch64-apple-darwin` (Apple silicon macOS), `x86_64-pc-windows-msvc` (Windows), and `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` (Linux). Other platforms, Intel macOS among them, build from source.
+
 ### From source
 
 ```sh
@@ -113,6 +115,9 @@ Every setting follows the same precedence: flag, then environment variable, then
 | `settlements` | `list`, `get`, `close`: settlement batches |
 | `settings` | `payment-config`, `contact-info`, `autofill`, `update-autofill`: account settings |
 | `api-keys` | `create`, `list`, `revoke`: API keys |
+| `applications` | `create`, `list`: merchant applications; `create` takes the rest of an application from `--file` |
+| `pricing-templates` | `list`: pricing templates for applications |
+| `users` | `list`, `schedule-as`, `split-profiles`: users, and a partner user's Schedule As and Split Profiles |
 | `ping` | API health check |
 | `version` | Print the CLI version and active profile |
 | `update` | Update to the latest GitHub Release |

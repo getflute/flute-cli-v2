@@ -33,7 +33,7 @@ Three rules that shape every parser you write against this CLI:
 |---|---|
 | `--profile <name>` | `sandbox` (default), or `production`/`prod`. Env: `FLUTE2_PROFILE`; then `~/.flute2/config.toml`'s `default_profile`; then `sandbox`. |
 | `--output <fmt>` | `json` (use this), `table` (human, the default), `quiet` (identifier only), in any case: `JSON` is `json`. Env: `FLUTE2_OUTPUT`; then the config file's `output`; then `table`. |
-| `--debug` | HTTP request and response traces to **stderr**. Card numbers, bank account numbers, security codes, bearer tokens and client secrets are masked. Prefer `--output json` plus `meta.correlation_id`; reach for `--debug` only when an operator is investigating. |
+| `--debug` | HTTP request and response traces to **stderr**. Card numbers, bank account numbers, security codes, Social Security numbers, tax ids, bearer tokens and client secrets are masked. Prefer `--output json` plus `meta.correlation_id`; reach for `--debug` only when an operator is investigating. |
 
 There are no short flags beyond `-h` and `-V`. Spell it `--output quiet`.
 
@@ -103,6 +103,11 @@ Envelope object names, by group:
 | `payment-links` | `payment_link` | `payment_link_list` |
 | `payment-sessions` | `payment_session` | — |
 | `api-keys` | `api_token` | `api_token_list` |
+| `applications` | `application` | `application_list` |
+| `pricing-templates` | — | `pricing_template_list` |
+| `users list` | — | `user_list` |
+| `users schedule-as` | — | `schedule_a_list` |
+| `users split-profiles` | — | `split_profile_list` |
 | `ping` | `ping` | — |
 | `version` | `version` | — |
 | `auth status` | `auth_status` | — |
@@ -409,7 +414,8 @@ empty rule alone — `settlements get`'s batch id, `settlements close
 --original-transaction-id` and `payment-methods set-default --customer-id`.
 So is every list filter whose value names a resource: `transactions list`'s `--source-id`, `--batch-id`, `--customer-id`,
 `--merchant-id` and `--reference-id`, `payment-methods list --customer-id`,
-`pos list --terminal-id`, `terminals list --serial-number`, and each repeat of
+`pos list --terminal-id`, `terminals list --serial-number`,
+`applications list --application-id`, and each repeat of
 `settlements list`'s `--batch-ids` and `--processor-ids`. An empty one is a
 `client` envelope and exit 3 with nothing sent, so an empty filter cannot return
 the unfiltered list. A free-text filter such as `--search`, `--email` or
@@ -726,8 +732,7 @@ flute2 terminals status [OPTIONS] <TERMINAL_ID>
 `--status` filters on `ready`, `busy` or `offline`, and `terminalStatus` reads
 back as `Ready`, `Busy` or `Offline`: the same three values. A terminal is
 `Busy` while a POS transaction is in progress on it and `Ready` once that
-transaction ends. The published response schema lists `Active` in place of
-`Ready`; the API does not send it.
+transaction ends.
 
 ### `settlements`
 
@@ -795,6 +800,79 @@ flute2 api-keys revoke [OPTIONS] --client-id <CLIENT_ID>
 - **The group needs partner credentials.** A merchant's own client id and
   secret answer 403 on every verb, with a message saying a merchant token is in
   use and a partner token is needed. A merchant key cannot manage keys.
+
+### `applications`
+
+```
+flute2 applications create [OPTIONS] --email <EMAIL> --delivery-method <DELIVERY_METHOD> --partner-user-id <PARTNER_USER_ID> --processor-id <PROCESSOR_ID> --schedule-a-id <SCHEDULE_A_ID> --split-profile-id <SPLIT_PROFILE_ID> --dba-name <DBA_NAME>
+flute2 applications list [OPTIONS]
+```
+
+- **`create` invites a merchant to a pre-filled application.** The seven
+  flags are the request's required fields. Everything else the application
+  should carry — owners, addresses, bank details, volumes, `metadata`,
+  `pricingTemplateIds` — goes in `--file <PATH>`, one JSON object in the
+  request's own shape, or `--file -` to read it from stdin. A flag wins over
+  the file's value for the same field; the file's other fields are sent as
+  written. A file that is not one JSON object, or whose `businessInformation`
+  is not an object, is a `client` envelope, exit 3, nothing sent. Every field
+  left out stays empty for the merchant to fill in.
+- `--file` keeps Social Security and bank account numbers out of argv and
+  shell history; they are masked in the `--debug` trace.
+- `--partner-user-id` comes from `users list`; `--schedule-a-id` and
+  `--split-profile-id` must belong to that user, from `users schedule-as` and
+  `users split-profiles`. `pricing-templates list` gives the ids for
+  `pricingTemplateIds`.
+- `create` answers with `applicationId` and the `applicationUrl` the
+  merchant completes the application at. No other response carries the URL —
+  `list` does not — so under `quiet` output, from the flag, `FLUTE2_OUTPUT` or
+  the config file, `create` is refused before any request, exit 3, because
+  the identifier alone would discard it.
+- `--processor-id` is 1 to 2147483647, the server's range; any other value is
+  a usage error, exit 3, nothing sent.
+- The reference says applications exist only in production, so a `create`
+  invites a real merchant. It takes `--idempotency-key`.
+- `list` returns newest first and is paginated. `--status` filters on the
+  onboarding status, and `--created-from`/`--created-to` take a `YYYY-MM-DD`
+  date. `--created-from` includes its date and `--created-to` excludes its
+  own, so June is `--created-from 2026-06-01 --created-to 2026-07-01`.
+  `quiet` prints each application's `id`.
+- **The group needs partner credentials.** A merchant token answers 403 with
+  a message saying a partner token is needed.
+- **The account needs access to the feature as well.** An account without it
+  answers 403 "You do not have permission to access this functionality.
+  Please contact your account manager." on partner credentials too: exit 2,
+  and the account manager, not a different key, is the way out.
+
+### `pricing-templates`
+
+```
+flute2 pricing-templates list [OPTIONS]
+```
+
+The partner's pricing templates, for an application's `pricingTemplateIds`.
+**Not paginated**: every template comes back at once, so it takes no
+pagination flags and its envelope carries no `page_info`. Needs partner
+credentials and access to the feature, as `applications` does: either one
+missing is a 403.
+
+### `users`
+
+```
+flute2 users list [OPTIONS]
+flute2 users schedule-as [OPTIONS] <USER_ID>
+flute2 users split-profiles [OPTIONS] <USER_ID>
+```
+
+- `list` is paginated and filters by `--user-type partner|merchant|applicant`
+  and `--email`. It takes a merchant token as well as a partner one, and a
+  merchant token lists only that merchant's users.
+- `schedule-as` and `split-profiles` list a partner user's Schedule A pricing
+  schedules and Split Profiles, the values `applications create` takes. Each
+  is **not paginated**: no pagination flags, no `page_info`. A user outside
+  the partner account answers 404, exit 4. Both need partner credentials.
+- Every verb needs the account to have access to the feature. Without it the
+  answer is the 403 that names the account manager, whatever the token.
 
 ### Utility
 
@@ -915,19 +993,19 @@ value is refused — exit 3, nothing sent — whatever else the update carries.
 | `customers delete`, `payment-methods delete`, `payment-links delete`, `api-keys revoke` — a repeat 404 is exit 0 with `found: false` | `customers create`, `payment-methods add-card`, `payment-methods add-ach`, `api-keys create` — they take no key |
 | a keyed write re-sent with the same `--idempotency-key` and the same arguments — the cancels included | |
 
-**The keyed writes** are the fifteen whose operation declares the
+**The keyed writes** are the sixteen whose operation declares the
 `Idempotency-Key` header: `transactions create`, `credit`, `capture`,
 `reversal`, `tip-adjust`, `ach-hold`, `ach-release`; `pos create`, `cancel`,
 `reversal`; `payment-links create`, `share`; `payment-sessions create`,
-`cancel`; and `settlements close`. Each takes `--idempotency-key <KEY>` and
+`cancel`; `settlements close`; and `applications create`. Each takes `--idempotency-key <KEY>` and
 sends it as that header, on the request and on the CLI's own retry after a
 401. Without the flag no header is sent; the CLI generates no key.
 
 - **The same key and the same arguments return the first result** instead of
   repeating the operation: one charge, one transaction id. The reference
-  declares the header on all fifteen. Observed on the sandbox, the replay
+  declares the header on all sixteen. Observed on the sandbox, the replay
   happens on `transactions create`, `capture` and `ach-hold`, and on
-  `payment-sessions create` and `cancel`; the other ten were not exercised.
+  `payment-sessions create` and `cancel`; the other eleven were not exercised.
   How long the server holds a key is not documented.
 - **The same key with different arguments is a 422**, `kind: "api"`, exit 3:
   a key names one request.

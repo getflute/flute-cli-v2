@@ -8,20 +8,17 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_terminal_list_first_page() {
+    account(Merchant);
     let listed = json(&["terminals", "list"]);
     assert_eq!(listed["object"], "terminal_list");
     assert!(listed["data"].is_array(), "{listed}");
 }
 
-/// **The evidence for the two `terminalStatus` enums.**
-///
-/// The query parameter declares `Ready`, `Busy`, `Offline`; the response
-/// declares `Active`, `Busy`, `Offline`. `Ready` and `Active` cannot both be
-/// the same state's name, and this is the half that shows whether the
-/// *filter* accepts the value it declares.
+/// The filter accepts the `terminalStatus` value it declares.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_terminal_list_filtered_by_the_declared_query_status() {
+    account(Merchant);
     let listed = json(&["terminals", "list", "--status", "ready"]);
     assert!(listed["data"].is_array(), "{listed}");
 }
@@ -29,6 +26,7 @@ fn live_terminal_list_filtered_by_the_declared_query_status() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_terminal_list_filtered_by_mode_and_connection() {
+    account(Merchant);
     let listed = json(&[
         "terminals",
         "list",
@@ -43,11 +41,11 @@ fn live_terminal_list_filtered_by_mode_and_connection() {
 }
 
 /// What the runtime reports for a terminal's status: `Ready`, `Busy` or
-/// `Offline`, the values `--status` filters on. The published response
-/// schemas declare `Active` in place of `Ready`; the API does not send it.
+/// `Offline`, the values `--status` filters on.
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
-fn live_terminal_status_reports_a_declared_status_needs_terminal() {
+fn live_terminal_status_reports_a_declared_status() {
+    account(Terminal);
     let status = json(&["terminals", "status", &terminal_id()]);
     assert_eq!(status["object"], "terminal_status");
     let reported = status["data"]["terminalStatus"]
@@ -66,6 +64,7 @@ fn live_terminal_status_reports_a_declared_status_needs_terminal() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_terminal_status_of_an_unknown_terminal_exits_four() {
+    account(Merchant);
     live_bin()
         .args([
             "terminals",

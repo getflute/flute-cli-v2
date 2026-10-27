@@ -308,22 +308,10 @@ pub async fn run(mut cli: Cli) -> (OutputFormat, anyhow::Result<()>) {
     }
     // The resolved mode, so a quiet reached through FLUTE2_OUTPUT or the
     // config file is refused as well as the flag.
-    if output == OutputFormat::Quiet
-        && matches!(
-            command,
-            Command::ApiKeys {
-                command: groups::api_keys::ApiKeysCommand::Create { .. }
-            }
-        )
-    {
-        return (
-            output,
-            Err(anyhow::anyhow!(
-                "api-keys create: the client secret is shown once, and --output quiet \
-                 would print only the client id and discard it. Use --output json \
-                 or --output table."
-            )),
-        );
+    if output == OutputFormat::Quiet {
+        if let Some(refusal) = quiet_discards_the_answer(&command) {
+            return (output, Err(anyhow::anyhow!(refusal)));
+        }
     }
 
     let notify = should_check_for_update(&command, &config, output, stderr_is_terminal());
@@ -340,6 +328,30 @@ pub async fn run(mut cli: Cli) -> (OutputFormat, anyhow::Result<()>) {
         }
     }
     (output, result)
+}
+
+/// The refusal a create earns under `--output quiet` when its response
+/// carries something it never returns again, which the bare identifier would
+/// discard.
+fn quiet_discards_the_answer(command: &Command) -> Option<&'static str> {
+    match command {
+        Command::ApiKeys {
+            command: groups::api_keys::ApiKeysCommand::Create { .. },
+        } => Some(
+            "api-keys create: the client secret is shown once, and --output quiet \
+             would print only the client id and discard it. Use --output json \
+             or --output table.",
+        ),
+        Command::Applications {
+            command: groups::applications::ApplicationsCommand::Create(_),
+        } => Some(
+            "applications create: the applicationUrl the merchant completes the \
+             application at is in this response alone, and --output quiet would \
+             print only the application id and discard it. Use --output json or \
+             --output table.",
+        ),
+        _ => None,
+    }
 }
 
 /// The refusal a destructive command earns when `--yes` is absent.
@@ -551,6 +563,7 @@ async fn dispatch(
     // dispatch owns its arguments rather than cloning them.
     match command {
         Command::ApiKeys { command } => groups::api_keys::dispatch(&ctx, command).await,
+        Command::Applications { command } => groups::applications::dispatch(&ctx, command).await,
         Command::Customers { command } => groups::customers::dispatch(&ctx, command).await,
         Command::PaymentLinks { command } => groups::payment_links::dispatch(&ctx, command).await,
         Command::PaymentMethods { command } => {
@@ -561,10 +574,14 @@ async fn dispatch(
         }
         Command::Ping => groups::ping::dispatch(&ctx).await,
         Command::Pos { command } => groups::pos::dispatch(&ctx, command).await,
+        Command::PricingTemplates { command } => {
+            groups::pricing_templates::dispatch(&ctx, command).await
+        }
         Command::Settings { command } => groups::settings::dispatch(&ctx, command).await,
         Command::Settlements { command } => groups::settlements::dispatch(&ctx, command).await,
         Command::Terminals { command } => groups::terminals::dispatch(&ctx, command).await,
         Command::Transactions { command } => groups::transactions::dispatch(&ctx, command).await,
+        Command::Users { command } => groups::users::dispatch(&ctx, command).await,
         Command::Auth {
             command: AuthCommand::Token,
         } => groups::auth::token(&ctx.api).await,

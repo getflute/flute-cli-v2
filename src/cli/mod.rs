@@ -115,6 +115,21 @@ pub enum Command {
         #[command(subcommand)]
         command: crate::groups::api_keys::ApiKeysCommand,
     },
+    /// Merchant application operations (create, list).
+    Applications {
+        #[command(subcommand)]
+        command: crate::groups::applications::ApplicationsCommand,
+    },
+    /// Pricing template operations (list).
+    PricingTemplates {
+        #[command(subcommand)]
+        command: crate::groups::pricing_templates::PricingTemplatesCommand,
+    },
+    /// User operations (list, schedule-as, split-profiles).
+    Users {
+        #[command(subcommand)]
+        command: crate::groups::users::UsersCommand,
+    },
     /// Print shell completion script for the given shell.
     Completion {
         /// Shell to generate completions for.

@@ -1,62 +1,50 @@
-//! Layer 5: the live sandbox suite. **Committed.**
+//! Layer 5: the live suite. **Committed.**
 //!
 //! Uncommitted tests cannot be a development guarantee: nothing stops them
 //! rotting, and the executable record of what the API actually accepts would
-//! live on one machine. Account-specific values come from `FLUTE2_LIVE_*`;
-//! only the file supplying them is ignored.
+//! live on one machine. Account-specific values come from the three account
+//! files; only those files are ignored.
 //!
 //! This crate builds only under the `live` feature, so a plain `cargo test`
 //! stays hermetic and offline, and every test here is `#[ignore]`d as well.
-//! Opt in with `scripts/live.sh`, which runs the unattended tiers each on the
-//! credentials it needs (`--help` lists them), or by hand:
+//! Opt in with `scripts/live.sh`, or by hand:
 //!
 //! ```sh
-//! source .flute2-live.env
 //! cargo test --features live --test live -- --ignored --test-threads=1 \
-//!     --skip attended --skip irreversible --skip needs_terminal --skip needs_partner
+//!     --skip attended --skip irreversible --skip needs_configured_user
 //! ```
 //!
-//! **Set the credentials in the environment, not the keychain, for any run
-//! you are not watching.** `load_with_env_fallback` tries `FLUTE2_CLIENT_ID`
-//! and `FLUTE2_CLIENT_SECRET` first and only then the keychain, so filling
-//! them in `.flute2-live.env` bypasses the store entirely.
+//! **Each scenario runs once, as the account it names.** Its first line is
+//! `account(..)` with one of the [`Account`] variants, and every command it
+//! builds after that carries the credentials and ids from that account's
+//! file, in `FLUTE2_LIVE_DIR` or the repository root. The merchant and
+//! partner are production sandbox accounts; the onboarding partner and the
+//! terminal account may be on another environment, never production live.
 //!
-//! It matters because a macOS keychain grant is bound to the *binary*, and
-//! `cargo test` rebuilds. A rebuilt `target/debug/flute2` is a different
-//! application to the OS, its access is gone, and an unattended run then
-//! fails **every** scenario with
+//! **The credentials never reach the keychain.** A macOS keychain grant is
+//! bound to the *binary*, and `cargo test` rebuilds. A rebuilt
+//! `target/debug/flute2` is a different application to the OS, its access is
+//! gone, and an unattended run then fails **every** scenario with
 //! `Platform secure storage failure: User canceled the operation` — an auth
 //! error where a result should be, after waiting on a prompt nobody is there
-//! to answer. One such run took nine times as long as the real thing and
-//! measured nothing.
+//! to answer.
 //!
-//! **`--test-threads=1` is not optional.** These scenarios share one sandbox
-//! account: the eight POS ones contend for a single terminal, and the settings
-//! round trip reads a singleton, changes it, and puts it back. Run in
-//! parallel they interfere with each other and report the interference as an
-//! API defect.
+//! **`--test-threads=1` is not optional.** Scenarios share accounts: the POS
+//! ones contend for a single terminal, and the settings round trip reads a
+//! singleton, changes it, and puts it back. Run in parallel they interfere
+//! with each other and report the interference as an API defect.
 //!
-//! **Four suffixes carry the tiers**, so the exclusions are made at the
-//! command line rather than by a runtime gate that could quietly pass:
+//! **Three suffixes mark what an unattended run leaves out**, so the exclusion
+//! is made at the command line rather than by a runtime gate that could
+//! quietly pass:
 //!
 //! - `_attended` — needs a person. Somebody accepts a prompt on the terminal,
 //!   paper comes out of a printer, or a real message is sent to a real
 //!   recipient.
-//! - `_needs_terminal` — needs a terminal to be provisioned on the account.
-//!   `terminals list` is what says whether one is, and until it answers a row
-//!   these panic on the unset `FLUTE2_LIVE_TERMINAL_ID` rather than reporting
-//!   an API defect.
-//! - `_needs_partner` — needs partner credentials. The `api-keys` endpoints
-//!   refuse a merchant token, so on the merchant credentials the rest of the
-//!   suite uses these fail for a reason that is not the CLI's.
 //! - `_irreversible` — cannot be undone, and changes what later scenarios
 //!   see. Closing a settlement batch. Run it last or not at all.
-//!
-//! A suffix is what excludes a scenario, never a name fragment naming a
-//! module: skipping `pos::` wholesale also skips the two POS *list* reads,
-//! which need no terminal at all and pass against an empty collection. An
-//! over-broad exclusion is indistinguishable from coverage that was never
-//! there.
+//! - `_needs_configured_user` — needs a partner user whose Schedule As and
+//!   Split Profiles are set up, which the onboarding partner's user is not.
 //!
 //! Everything else is reversible and unattended: it creates what it needs and
 //! removes it again. Run the full set only with somebody at the terminal:
@@ -104,86 +92,243 @@ mod payment_sessions;
 #[path = "live/api_keys.rs"]
 mod api_keys;
 
+#[path = "live/applications.rs"]
+mod applications;
+
+#[path = "live/users.rs"]
+mod users;
+
 #[path = "live/slice.rs"]
 mod slice;
 
-/// Sandbox identifiers come from the environment. Nothing account-specific is
-/// ever written into this repository, which is public.
+/// The account a scenario runs as, each from its own file in
+/// `FLUTE2_LIVE_DIR` (the repository root when unset). Each scenario names
+/// one with [`account`] before its first command.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Account {
+    /// A production sandbox merchant: `.flute2-live-merchant.env`.
+    Merchant,
+    /// A production sandbox partner: `.flute2-live-partner.env`.
+    Partner,
+    /// A partner with the applications and user-configuration API
+    /// permissions, anywhere but production live:
+    /// `.flute2-live-partner-uat.env`.
+    OnboardingPartner,
+    /// A merchant with a semi-integrated terminal, anywhere but production
+    /// live: `.flute2-live-terminal.env`.
+    Terminal,
+}
+pub use Account::{Merchant, OnboardingPartner, Partner, Terminal};
+
+impl Account {
+    fn file(self) -> &'static str {
+        match self {
+            Merchant => ".flute2-live-merchant.env",
+            Partner => ".flute2-live-partner.env",
+            OnboardingPartner => ".flute2-live-partner-uat.env",
+            Terminal => ".flute2-live-terminal.env",
+        }
+    }
+}
+
+thread_local! {
+    static CURRENT: std::cell::RefCell<Option<(Account, std::collections::HashMap<String, String>)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Run the rest of this scenario as `which`, from its file.
 ///
-/// `where_to_find_it` is not decoration. Three of these five values are
-/// sitting in the API already, and a caller told only that a variable is unset
-/// goes looking in a dashboard for something one command would have printed.
-/// The suite deliberately does **not** discover them at run time: that would
-/// couple every transaction scenario to `settings payment-config`, so one
-/// broken read would fail eight unrelated scenarios for the wrong reason.
-/// Pinning the values keeps a failure attributable to the endpoint under test.
-pub fn required(var: &str, where_to_find_it: &str) -> String {
-    std::env::var(var).unwrap_or_else(|_| {
+/// The merchant and partner are production sandbox accounts, so their files
+/// name no other host. The onboarding partner and the terminal account may be
+/// on the production sandbox or another environment, never production live:
+/// one invites merchants and the other takes cards.
+pub fn account(which: Account) {
+    let dir =
+        std::env::var("FLUTE2_LIVE_DIR").unwrap_or_else(|_| env!("CARGO_MANIFEST_DIR").into());
+    let path = std::path::Path::new(&dir).join(which.file());
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
         panic!(
-            "{var} is not set.\n\n  {where_to_find_it}\n\nCopy \
-             .flute2-live.env.example to .flute2-live.env, fill it in, and \
-             source it."
+            "this scenario runs as the {which:?} account, from {}: {e}. Copy \
+             .flute2-live.env.example there and fill it in.",
+            path.display()
         )
+    });
+    let vars = parse_env_file(&text);
+    let host = vars.get("FLUTE2_LIVE_API_BASE_URL");
+    match which {
+        Merchant | Partner => assert!(
+            host.is_none(),
+            "{}: this account runs on the production sandbox, so the file sets \
+             no FLUTE2_LIVE_API_BASE_URL",
+            path.display()
+        ),
+        OnboardingPartner | Terminal => assert!(
+            host.is_none_or(|h| !h.trim_end_matches('/').ends_with("//api.flute.com")),
+            "{}: the {which:?} account may not be on production live",
+            path.display()
+        ),
+    }
+    CURRENT.with(|c| *c.borrow_mut() = Some((which, vars)));
+}
+
+/// `KEY=value` lines, each optionally after `export `, quoted, or followed by
+/// ` # comment`.
+fn parse_env_file(text: &str) -> std::collections::HashMap<String, String> {
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .filter_map(|l| l.trim_start_matches("export ").split_once('='))
+        .map(|(k, v)| {
+            let v = v.split(" #").next().unwrap_or(v).trim();
+            (
+                k.trim().to_string(),
+                v.trim_matches(['"', '\'']).to_string(),
+            )
+        })
+        .collect()
+}
+
+/// One value from the scenario's account file.
+///
+/// The ids are pinned rather than discovered at run time, so one broken read
+/// cannot fail every scenario that needed an id from it. `where_to_find_it`
+/// says how to look one up.
+pub fn required(var: &str, where_to_find_it: &str) -> String {
+    optional(var).unwrap_or_else(|| {
+        let which = CURRENT
+            .with(|c| c.borrow().as_ref().map(|(w, _)| *w))
+            .unwrap();
+        panic!(
+            "{var} is not set in {}.\n\n  {where_to_find_it}",
+            which.file()
+        )
+    })
+}
+
+fn optional(var: &str) -> Option<String> {
+    CURRENT.with(|c| {
+        let current = c.borrow();
+        let (_, vars) = current
+            .as_ref()
+            .expect("the scenario named no account: call account(..) before its first command");
+        vars.get(var).cloned()
     })
 }
 
 /// The card and ACH processors are **two different values**, and both are
 /// marked `isDefault` — the flag is per payment method, not per account. A
 /// single processor variable would send an ACH debit to a card processor,
-/// which fails for a reason that looks nothing like the cause, so there is one
-/// accessor per instrument and no general one to reach for by mistake.
+/// which fails for a reason that looks nothing like the cause.
 pub fn card_processor_id() -> String {
     required(
         "FLUTE2_LIVE_CARD_PROCESSOR_ID",
-        "`./target/debug/flute2 settings payment-config` lists the account's \
-         processors; take the paymentProcessorId of the one whose type is \
-         SandboxCard or Tsys. Both processors report isDefault, because that \
-         flag is per payment method rather than per account.",
+        "`flute2 settings payment-config` lists the account's processors; take \
+         the paymentProcessorId of the one whose type is SandboxCard or Tsys.",
     )
 }
-
 pub fn ach_processor_id() -> String {
     required(
         "FLUTE2_LIVE_ACH_PROCESSOR_ID",
-        "`./target/debug/flute2 settings payment-config` lists the account's \
-         processors; take the paymentProcessorId of the one whose type is \
-         SandboxAch or Ach. Sending an ACH request to the card processor is \
-         the failure this separate variable exists to prevent.",
+        "`flute2 settings payment-config` lists the account's processors; take \
+         the paymentProcessorId of the one whose type is SandboxAch or Ach.",
     )
 }
 pub fn merchant_id() -> String {
     required(
         "FLUTE2_LIVE_MERCHANT_ID",
-        "`./target/debug/flute2 terminals list` shows merchantId on every row, and \
-         so does `./target/debug/flute2 api-keys list`.",
+        "`flute2 terminals list` shows merchantId on every row. In the partner \
+         file, a merchant under that partner.",
     )
 }
 pub fn terminal_id() -> String {
     required(
         "FLUTE2_LIVE_TERMINAL_ID",
-        "`./target/debug/flute2 terminals list` — take the ID of a row whose MODE is \
-         SemiIntegrated and whose LINE is Online. POS cannot use a terminal in \
-         any other mode, and an offline one fails every POS scenario for a \
-         reason that is not the CLI's.",
+        "`flute2 terminals list`: the ID of a row whose MODE is SemiIntegrated \
+         and whose LINE is Online.",
     )
 }
 pub fn pos_device_id() -> String {
     required(
         "FLUTE2_LIVE_POS_DEVICE_ID",
-        "the external identifier configured on the terminal itself. This is \
-         the one value the API cannot hand back: v2 declares no device \
-         endpoints at all. `./target/debug/flute2 pos list` shows posDeviceId, but \
-         only for transactions that already exist, and creating one needs this \
-         value first.",
+        "the external identifier configured on the terminal itself; v2 declares \
+         no device endpoint that could hand it back.",
+    )
+}
+pub fn partner_user_id() -> String {
+    required(
+        "FLUTE2_LIVE_PARTNER_USER_ID",
+        "`flute2 users list --user-type partner` on the partner account.",
     )
 }
 pub fn share_recipient() -> String {
     required(
         "FLUTE2_LIVE_SHARE_RECIPIENT",
-        "your own mobile number in E.164 form (+15551234567) or your own email \
-         address. A share sends a real message, so there is deliberately no \
-         default to fall back on.",
+        "your own mobile number in E.164 form or your own email address. A \
+         share sends a real message, so there is no default to fall back on.",
     )
+}
+/// The account's client id, to tell its own key from a new one.
+pub fn client_id() -> String {
+    required("FLUTE2_CLIENT_ID", "the account's client id.")
+}
+
+/// A `flute2` invocation as the scenario's account.
+///
+/// The credentials reach the child's environment and nothing else: a failure
+/// is reported from the output alone, because a printed `Command` lists every
+/// variable set on it. The keychain is out of reach — a macOS grant is bound
+/// to the binary, `cargo test` rebuilds, and a rebuilt binary would raise an
+/// authorisation dialog per scenario.
+pub struct LiveCommand(std::process::Command);
+
+impl LiveCommand {
+    pub fn args<I, S>(mut self, args: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        self.0.args(args);
+        self
+    }
+
+    pub fn output(mut self) -> std::process::Output {
+        self.0.output().unwrap()
+    }
+
+    pub fn assert(self) -> assert_cmd::assert::Assert {
+        use assert_cmd::assert::OutputAssertExt;
+        self.output().assert()
+    }
+}
+
+pub fn live_bin() -> LiveCommand {
+    let mut c = std::process::Command::new(assert_cmd::cargo::cargo_bin("flute2"));
+    for (k, _) in std::env::vars() {
+        if k.starts_with("FLUTE2_") {
+            c.env_remove(k);
+        }
+    }
+    c.env(
+        "FLUTE2_CLIENT_ID",
+        required("FLUTE2_CLIENT_ID", "the account's client id."),
+    )
+    .env(
+        "FLUTE2_CLIENT_SECRET",
+        required("FLUTE2_CLIENT_SECRET", "the account's client secret."),
+    )
+    .env("FLUTE2_NO_KEYCHAIN", "1")
+    .env("FLUTE2_NO_UPDATE_CHECK", "1")
+    .env("FLUTE2_PROFILE", "sandbox");
+    if let Some(api) = optional("FLUTE2_LIVE_API_BASE_URL") {
+        let oauth = required(
+            "FLUTE2_LIVE_OAUTH_URL",
+            "it is set alongside FLUTE2_LIVE_API_BASE_URL: a token from one \
+             environment is refused by the other's API.",
+        );
+        c.env("FLUTE2_API_BASE_URL", api)
+            .env("FLUTE2_OAUTH_URL", oauth);
+    }
+    LiveCommand(c)
 }
 
 /// The billing address the sandbox's address-verification fixture **approves**.
@@ -224,72 +369,19 @@ pub const AVS_DOES_NOT_MATCH: [&str; 6] = [
     "US",
 ];
 
-/// A `flute2` invocation against the **real** sandbox.
-///
-/// Deliberately unlike `support::bin` in one way and like it in another: there
-/// is no base-URL override, so this reaches the real API — and the keychain is
-/// **off**, so it reads credentials from the environment.
-///
-/// The one way to aim the run elsewhere is `FLUTE2_LIVE_API_BASE_URL` with
-/// `FLUTE2_LIVE_OAUTH_URL`, passed on as the CLI's two overrides — how the
-/// terminal scenarios reach an environment with a terminal provisioned. A
-/// stray `FLUTE2_API_BASE_URL` in the shell is still removed, so only a value
-/// set for this suite can redirect it.
-///
-/// The keychain is out of reach rather than merely unused: every scenario
-/// spawns its own process, a macOS keychain grant is bound to the *binary*,
-/// and `cargo test` rebuilds. A rebuilt binary holds no grant, so a reachable
-/// keychain raises an authorisation dialog per process and then fails.
-/// Convenience for one command is not worth a run that measures nothing.
-///
-/// The credentials are required up front rather than left to fail per
-/// scenario, so a run without them stops on the first with one legible reason.
-/// The update check is still suppressed: a GitHub round trip is not part of
-/// what these tests measure.
-pub fn live_bin() -> assert_cmd::Command {
-    let reason = "the live suite reads credentials from the environment rather \
-                  than the keychain, because it spawns a process per scenario \
-                  and a keychain grant is bound to the binary — a rebuild would \
-                  raise one authorisation dialog per scenario. Put it in \
-                  .flute2-live.env and source that.";
-    // Required for the message, **never passed on**: `assert_cmd` prints every
-    // variable a command sets in its failure output, so setting these here put
-    // the client id and secret into the text of every failing scenario. They
-    // are inherited from the surrounding shell instead, where `assert_cmd`
-    // cannot see them to print them.
-    required("FLUTE2_CLIENT_ID", reason);
-    required("FLUTE2_CLIENT_SECRET", reason);
-
-    let mut c = assert_cmd::Command::cargo_bin("flute2").unwrap();
-    c.env_remove("FLUTE2_API_BASE_URL")
-        .env_remove("FLUTE2_OAUTH_URL")
-        .env("FLUTE2_NO_KEYCHAIN", "1")
-        .env("FLUTE2_PROFILE", "sandbox")
-        .env("FLUTE2_NO_UPDATE_CHECK", "1");
-    if let Ok(api) = std::env::var("FLUTE2_LIVE_API_BASE_URL") {
-        let oauth = required(
-            "FLUTE2_LIVE_OAUTH_URL",
-            "it is set alongside FLUTE2_LIVE_API_BASE_URL: a token from one \
-             environment is refused by the other's API.",
-        );
-        c.env("FLUTE2_API_BASE_URL", api)
-            .env("FLUTE2_OAUTH_URL", oauth);
-    }
-    c
-}
-
 /// Run a command and return its parsed JSON envelope.
 pub fn json(args: &[&str]) -> serde_json::Value {
     let mut all = vec!["--output", "json"];
     all.extend_from_slice(args);
-    let out = live_bin()
-        .args(&all)
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    serde_json::from_slice(&out).expect("the live response was not a JSON envelope")
+    let out = live_bin().args(&all).output();
+    let v: serde_json::Value =
+        serde_json::from_slice(&out.stdout).expect("the live response was not a JSON envelope");
+    assert!(
+        out.status.success(),
+        "`flute2 {}` failed: {v}",
+        args.join(" ")
+    );
+    v
 }
 
 /// `pos create` on the scenario terminal, with the given extra arguments,
@@ -319,7 +411,7 @@ pub fn pos_create(extra: &[&str]) -> String {
     args.extend_from_slice(extra);
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
     loop {
-        let out = live_bin().args(&args).output().unwrap();
+        let out = live_bin().args(&args).output();
         let v: serde_json::Value =
             serde_json::from_slice(&out.stdout).expect("the live response was not a JSON envelope");
         if out.status.success() {

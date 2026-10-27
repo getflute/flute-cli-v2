@@ -1,0 +1,12 @@
+---
+source: tests/snapshots.rs
+expression: "render::detail_table(r.resource, &object_for(r))"
+---
+id:                         8e3b1c5a-2f4d-4a6b-9c7e-1d2f3a4b5c6d
+applicationNumber:          4711
+businessName:               Corner Coffee
+applicationStatus:          Active
+applicationStatusStartedAt: 2026-06-22T16:30:00.000Z
+merchantId:                 7c9e6679-7425-40de-944b-e07fc1f90ae7
+mid:                        932129304958123
+createdOn:                  2026-06-15T10:00:00.000Z

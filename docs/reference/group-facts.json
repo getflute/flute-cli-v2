@@ -1,6 +1,6 @@
 {
- "bundle_sha256": "6b137a6c9bb4a49f84cd52d48877c8a85d8fd57c3f776558c0efe68ce6cf3ee2",
- "operation_count": 52,
+ "bundle_sha256": "35a7f7da7200ee443462564b66f0b8ff7d1fa3c82ae1b9edc0b53058c004a250",
+ "operation_count": 57,
  "operations": [
   {
    "additional_properties": null,
@@ -50,7 +50,7 @@
    "operation_id": "flute-v2-post-api-keys",
    "path": "/v2/api-keys",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "apiKeyName",
     "merchantId"
@@ -83,6 +83,278 @@
      "example": false,
      "examples": [],
      "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "applications",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-applications",
+   "path": "/v2/applications",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "applicationStatus",
+     "required": false,
+     "type": null
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "uuid",
+     "maximum": null,
+     "minimum": null,
+     "name": "applicationId",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date",
+     "maximum": null,
+     "minimum": null,
+     "name": "createdFrom",
+     "required": false,
+     "type": "string"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "date",
+     "maximum": null,
+     "minimum": null,
+     "name": "createdTo",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "AllFields",
+      "CancelledApplications",
+      "FilteredByStatus",
+      "NoResults",
+      "SeveralApplications"
+     ],
+     "schema": "PageOfListApplicationsResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": false,
+   "body_schema": "CreateApplicationRequestDto",
+   "content_types": [
+    "application/json"
+   ],
+   "group": "applications",
+   "leaves": [
+    "/achProcessor",
+    "/achProcessorData/billingAccount",
+    "/achProcessorData/billingAccountName",
+    "/achProcessorData/billingBank",
+    "/achProcessorData/billingRouting",
+    "/achProcessorData/customerType",
+    "/achProcessorData/highTicketAch",
+    "/achProcessorData/highTicketAchPayouts",
+    "/achProcessorData/monthlyVolumeAch",
+    "/achProcessorData/monthlyVolumeAchPayouts",
+    "/achProcessorData/paymentAuthorizationType",
+    "/achProcessorData/statementDescriptor",
+    "/achProcessorData/ticketCountAch",
+    "/achProcessorData/ticketCountAchPayouts",
+    "/achProcessorData/useOfPaymentServiceDescription",
+    "/authorizedSigner/address/addressLine1",
+    "/authorizedSigner/address/addressLine2",
+    "/authorizedSigner/address/city",
+    "/authorizedSigner/address/countryCode",
+    "/authorizedSigner/address/postalCode",
+    "/authorizedSigner/address/regionCode",
+    "/authorizedSigner/dateOfBirth",
+    "/authorizedSigner/email",
+    "/authorizedSigner/firstName",
+    "/authorizedSigner/lastName",
+    "/authorizedSigner/phoneNumber",
+    "/authorizedSigner/ssn",
+    "/authorizedSigner/title",
+    "/businessInformation/avgDaysToDelivery",
+    "/businessInformation/bankInfo/account",
+    "/businessInformation/bankInfo/accountName",
+    "/businessInformation/bankInfo/bank",
+    "/businessInformation/bankInfo/routing",
+    "/businessInformation/businessEmail",
+    "/businessInformation/businessEstablishedDate",
+    "/businessInformation/businessPhone",
+    "/businessInformation/customerServicePhone",
+    "/businessInformation/dbaName",
+    "/businessInformation/desiredLimits/avgTicketAmex",
+    "/businessInformation/desiredLimits/avgTicketVMcD",
+    "/businessInformation/desiredLimits/highTicketAmex",
+    "/businessInformation/desiredLimits/highTicketVMcD",
+    "/businessInformation/desiredLimits/monthlyAmex",
+    "/businessInformation/desiredLimits/monthlyVMcD",
+    "/businessInformation/detailedExplanationWhatDoYouSell",
+    "/businessInformation/documentationMailingAddress",
+    "/businessInformation/eCommerce",
+    "/businessInformation/isMerchantOptsOutReceivingFutureCommercialFromAmex",
+    "/businessInformation/keyed",
+    "/businessInformation/legalName",
+    "/businessInformation/maxDaysToDelivery",
+    "/businessInformation/mccCodeAliasId",
+    "/businessInformation/merchantType",
+    "/businessInformation/minDaysToDelivery",
+    "/businessInformation/sellingOutsideOfUs",
+    "/businessInformation/siteInspectionType",
+    "/businessInformation/swiped",
+    "/businessInformation/taxId",
+    "/businessInformation/typeOfBusiness",
+    "/businessInformation/website",
+    "/deliveryMethod",
+    "/email",
+    "/isLegalAddressTheSame",
+    "/isPrimaryContactTheSame",
+    "/legalAddress/addressLine1",
+    "/legalAddress/addressLine2",
+    "/legalAddress/city",
+    "/legalAddress/countryCode",
+    "/legalAddress/postalCode",
+    "/legalAddress/regionCode",
+    "/locationAddress/addressLine1",
+    "/locationAddress/addressLine2",
+    "/locationAddress/city",
+    "/locationAddress/countryCode",
+    "/locationAddress/locationIfOther",
+    "/locationAddress/postalCode",
+    "/locationAddress/regionCode",
+    "/locationAddress/typeOfLocation",
+    "/metadata",
+    "/owner1/address/addressLine1",
+    "/owner1/address/addressLine2",
+    "/owner1/address/city",
+    "/owner1/address/countryCode",
+    "/owner1/address/postalCode",
+    "/owner1/address/regionCode",
+    "/owner1/dateOfBirth",
+    "/owner1/email",
+    "/owner1/firstName",
+    "/owner1/lastName",
+    "/owner1/ownership",
+    "/owner1/phoneNumber",
+    "/owner1/ssn",
+    "/owner1/title",
+    "/owner2/address/addressLine1",
+    "/owner2/address/addressLine2",
+    "/owner2/address/city",
+    "/owner2/address/countryCode",
+    "/owner2/address/postalCode",
+    "/owner2/address/regionCode",
+    "/owner2/dateOfBirth",
+    "/owner2/email",
+    "/owner2/firstName",
+    "/owner2/lastName",
+    "/owner2/ownership",
+    "/owner2/phoneNumber",
+    "/owner2/ssn",
+    "/owner2/title",
+    "/owner3/address/addressLine1",
+    "/owner3/address/addressLine2",
+    "/owner3/address/city",
+    "/owner3/address/countryCode",
+    "/owner3/address/postalCode",
+    "/owner3/address/regionCode",
+    "/owner3/dateOfBirth",
+    "/owner3/email",
+    "/owner3/firstName",
+    "/owner3/lastName",
+    "/owner3/ownership",
+    "/owner3/phoneNumber",
+    "/owner3/ssn",
+    "/owner3/title",
+    "/owner4/address/addressLine1",
+    "/owner4/address/addressLine2",
+    "/owner4/address/city",
+    "/owner4/address/countryCode",
+    "/owner4/address/postalCode",
+    "/owner4/address/regionCode",
+    "/owner4/dateOfBirth",
+    "/owner4/email",
+    "/owner4/firstName",
+    "/owner4/lastName",
+    "/owner4/ownership",
+    "/owner4/phoneNumber",
+    "/owner4/ssn",
+    "/owner4/title",
+    "/partnerUserId",
+    "/pricingTemplateIds/[]",
+    "/primaryContact/email",
+    "/primaryContact/firstName",
+    "/primaryContact/lastName",
+    "/primaryContact/phoneNumber",
+    "/primaryContact/title",
+    "/processorId",
+    "/scheduleAId",
+    "/splitProfileId"
+   ],
+   "method": "POST",
+   "operation_id": "flute-v2-post-applications",
+   "path": "/v2/applications",
+   "query": [],
+   "request_body_required_flag": true,
+   "required_fields": [
+    "businessInformation",
+    "deliveryMethod",
+    "email",
+    "partnerUserId",
+    "processorId",
+    "scheduleAId",
+    "splitProfileId"
+   ],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "AllFields",
+      "Email",
+      "Iframe",
+      "PartnerDirect"
+     ],
+     "schema": "CreateApplicationResponseDto",
      "status": 200
     }
    ]
@@ -277,7 +549,7 @@
    "operation_id": "flute-v2-post-customers",
    "path": "/v2/customers",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "firstName",
     "lastName"
@@ -512,7 +784,7 @@
    "operation_id": "flute-v2-post-payment-links",
    "path": "/v2/payment-links",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "paymentMethods"
    ],
@@ -629,7 +901,7 @@
    "operation_id": "flute-v2-post-payment-links-paymentlinkid-share",
    "path": "/v2/payment-links/{paymentLinkId}/share",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "hasCustomerConsent",
     "recipient",
@@ -769,7 +1041,7 @@
    "operation_id": "flute-v2-post-payment-methods-ach",
    "path": "/v2/payment-methods/ach",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "accountHolderType",
     "accountNumber",
@@ -805,7 +1077,7 @@
    "operation_id": "flute-v2-post-payment-methods-cards",
    "path": "/v2/payment-methods/cards",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "cardNumber",
     "expirationMonth",
@@ -1175,7 +1447,7 @@
    "operation_id": "flute-v2-post-pos-transactions",
    "path": "/v2/pos/transactions",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "baseAmount",
     "currencyCode",
@@ -1216,7 +1488,7 @@
    "operation_id": "flute-v2-post-pos-transactions-reversal",
    "path": "/v2/pos/transactions/reversal",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "posDeviceId",
     "referenceId",
@@ -1282,7 +1554,7 @@
      "bodyless": false,
      "example": true,
      "examples": [],
-     "schema": "CreatePosTransactionResponseDto",
+     "schema": "CancelPosTransactionResponseDto",
      "status": 200
     }
    ]
@@ -1301,7 +1573,7 @@
    "operation_id": "flute-v2-post-pos-transactions-postransactionid-print-receipt",
    "path": "/v2/pos/transactions/{posTransactionId}/print-receipt",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "terminalId"
    ],
@@ -1311,6 +1583,32 @@
      "example": false,
      "examples": [],
      "schema": null,
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "pricing-templates",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-pricing-templates",
+   "path": "/v2/pricing-templates",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "AllFields",
+      "NoTemplates",
+      "SeveralTemplates"
+     ],
+     "schema": "ListPricingTemplatesResponseDto",
      "status": 200
     }
    ]
@@ -1352,8 +1650,12 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "CardAndAch",
+      "DualPricing",
+      "Sandbox"
+     ],
      "schema": "PaymentConfigurationResponseDto",
      "status": 200
     }
@@ -1527,8 +1829,12 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "NoResults",
+      "RecentBatches",
+      "SettledForProcessor"
+     ],
      "schema": "PageOfListBatchesResponseDto",
      "status": 200
     }
@@ -1548,7 +1854,7 @@
    "operation_id": "flute-v2-post-settlements-batches-close",
    "path": "/v2/settlements/batches/close",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "paymentProcessorId"
    ],
@@ -1678,8 +1984,14 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "AllFields",
+      "AllTerminals",
+      "BySerialNumber",
+      "NoResults",
+      "ReadyAndOnline"
+     ],
      "schema": "PageOfListTerminalsResponseDto",
      "status": 200
     }
@@ -1700,8 +2012,15 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "AllFields",
+      "Busy",
+      "DebitKeyMissing",
+      "LowBatteryOnMobile",
+      "Offline",
+      "Ready"
+     ],
      "schema": "GetTerminalStatusResponseDto",
      "status": 200
     }
@@ -2026,7 +2345,7 @@
    "operation_id": "flute-v2-post-transactions-calculate-amount",
    "path": "/v2/transactions/calculate-amount",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "baseAmount"
    ],
@@ -2089,9 +2408,10 @@
    "operation_id": "flute-v2-post-transactions-credit",
    "path": "/v2/transactions/credit",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "baseAmount",
+    "billingAddress",
     "creditDetails",
     "paymentProcessorId",
     "referenceId"
@@ -2099,75 +2419,12 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "AchCredit",
+      "CardUnreferencedRefund"
+     ],
      "schema": "GetTransactionResponseDtoFull",
-     "status": 200
-    }
-   ]
-  },
-  {
-   "additional_properties": false,
-   "body_schema": "CreditRequestDto",
-   "content_types": [
-    "application/json"
-   ],
-   "group": "transactions",
-   "leaves": [
-    "/baseAmount",
-    "/billingAddress/addressLine1",
-    "/billingAddress/addressLine2",
-    "/billingAddress/city",
-    "/billingAddress/countryCode",
-    "/billingAddress/postalCode",
-    "/billingAddress/stateCode",
-    "/contactInfo/companyName",
-    "/contactInfo/email",
-    "/contactInfo/firstName",
-    "/contactInfo/hasSmsConsent",
-    "/contactInfo/lastName",
-    "/contactInfo/mobilePhoneNumber",
-    "/creditDetails/achData/isSameDayProcessing",
-    "/creditDetails/achData/paymentMethodDetails/accountHolderType",
-    "/creditDetails/achData/paymentMethodDetails/accountNumber",
-    "/creditDetails/achData/paymentMethodDetails/accountType",
-    "/creditDetails/achData/paymentMethodDetails/routingNumber",
-    "/creditDetails/achData/paymentMethodDetails/taxId",
-    "/creditDetails/achData/paymentMethodId",
-    "/creditDetails/achData/requesterIpAddress",
-    "/creditDetails/achData/secCode",
-    "/creditDetails/cardData/paymentMethodDetails/cardNumber",
-    "/creditDetails/cardData/paymentMethodDetails/expirationMonth",
-    "/creditDetails/cardData/paymentMethodDetails/expirationYear",
-    "/creditDetails/cardData/paymentMethodDetails/securityCode",
-    "/currencyCode",
-    "/customerId",
-    "/paymentProcessorId",
-    "/referenceId",
-    "/shippingAddress/addressLine1",
-    "/shippingAddress/addressLine2",
-    "/shippingAddress/city",
-    "/shippingAddress/countryCode",
-    "/shippingAddress/postalCode",
-    "/shippingAddress/stateCode"
-   ],
-   "method": "POST",
-   "operation_id": "flute-v2-post-transactions-reversal",
-   "path": "/v2/transactions/reversal",
-   "query": [],
-   "request_body_required_flag": null,
-   "required_fields": [
-    "baseAmount",
-    "creditDetails",
-    "paymentProcessorId",
-    "referenceId"
-   ],
-   "responses": [
-    {
-     "bodyless": false,
-     "example": true,
-     "examples": [],
-     "schema": "PageOfGetTransactionResponseDto",
      "status": 200
     }
    ]
@@ -2212,8 +2469,10 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "AchHeld"
+     ],
      "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
@@ -2234,8 +2493,10 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "AchReleased"
+     ],
      "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
@@ -2260,8 +2521,11 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "FullCapture",
+      "PartialCapture"
+     ],
      "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
@@ -2286,8 +2550,12 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "AchRefundSettled",
+      "PartialRefundSettledCard",
+      "VoidUnsettledCard"
+     ],
      "schema": "GetTransactionResponseDtoFull",
      "status": 200
     }
@@ -2309,7 +2577,7 @@
    "operation_id": "flute-v2-post-transactions-transactionid-share-receipt",
    "path": "/v2/transactions/{transactionId}/share-receipt",
    "query": [],
-   "request_body_required_flag": null,
+   "request_body_required_flag": true,
    "required_fields": [
     "hasCustomerConsent",
     "recipient",
@@ -2345,9 +2613,133 @@
    "responses": [
     {
      "bodyless": false,
-     "example": true,
-     "examples": [],
+     "example": false,
+     "examples": [
+      "TipAdjusted"
+     ],
      "schema": "GetTransactionResponseDtoFull",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "users",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-users",
+   "path": "/v2/users",
+   "query": [
+    {
+     "default": 0,
+     "enum": null,
+     "format": "int32",
+     "maximum": null,
+     "minimum": 0,
+     "name": "pageIndex",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": 20,
+     "enum": null,
+     "format": "int32",
+     "maximum": 100,
+     "minimum": 1,
+     "name": "pageSize",
+     "required": false,
+     "type": "integer"
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": null,
+     "maximum": null,
+     "minimum": null,
+     "name": "userType",
+     "required": false,
+     "type": null
+    },
+    {
+     "default": null,
+     "enum": null,
+     "format": "email",
+     "maximum": null,
+     "minimum": null,
+     "name": "email",
+     "required": false,
+     "type": "string"
+    }
+   ],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "AllFields",
+      "ByEmail",
+      "MerchantToken",
+      "NoResults",
+      "PartnerToken",
+      "PartnerUsersOnly"
+     ],
+     "schema": "PageOfListUsersResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "users",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-users-userid-schedule-as",
+   "path": "/v2/users/{userId}/schedule-as",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "AllFields",
+      "NoScheduleAs",
+      "SeveralScheduleAs"
+     ],
+     "schema": "ListScheduleAsResponseDto",
+     "status": 200
+    }
+   ]
+  },
+  {
+   "additional_properties": null,
+   "body_schema": null,
+   "content_types": [],
+   "group": "users",
+   "leaves": [],
+   "method": "GET",
+   "operation_id": "flute-v2-get-users-userid-split-profiles",
+   "path": "/v2/users/{userId}/split-profiles",
+   "query": [],
+   "request_body_required_flag": null,
+   "required_fields": [],
+   "responses": [
+    {
+     "bodyless": false,
+     "example": false,
+     "examples": [
+      "AllFields",
+      "NoSplitProfiles",
+      "SeveralSplitProfiles"
+     ],
+     "schema": "ListSplitProfilesResponseDto",
      "status": 200
     }
    ]

@@ -13,6 +13,7 @@ use crate::*;
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settings_payment_config_lists_the_processor_ids() {
+    account(Merchant);
     let config = json(&["settings", "payment-config"]);
     assert_eq!(config["object"], "payment_config");
     let processors = config["data"]["availablePaymentProcessors"]
@@ -36,6 +37,7 @@ fn live_settings_payment_config_lists_the_processor_ids() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settings_contact_info() {
+    account(Merchant);
     let info = json(&["settings", "contact-info"]);
     assert_eq!(info["object"], "contact_info");
     assert!(info["data"]["contactInfos"].is_array(), "{info}");
@@ -44,6 +46,7 @@ fn live_settings_contact_info() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settings_autofill_read() {
+    account(Merchant);
     let autofill = json(&["settings", "autofill"]);
     assert_eq!(autofill["object"], "transaction_autofill");
 }
@@ -54,6 +57,7 @@ fn live_settings_autofill_read() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settings_update_autofill_round_trip() {
+    account(Merchant);
     let before = json(&["settings", "autofill"]);
     let previous = before["data"]["level2Settings"]["taxRate"].clone();
 
@@ -85,6 +89,7 @@ fn live_settings_update_autofill_round_trip() {
 #[test]
 #[ignore = "live sandbox; opt in with --ignored"]
 fn live_settings_update_autofill_rejects_a_rate_above_the_declared_maximum() {
+    account(Merchant);
     live_bin()
         .args(["settings", "update-autofill", "--l2-tax-rate", "23"])
         .assert()
